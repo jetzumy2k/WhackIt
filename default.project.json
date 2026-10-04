@@ -1,0 +1,63 @@
+{
+  "name": "WhackItOut",
+  "tree": {
+    "$className": "DataModel",
+
+    "ReplicatedStorage": {
+      "Shared": {
+        "$path": "src/shared"
+      },
+
+      "Config": {
+        "$path": "src/config"
+      },
+
+      "Remotes": {
+        "$path": "src/remotes"
+      }
+    },
+
+    "ServerScriptService": {
+      "Services": {
+        "$path": "src/server/services"
+      },
+
+      "Controllers": {
+        "$path": "src/server/controllers"
+      }
+    },
+
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "Controllers": {
+          "$path": "src/client/controllers"
+        }
+      }
+    },
+
+    "StarterGui": {
+      "Screens": {
+        "$path": "src/gui/screens"
+      }
+    },
+
+    "Workspace": {
+      "$properties": {
+        "Gravity": 196.2
+      }
+    },
+
+    "Lighting": {
+      "$properties": {
+        "Brightness": 2,
+        "GlobalShadows": true
+      }
+    },
+
+    "SoundService": {
+      "$properties": {
+        "RespectFilteringEnabled": true
+      }
+    }
+  }
+}
