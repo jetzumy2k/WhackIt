@@ -15,7 +15,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Attributes = require(ReplicatedStorage.Shared.Attributes)
-local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
 
 local HammerTool = {}
 
@@ -39,7 +38,16 @@ local function prop(name: string, size: Vector3, color: Color3): Part
 	return part
 end
 
-function HammerTool.build(hammer: HammerConfig.HammerDefinition): Tool
+-- The look of a hammer; regular HammerDefinitions and resolved Mystery Hammers both fit.
+export type HammerLook = {
+	Id: string,
+	DisplayName: string,
+	Description: string,
+	HeadColor: Color3,
+	HandleColor: Color3,
+}
+
+function HammerTool.build(hammer: HammerLook): Tool
 	local tool = Instance.new("Tool")
 	tool.Name = hammer.DisplayName
 	tool.ToolTip = hammer.Description

@@ -8,6 +8,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterGui = game:GetService("StarterGui")
+local Workspace = game:GetService("Workspace")
 local UserInputService = game:GetService("UserInputService")
 
 local Attributes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Attributes"))
@@ -24,11 +25,27 @@ local STRESS_COLOR = Color3.fromRGB(235, 80, 80)
 local HEALTH_COLOR = Color3.fromRGB(90, 210, 110)
 local TEXT_COLOR = Color3.fromRGB(255, 255, 255)
 local TOAST_COLOR = Color3.fromRGB(255, 230, 80)
-local TOAST_SECONDS = 1.2
+local TOAST_SECONDS = 2.5
+local SAVED_SECONDS = 2
+local SHOUT_SECONDS = 4.5
 
 local localPlayer = Players.LocalPlayer
+local BUFF_ORDER = { "Xp", "Damage", "CritDamage" }
+local BUFF_LABELS: { [string]: string } = { Xp = "XP", Damage = "DMG", CritDamage = "CRIT DMG" }
+
+-- 3725 -> "1:02:05", 125 -> "2:05"
+local function formatTime(seconds: number): string
+	local total = math.max(0, math.floor(seconds))
+	local hours, minutes, secs = total // 3600, (total % 3600) // 60, total % 60
+	if hours > 0 then
+		return string.format("%d:%02d:%02d", hours, minutes, secs)
+	end
+	return string.format("%d:%02d", minutes, secs)
+end
 local victoryCardShownAt = 0
 local toastLabel: TextLabel? = nil
+local savedLabel: TextLabel? = nil
+local savedShownAt = 0
 local toastShownAt = 0
 
 local function makeLabel(name: string, parent: Instance): TextLabel
@@ -100,8 +117,8 @@ local function buildHud(): (ScreenGui, Frame)
 	local scoreLabel = makeLabel("Score", gui)
 	scoreLabel.AnchorPoint = Vector2.new(0.5, 0)
 	scoreLabel.Position = UDim2.new(0.5, 0, 0, 48)
-	scoreLabel.Size = UDim2.new(0.5, 0, 0, 26)
-	scoreLabel.Text = "Score: 0   Coins: 0   Zen Lv 0"
+	scoreLabel.Size = UDim2.new(0.6, 0, 0, 26)
+	scoreLabel.Text = "Lv 1   Score: 0   Coins: 0   Zen Lv 0"
 	task.spawn(function()
 		local leaderstats = localPlayer:WaitForChild("leaderstats")
 		local score = leaderstats:WaitForChild("Score")
@@ -112,8 +129,10 @@ local function buildHud(): (ScreenGui, Frame)
 		local function refreshStats(): ()
 			local snapshot = ProgressController.get()
 			local zenLevel = if snapshot then snapshot.ZenLevel else 0
+			local level = localPlayer:GetAttribute(Attributes.Level)
 			scoreLabel.Text = string.format(
-				"Score: %d   Coins: %d   Zen Lv %d",
+				"Lv %d   Score: %d   Coins: %d   Zen Lv %d",
+				if typeof(level) == "number" then level else 1,
 				score.Value,
 				coins.Value,
 				zenLevel
@@ -122,7 +141,62 @@ local function buildHud(): (ScreenGui, Frame)
 		score.Changed:Connect(refreshStats)
 		coins.Changed:Connect(refreshStats)
 		ProgressController.Changed:Connect(refreshStats)
+		localPlayer:GetAttributeChangedSignal(Attributes.Level):Connect(refreshStats)
 		refreshStats()
+	end)
+
+	-- Active buffs with time left, under the score line.
+	local buffsLabel = makeLabel("Buffs", gui)
+	buffsLabel.AnchorPoint = Vector2.new(0.5, 0)
+	buffsLabel.Position = UDim2.new(0.5, 0, 0, 76)
+	buffsLabel.Size = UDim2.new(0.7, 0, 0, 22)
+	buffsLabel.TextColor3 = Color3.fromRGB(150, 230, 255)
+	buffsLabel.Text = ""
+	task.spawn(function()
+		local receivedAt = os.clock()
+		local lastSnapshot = ProgressController.get()
+		ProgressController.Changed:Connect(function()
+			lastSnapshot = ProgressController.get()
+			receivedAt = os.clock()
+		end)
+		while gui.Parent ~= nil do
+			local parts: { string } = {}
+			local zenEnds = localPlayer:GetAttribute(Attributes.ZenBuffEnds)
+			if typeof(zenEnds) == "number" then
+				local left = zenEnds - Workspace:GetServerTimeNow()
+				if left > 0 then
+					table.insert(
+						parts,
+						string.format(
+							"ZEN +%d dmg +%d%% crit %s",
+							GameConfig.ZenBuffFlatDamage,
+							GameConfig.ZenBuffCritChance * 100,
+							formatTime(left)
+						)
+					)
+				end
+			end
+			if lastSnapshot then
+				-- Buffs only count down while playing, so local elapsed time matches the server.
+				local elapsed = os.clock() - receivedAt
+				for _, kind in BUFF_ORDER do
+					local buff = lastSnapshot.Buffs[kind]
+					if buff and buff.SecondsLeft - elapsed > 0 then
+						table.insert(
+							parts,
+							string.format(
+								"%s +%d%% %s",
+								BUFF_LABELS[kind],
+								buff.Percent,
+								formatTime(buff.SecondsLeft - elapsed)
+							)
+						)
+					end
+				end
+			end
+			buffsLabel.Text = table.concat(parts, "   |   ")
+			task.wait(1)
+		end
 	end)
 
 	-- How to play, bottom centre.
@@ -134,6 +208,17 @@ local function buildHud(): (ScreenGui, Frame)
 	hint.Text = if UserInputService.TouchEnabled
 		then "Walk up to a boss and tap to swing your hammer!"
 		else "Walk up to a boss and click to swing your hammer!"
+
+	-- "Progress saved" note, bottom-left, shown briefly after each save.
+	local saved = makeLabel("Saved", gui)
+	saved.AnchorPoint = Vector2.new(0, 1)
+	saved.Position = UDim2.new(0, 16, 1, -16)
+	saved.Size = UDim2.fromOffset(170, 22)
+	saved.TextXAlignment = Enum.TextXAlignment.Left
+	saved.TextColor3 = Color3.fromRGB(150, 230, 150)
+	saved.Text = "Progress saved"
+	saved.Visible = false
+	savedLabel = saved
 
 	-- Short-lived tips (e.g. "Get closer to the boss!"), just above the hint.
 	local toast = makeLabel("Toast", gui)
@@ -192,20 +277,56 @@ function attachBossBar(model: Model, billboardParent: Instance): ()
 	billboard.ResetOnSpawn = false
 	billboard.Adornee = body
 	billboard.AlwaysOnTop = true
-	billboard.Size = UDim2.fromOffset(200, 50)
+	billboard.Size = UDim2.fromOffset(240, 110)
 	billboard.StudsOffset = Vector3.new(0, body.Size.Y / 2 + 2, 0)
 	billboard.MaxDistance = 120
 
+	-- Speech bubble on top (boss shouts), then the name and HP bar below it.
+	local bubble = Instance.new("TextLabel")
+	bubble.Name = "Shout"
+	bubble.Size = UDim2.fromScale(1, 0.5)
+	bubble.BackgroundColor3 = Color3.fromRGB(245, 240, 230)
+	bubble.TextColor3 = Color3.fromRGB(35, 30, 40)
+	bubble.Font = Enum.Font.FredokaOne
+	bubble.TextScaled = true
+	bubble.TextWrapped = true
+	bubble.Visible = false
+	bubble.Parent = billboard
+	Instance.new("UICorner").Parent = bubble
+	local bubblePadding = Instance.new("UIPadding")
+	bubblePadding.PaddingLeft = UDim.new(0, 8)
+	bubblePadding.PaddingRight = UDim.new(0, 8)
+	bubblePadding.Parent = bubble
+
+	local shownSeq = 0
+	local function showShout(): ()
+		local text = model:GetAttribute(Attributes.ShoutText)
+		local seq = model:GetAttribute(Attributes.ShoutSeq)
+		if typeof(text) ~= "string" or typeof(seq) ~= "number" then
+			return
+		end
+		bubble.Text = text
+		bubble.Visible = true
+		shownSeq = seq
+		task.delay(SHOUT_SECONDS, function()
+			if shownSeq == seq then
+				bubble.Visible = false
+			end
+		end)
+	end
+	model:GetAttributeChangedSignal(Attributes.ShoutSeq):Connect(showShout)
+
 	local nameLabel = makeLabel("Name", billboard)
-	nameLabel.Size = UDim2.fromScale(1, 0.5)
+	nameLabel.Position = UDim2.fromScale(0, 0.52)
+	nameLabel.Size = UDim2.fromScale(1, 0.24)
 	local bossId = model:GetAttribute(Attributes.BossId)
 	local definition = if typeof(bossId) == "string" then BossConfig.ById[bossId] else nil
 	nameLabel.Text = if definition then definition.DisplayName else model.Name
 
 	local fill, healthLabel = makeBar("HealthBar", HEALTH_COLOR, billboard)
 	local healthBar = fill.Parent :: Frame
-	healthBar.Position = UDim2.fromScale(0, 0.55)
-	healthBar.Size = UDim2.fromScale(1, 0.45)
+	healthBar.Position = UDim2.fromScale(0, 0.77)
+	healthBar.Size = UDim2.fromScale(1, 0.23)
 
 	local function refresh(): ()
 		local health = model:GetAttribute(Attributes.Health)
@@ -220,9 +341,14 @@ function attachBossBar(model: Model, billboardParent: Instance): ()
 		local previous = if status and status.PreviousBossId
 			then BossConfig.ById[status.PreviousBossId]
 			else nil
-		if status and not status.Unlocked and previous then
+		if status and status.LevelNeeded > 0 then
+			healthLabel.Text = string.format("LOCKED: reach Lv %d", status.LevelNeeded)
+		elseif status and not status.Unlocked and previous then
 			healthLabel.Text =
 				string.format("LOCKED: beat %s x%d", previous.DisplayName, status.DefeatsNeeded)
+		elseif status and not status.Unlocked then
+			healthLabel.Text =
+				string.format("LOCKED: beat every boss (%d left)", status.DefeatsNeeded)
 		elseif model:GetAttribute(Attributes.Defeated) == true then
 			healthLabel.Text = "DEFEATED!"
 		else
@@ -388,6 +514,34 @@ function UIController.start(): ()
 	assert(zenAchieved:IsA("RemoteEvent"), "ZenAchieved must be a RemoteEvent")
 	zenAchieved.OnClientEvent:Connect(function(payload: unknown)
 		onZenAchieved(card, payload)
+	end)
+
+	-- Short messages from the server (e.g. the Executive Elevator).
+	local toastRemote =
+		ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Notify"):WaitForChild("Toast")
+	assert(toastRemote:IsA("RemoteEvent"), "Notify.Toast must be a RemoteEvent")
+	toastRemote.OnClientEvent:Connect(function(message: unknown)
+		if typeof(message) == "string" and #message <= 120 then
+			UIController.showToast(message)
+		end
+	end)
+
+	local savedRemote =
+		ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Profile"):WaitForChild("Saved")
+	assert(savedRemote:IsA("RemoteEvent"), "Profile.Saved must be a RemoteEvent")
+	savedRemote.OnClientEvent:Connect(function()
+		local label = savedLabel
+		if label == nil then
+			return
+		end
+		label.Visible = true
+		savedShownAt = os.clock()
+		local shownAt = savedShownAt
+		task.delay(SAVED_SECONDS, function()
+			if savedShownAt == shownAt then
+				label.Visible = false
+			end
+		end)
 	end)
 end
 

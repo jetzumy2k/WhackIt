@@ -1,0 +1,100 @@
+# Robux Store
+
+Optional monetization, added in Phase 8. Players buy **timed boosts** and the **Mystery Hammer**
+with Robux (Developer Products). Everything the store sells can also be earned or matched through play:
+coins buy hammers, and Zen gives a free damage and crit buff. The leaderboard stays fair because
+**Score is never boosted**. XP boosts only change Player Level.
+
+Code: `Config/StoreConfig` (catalogue), `Shared/BuffRules`, `Shared/HammerRules`,
+`Shared/StoreSchedule`, `Services/BuffService`, `Services/StoreService`, `Services/PurchaseService`,
+`Config/StoreAdminConfig` (server only), `Controllers/StoreController` (client UI).
+
+## Catalogue and suggested prices (Robux)
+Every boost comes in three lengths of **play time**: 30 minutes, 1 hour or 5 hours.
+
+| Boost | 30 min | 1 hour | 5 hours |
+|---|---|---|---|
+| +10 % XP | 15 | 25 | 99 |
+| +20 % XP | 25 | 45 | 149 |
+| +25 % XP | 35 | 59 | 199 |
+| +3 % Damage | 15 | 25 | 99 |
+| +5 % Damage | 25 | 45 | 149 |
+| +10 % Damage | 45 | 79 | 249 |
+| +3 % Crit Damage | 10 | 19 | 79 |
+| +5 % Crit Damage | 15 | 25 | 99 |
+| +10 % Crit Damage | 25 | 45 | 149 |
+| +15 % Crit Damage | 39 | 69 | 219 |
+| +20 % Crit Damage | 49 | 89 | 279 |
+| **Mystery Hammer** (permanent) | 199 | | |
+
+Why these prices: 30-minute boosts sit at impulse prices (10–49 R$). Longer boosts give a better
+rate per minute, so the 5-hour packs are about 30–40 % of the 30-minute rate. Damage boosts cost more
+than crit-damage boosts of the same percent because they apply to every hit, whereas crit damage only
+applies on crits (5 % base chance, 10 % in Zen). The Mystery Hammer is priced like a permanent
+cosmetic plus stat item.
+
+The store shows the **live Creator Hub price** (`GetProductInfoAsync`). The prices above are only
+fallbacks and suggestions.
+
+## Rules
+- **Boosts count down only while you're in the game.** A 5-hour boost gives 5 hours of play.
+- **Same kind again:** time adds up and the strongest percent applies to the combined time. Banked
+  time is capped at 50 hours (`StoreConfig.MaxBuffSeconds`).
+- XP boost multiplies XP from defeats. Score and coins are not boosted.
+- Damage boost multiplies hit damage. Crit Damage boost adds to the crit multiplier
+  (base crit +50 %).
+- **Mystery Hammer:** rolled once at purchase and kept forever. It is equipped straight away and
+  listed under "Hammers".
+
+  | Stat | Range | Odds |
+  |---|---|---|
+  | Damage | 20–35 (whole numbers) | each value 1 in 16 = 6.25 % |
+  | Crit damage | +5 % to +10 % | each value 1 in 6 ≈ 16.7 % |
+
+  The odds are shown in the store before buying, as Roblox requires for paid random items. Players
+  whose `PolicyService` info has `ArePaidRandomItemsRestricted` (or whose lookup fails) never see the
+  Mystery tab, and the server refuses to prompt it for them.
+
+## Purchase delivery (`PurchaseService`)
+`MarketplaceService.ProcessReceipt` handles each receipt as follows:
+1. Wait (up to 20 s) for the buyer's data. ProfileStore's session lock means only one server owns it.
+2. If the receipt's `PurchaseId` is already in `ProcessedPurchases` (last 200 kept), don't grant again.
+3. Otherwise grant the product and record the `PurchaseId` in the same step, with no yield in between.
+4. Return `PurchaseGranted` only once a save containing that `PurchaseId` has reached the DataStore.
+   Otherwise return `NotProcessedYet` so Roblox retries later.
+
+Delivery **never** depends on the store being open: anything paid for is delivered.
+
+## Admin: open, close or schedule the store
+Admins see an **Admin** tab in the store. They can choose:
+- **Open now** / **Close now**;
+- **Schedule:** open from a start time until an end time (entered in the admin's local time, stored
+  as UTC). The end time must be in the future and within a year.
+
+The setting is saved in DataStore `StoreSettings` (key `Global`) and pushed to every server through
+MessagingService topic `StoreSettings`. Servers also re-read it every 5 minutes. Until an admin saves a
+setting, the store uses `StoreAdminConfig.DefaultMode` (`"On"`).
+
+The server decides who is an admin (`StoreService.checkAdmin`):
+- the experience owner: the user, or the owner of the creator group;
+- any UserId in `StoreAdminConfig.AdminUserIds`;
+- the local tester in Studio (`StudioTesterIsAdmin`).
+
+## Going live: setup checklist
+1. Creator Hub → your experience → **Monetization → Developer Products**. Create one product per key
+   (34 in total), for example "+10% XP Boost (30 min)", priced as in the table above.
+
+   | Kind | Keys |
+   |---|---|
+   | XP | `xp_10_30m`, `xp_10_1h`, `xp_10_5h`, `xp_20_*`, `xp_25_*` |
+   | Damage | `dmg_3_*`, `dmg_5_*`, `dmg_10_*` |
+   | Crit Damage | `crit_3_*`, `crit_5_*`, `crit_10_*`, `crit_15_*`, `crit_20_*` |
+   | Mystery Hammer | `mystery_hammer` |
+
+   `*` stands for each of `30m`, `1h` and `5h`.
+2. Paste each product id into `PRODUCT_IDS` in `src/config/StoreConfig.luau`. Products without an id
+   stay hidden, so you can launch a few at a time.
+3. Enable **Studio Access to API Services** to test the admin settings in Studio. Test purchases in
+   Studio are free and go through the real `ProcessReceipt`.
+4. Update the experience questionnaire: the game now has **paid random items** (Mystery Hammer).
+5. Run the store checks in `PLAYTEST.md` (59 and later).

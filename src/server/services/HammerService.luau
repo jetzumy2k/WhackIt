@@ -8,6 +8,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
+local HammerRules = require(ReplicatedStorage.Shared.HammerRules)
 local HammerTool = require(ServerScriptService.Lib.HammerTool)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 
@@ -15,13 +16,15 @@ local HammerService = {}
 
 local CHARACTER_LOAD_TIMEOUT = 10 -- seconds to wait for a Humanoid before giving up
 
-local function equippedHammer(player: Player): HammerConfig.HammerDefinition?
+local function equippedHammer(player: Player): HammerTool.HammerLook?
 	-- Read from the saved data, not the session: on load, this service may run
 	-- before SessionService has created the session. Before the data loads the
 	-- character gets the default hammer, swapped once the data arrives.
 	local data = PlayerDataService.get(player)
-	local hammerId = if data then data.EquippedHammerId else GameConfig.DefaultHammerId
-	return HammerConfig.ById[hammerId]
+	if data == nil then
+		return HammerConfig.ById[GameConfig.DefaultHammerId]
+	end
+	return HammerRules.resolve(data.EquippedHammerId, data.MysteryHammers)
 end
 
 local function removeHammers(container: Instance?): ()

@@ -17,6 +17,15 @@ local GameConfig = table.freeze({
 	MoodNeutralMax = 50,
 	MoodStressedMax = 75,
 
+	-- Critical hits (rolled on the server for every accepted hit)
+	BaseCritChance = 0.05, -- 5 % of hits are crits...
+	BaseCritDamage = 0.5, -- ...and a crit does +50 % damage (more with hammer/boost bonuses)
+
+	-- Zen buff: reaching 0 stress also powers you up for a while
+	ZenBuffSeconds = 180,
+	ZenBuffFlatDamage = 10, -- added to every hit
+	ZenBuffCritChance = 0.05, -- added to crit chance
+
 	-- Zen: reaching 0 stress
 	ZenBonusCoins = 100,
 	ZenCoinBonusPerLevel = 0.05, -- +5% boss coins per Zen Level...
@@ -26,6 +35,13 @@ local GameConfig = table.freeze({
 	-- Score and coins
 	StartingScore = 0,
 	StartingCoins = 0,
+
+	-- Player Level (Shared/LevelRules): level = floor(sqrt(score / factor)) + 1
+	LevelScoreFactor = 600,
+	-- Senior bosses upstairs need at least this Player Level.
+	UpstairsMinLevel = 10,
+	-- The CEO (3rd floor) has this many times the HP of the toughest other boss.
+	CeoHealthMultiplier = 150,
 
 	-- Combat
 	HitCooldown = 0.45, -- seconds per hammer swing = minimum time between accepted hits
@@ -44,6 +60,12 @@ local GameConfig = table.freeze({
 	MinRewardDamageShare = 0.1,
 	LastHitBonusShare = 0.05, -- extra fraction of the boss's reward for the defeating hit
 	BossRespawnDelay = 5, -- seconds from defeat until a fresh boss appears
+
+	-- Boss shouts (speech bubbles, BossShoutConfig)
+	ShoutIdleMin = 8, -- seconds between a boss's idle shouts, at least...
+	ShoutIdleMax = 15, -- ...and at most
+	ShoutHitChance = 0.2, -- chance a hit makes the boss shout back
+	ShoutCooldown = 4, -- seconds a boss stays quiet after any shout
 
 	-- Player
 	RespawnTime = 3, -- seconds

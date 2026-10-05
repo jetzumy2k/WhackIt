@@ -17,7 +17,9 @@ local FLASH_SECONDS = 0.12
 local DAMAGE_NUMBER_SECONDS = 0.7
 local DAMAGE_NUMBER_RISE = 3
 local SHAKE_SECONDS = 0.08
-local SHAKE_STRENGTH = 0.35
+local SHAKE_STRENGTH = 0.6
+local BURST_PARTICLES = 14
+local BURST_SECONDS = 1
 -- Other players' swings are shown from the start of the downswing: their hit is
 -- only known once confirmed, so replaying the wind-up would land late.
 local REMOTE_SWING_START = 0.42
@@ -30,6 +32,7 @@ type Feedback = {
 	Damage: number,
 	HitterUserId: number,
 	Defeated: boolean,
+	Crit: boolean,
 }
 
 -- Server messages are still checked before use: a malformed payload must not
@@ -49,7 +52,13 @@ local function parse(payload: unknown): Feedback?
 	then
 		return nil
 	end
-	return { BossInstanceId = id, Damage = damage, HitterUserId = hitter, Defeated = defeated }
+	return {
+		BossInstanceId = id,
+		Damage = damage,
+		HitterUserId = hitter,
+		Defeated = defeated,
+		Crit = data.Crit == true,
+	}
 end
 
 local function flash(model: Model): ()
@@ -66,13 +75,14 @@ local function showDamageNumber(
 	body: BasePart,
 	damage: number,
 	isOwnHit: boolean,
+	isCrit: boolean,
 	parent: Instance
 ): ()
 	local billboard = Instance.new("BillboardGui")
 	billboard.ResetOnSpawn = false
 	billboard.Adornee = body
 	billboard.AlwaysOnTop = true
-	billboard.Size = UDim2.fromOffset(80, 40)
+	billboard.Size = if isCrit then UDim2.fromOffset(150, 60) else UDim2.fromOffset(80, 40)
 	local startOffset = Vector3.new(random:NextNumber(-1.5, 1.5), body.Size.Y / 2, 0)
 	billboard.StudsOffset = startOffset
 
@@ -81,10 +91,11 @@ local function showDamageNumber(
 	label.Size = UDim2.fromScale(1, 1)
 	label.Font = Enum.Font.FredokaOne
 	label.TextScaled = true
-	label.Text = "-" .. damage
-	-- Own hits stand out; teammates' hits are softer so the screen stays readable.
-	label.TextColor3 = if isOwnHit
-		then Color3.fromRGB(255, 230, 80)
+	label.Text = if isCrit then "CRIT! -" .. damage else "-" .. damage
+	-- Crits are big and orange; own hits stand out; teammates' hits are softer.
+	label.TextColor3 = if isCrit
+		then Color3.fromRGB(255, 140, 40)
+		elseif isOwnHit then Color3.fromRGB(255, 230, 80)
 		else Color3.fromRGB(230, 230, 230)
 	label.TextStrokeTransparency = 0.4
 	label.Parent = billboard
@@ -101,6 +112,26 @@ local function showDamageNumber(
 		:Play()
 	TweenService:Create(label, info, { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
 	Debris:AddItem(billboard, DAMAGE_NUMBER_SECONDS)
+end
+
+-- A short burst of sparks where the hammer meets the boss (Roblox's default
+-- particle texture, so no uploaded assets).
+local function impactBurst(body: BasePart): ()
+	local attachment = Instance.new("Attachment")
+	attachment.Name = "ImpactBurst"
+	attachment.Position = Vector3.new(0, body.Size.Y / 4, 0)
+	attachment.Parent = body
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Enabled = false
+	emitter.Color = ColorSequence.new(Color3.fromRGB(255, 240, 150))
+	emitter.LightEmission = 0.8
+	emitter.Size = NumberSequence.new(0.9, 0)
+	emitter.Lifetime = NumberRange.new(0.3, 0.6)
+	emitter.Speed = NumberRange.new(12, 20)
+	emitter.SpreadAngle = Vector2.new(180, 180)
+	emitter.Parent = attachment
+	emitter:Emit(BURST_PARTICLES)
+	Debris:AddItem(attachment, BURST_SECONDS)
 end
 
 local function shakeCamera(): ()
@@ -144,7 +175,8 @@ function FeedbackController.start(): ()
 		if visual and visual:IsA("Model") then
 			flash(visual)
 		end
-		showDamageNumber(body, feedback.Damage, isOwnHit, effects)
+		showDamageNumber(body, feedback.Damage, isOwnHit, feedback.Crit, effects)
+		impactBurst(body)
 		if isOwnHit then
 			shakeCamera()
 		else

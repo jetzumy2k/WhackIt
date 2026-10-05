@@ -59,9 +59,9 @@ works but nothing is kept between Play sessions.
 | # | Check | Expected |
 |---|---|---|
 | 23 | Spawn | You start in the lobby facing a corridor of five offices, each with a name plate over its door; inside each office a monster stands between the desk, cabinet and plants. Only Deadline Boss is in colour, the other four grey with "LOCKED: beat …" bars. HUD shows `Score: … Coins: …`; a "Hammers" button bottom-right |
-| 24 | Swing at a locked boss | Swing plays, toast "Defeat Deadline Boss 3 more times to unlock!", no damage |
+| 24 | Swing at a locked boss | Swing plays, toast "Defeat Deadline Boss 1 more time to unlock!", no damage |
 | 25 | Defeat Deadline Boss | Victory Card `+100 score +10 coins -5 stress`; Coins in HUD and player list +10 |
-| 26 | Defeat it 3 times total | Third Victory Card adds "NEW BOSS UNLOCKED: Meeting Master!"; Meeting Master turns colourful and can be hit |
+| 26 | Defeat it once | The Victory Card adds "NEW BOSS UNLOCKED: Meeting Master!"; Meeting Master turns colourful and can be hit |
 | 27 | Open Hammers with < 150 coins | Squeaky Hammer "Equipped"; others "Need 150/400/1000" (greyed) |
 | 28 | Earn 150 coins, Buy Bouncy Mallet | Coins −150, hammer in hand changes to the blue/white mallet, row shows "Equipped"; hits do 14 × boss multiplier |
 | 29 | Equip Squeaky Hammer again | Hammer swaps back; damage back to 10 × multiplier |
@@ -82,3 +82,47 @@ works but nothing is kept between Play sessions.
 | 40 | A player deals under 10 % | Gets a small score/coin share but "Deal at least 10% of its HP to count the defeat."; no unlock progress |
 | 41 | Second client watching | Sees the other player's face and hammer glow change, and a toast when they reach Zen |
 
+## Phase 6: hardening
+| # | Check | Expected |
+|---|---|---|
+| 42 | From the **server** command bar (Test → Clients and Servers), teleport a player next to a boss: `game.Players:GetPlayers()[1].Character:PivotTo(CFrame.new(-68, 4, -32))`, then swing within 5 s | Server Output prints `[MovementGuard] … hits ignored for 5 s`; swings in those 5 s do no damage; after that hits land |
+| 43 | Walk, jump and run around normally for a minute | No `[MovementGuard]` lines |
+
+## Phase 7: content and polish
+| # | Check | Expected |
+|---|---|---|
+| 44 | Spawn | HUD shows `Lv 1`; "Lv 1" floats above your head; a "Music: On" button only if tracks are configured |
+| 45 | Lobby | Leaderboard board on the west wall ("TOP STRESS RELIEVERS"); in Studio with API access off its footer says "This server only" |
+| 46 | Play for a while | Within ~2 minutes "Progress saved" flashes bottom-left |
+| 47 | Walk the stairs (east side of the lobby) | Smooth climb to the upper corridor with a glass railing over the lobby; five crowned Senior bosses, greyed with "LOCKED: reach Lv 10" |
+| 48 | Swing at a Senior boss below Level 10 | Toast "Reach Level 10 to fight this Senior boss!", no damage |
+| 49 | Reach Level 10 (or test with a temporarily lower `UpstairsMinLevel`) after defeating the ground boss once | Senior boss turns colourful; Victory Card can show "NEW BOSS UNLOCKED: Senior …" when the level-up happens |
+| 50 | Look around | Calm, darker rooms: slate walls and ceilings, warm dim lights, no glare; thin cyan (ground) and purple (upstairs) LED strips along the corridors; windows in office back walls show grass, trees and the skyline; the lobby's glass front faces a street with trees |
+| 51 | Swing | Brief pause at the top, hammer head stretches then squashes, white trail, spark burst on the boss, stronger shake |
+
+## Phase 7b: shouts, Executive Floor and the CEO
+| # | Check | Expected |
+|---|---|---|
+| 52 | Stand near any boss for ~15 s | A speech bubble with a job-related line appears above its HP bar for a few seconds; other players see the same line |
+| 53 | Hit a boss repeatedly | Now and then it shouts back (not more than once every 4 s) |
+| 54 | 2nd floor, west end of the corridor: use "Ride up" before beating every boss | Toast "Executive Floor: defeat every boss once first (N to go)." (or the level message); you stay on the 2nd floor |
+| 55 | Beat every boss once (for testing, temporarily lower `UpstairsMinLevel` and play through), then "Ride up" | You arrive on the Executive Floor, stress jumps to 100 % (frazzled face), toast "Welcome to the Executive Floor…" |
+| 56 | The CEO | A big crowned monster with "Q4 RESULTS?!" sign, HP bar `90000 / 90000`; angry but clean shouts; hits land and the bar drops |
+| 57 | "Ride down" on the 3rd floor | Back on the 2nd floor next to the elevator |
+| 58 | (Server command bar) teleport a player without access onto the 3rd floor: `game.Players:GetPlayers()[1].Character:PivotTo(CFrame.new(0, 33, -10))` | Within ~1 s they are sent back down with the "defeat every boss" toast |
+
+## Phase 8: crits, Zen buff, XP and the Robux store
+| # | Check | Expected |
+|---|---|---|
+| 59 | Hit bosses for a while | About 1 in 20 hits shows a bigger orange "CRIT! -N" (about 1.5x damage) |
+| 60 | Reach 0 stress | Under the score line: "ZEN +10 dmg +5% crit 2:59" counting down; hits do about 10 more damage; crits more frequent; line disappears after 3 minutes |
+| 61 | Existing save from before Phase 8 | Same Level as before (XP starts at old Score); Score unchanged |
+| 62 | "Store" button (above "Hammers") with no product ids configured | Tabs XP Boost / Damage / Crit Dmg / (Mystery) / (Admin in Studio); each shows "Coming soon." |
+| 63 | Add one test product id to `StoreConfig.PRODUCT_IDS` (e.g. `xp_10_30m`), buy it in Studio (test purchase) | Toast "+10% XP boost added (30 min of play time)."; HUD shows "XP +10% 29:59"; Output has no `[Purchase]` warnings |
+| 64 | Buy the same boost again | Time adds up (about 59:xx); percent stays the strongest |
+| 65 | Leave and rejoin | Boost still there with the same time left (it doesn't count down while offline) |
+| 66 | Mystery tab | Odds text: damage 20 to 35, each 1 in 16 (6.25%); crit +5% to +10%, each 1 in 6 (16.7%) |
+| 67 | Buy the Mystery Hammer (test product id) | Toast with the rolled stats; gold and purple hammer in hand; listed under "Hammers" with "Equipped"; switching hammers and back works |
+| 68 | Admin tab: "Close now" | Store shows "The store is closed right now" for other players (a second client loses the Store button); "Open now" brings it back |
+| 69 | Admin tab: schedule from 1 minute from now for 2 minutes | Store opens at the start time and closes at the end time (within ~5 s), without anyone pressing anything |
+| 70 | Non-admin (published game, another account) | No Admin tab; firing `AdminSetMode` from the console is rejected (`[Remote] rejected AdminSetMode … not an admin`) |

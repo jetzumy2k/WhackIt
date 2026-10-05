@@ -13,8 +13,15 @@ values live in `src/config/` and formulas in `src/shared/CombatRules.luau` and `
 
 ## Hit damage
 ```
-damage = max(MinHitDamage, round(hammer.Damage × boss.DamageTakenMultiplier))
+raw    = (hammer.Damage + flatBonus) × (1 + damageBoost) × boss.DamageTakenMultiplier
+crit?  = serverRoll < critChance            -- rolled by the server only
+damage = max(MinHitDamage, round(raw × (1 + critDamage if crit)))
 ```
+- `flatBonus`: +`ZenBuffFlatDamage` (10) during the Zen buff, otherwise 0
+- `damageBoost`: Damage store boost (0.03 / 0.05 / 0.10)
+- `critChance`: `BaseCritChance` (5 %) + `ZenBuffCritChance` (5 %) during the Zen buff
+- `critDamage`: `BaseCritDamage` (+50 %) + Mystery Hammer crit damage + Crit Damage store boost
+- Crits show a bigger orange "CRIT! -N" number.
 - `hammer.Damage`: `HammerConfig`
 - `boss.DamageTakenMultiplier`: `BossConfig` (higher = boss is easier to hurt)
 - `MinHitDamage`: `GameConfig` (currently 1)
@@ -69,6 +76,9 @@ heads have their face decal hidden; newer animated (mesh) heads get the drawn fa
 original face may show through a little.
 
 ### Zen (reaching 0)
+- **Zen buff:** +`ZenBuffFlatDamage` (10) damage per hit and +`ZenBuffCritChance` (5 %) crit chance
+  for `ZenBuffSeconds` (3 minutes), shown with a countdown under the score line. It is granted on
+  every Zen, even when the coin reward isn't armed. It isn't saved.
 - **Reward:** +`ZenBonusCoins` (100) and +1 **Zen Level**. Each Zen Level permanently adds
   `ZenCoinBonusPerLevel` (+5 %) to boss coins, counting up to `ZenCoinBonusMaxLevel` (10) levels.
 - Your screen shows "ZEN ACHIEVED!"; everyone else gets a toast. Your hammer glows while you stay at 0.
@@ -93,8 +103,11 @@ sound plays on the downswing. The hit request is sent at the impact moment (`Swi
 halfway through the swing), so the boss reacts as the hammer lands. Joint animation is local, so other clients replay the strike on
 the hitter's character when the hit is confirmed. Presses during a swing are ignored.
 
-The map is an office floor (`ArenaConfig.Offices`, built by the server's `Lib/OfficeBuilder` from simple
-parts): each boss stands in **its own 32×32 office** along a carpeted corridor, with a name plate over
+The map is a two-storey office building (`ArenaConfig.Offices`, built by the server's `Lib/OfficeBuilder`
+from simple parts; ceilings with lights, office windows, a roof, and outdoor grass, street, trees and a
+city skyline from `Lib/OutdoorBuilder`). The interior uses a darker, eye-friendly palette: muted slate
+walls and ceilings, deepened carpets, dim warm lights (brightness ≤ 1, no glowing panels) and thin
+cyan/purple LED accent strips; specs cap surface brightness so it can't drift back to glare: each boss stands in **its own 32×32 office** along a carpeted corridor, with a name plate over
 the open doorway, a carpet in the boss's tint, and a desk (monitor joke per boss), chair, filing
 cabinet, plants and a themed poster, all kept clear of the boss and the walk from the door. South
 of the corridor is the lobby (welcome sign, reception desk, couches, water cooler, plants) with the
@@ -117,10 +130,10 @@ The full boss reward (100 % share, solo):
 | Boss | Score | Coins | Unlocks after |
 |---|---|---|---|
 | Deadline Boss | 100 | 10 | always open |
-| Meeting Master | 120 | 15 | 3 defeats of Deadline Boss |
-| Reply-All Boss | 150 | 20 | 3 defeats of Meeting Master |
-| Production Bug | 200 | 30 | 3 defeats of Reply-All Boss |
-| Monday Monster | 300 | 50 | 3 defeats of Production Bug |
+| Meeting Master | 120 | 15 | 1 defeat of Deadline Boss |
+| Reply-All Boss | 150 | 20 | 1 defeat of Meeting Master |
+| Production Bug | 200 | 30 | 1 defeat of Reply-All Boss |
+| Monday Monster | 300 | 50 | 1 defeat of Production Bug (lowered from 3 on 2026-10-05) |
 
 Score is the lifetime leaderboard number and never goes down; coins are spent in the hammer shop.
 Locked bosses are drawn greyed out with "LOCKED: beat <previous> xN"; swings at them don't count and
@@ -136,3 +149,60 @@ show "Defeat <previous> N more times to unlock!".
 
 A bought hammer is equipped immediately; any owned hammer can be re-equipped. Pricier hammers always
 hit harder (spec-enforced).
+
+## Player Level, leaderboard and the Senior floor (2026-10-05)
+### Player Level
+`level = floor(sqrt(Xp / LevelScoreFactor)) + 1` (`Shared/LevelRules`, factor 600). **XP** grows with
+score (each defeat's score), multiplied by any XP store boost. Score itself is never boosted, so the
+leaderboard stays fair. Level is derived from XP, never stored, and shown in the HUD and as "Lv N"
+above every head. Existing players start with XP equal to their score (schema v4).
+
+| Level | XP |
+|---|---|
+| 1 | 0 |
+| 2 | 600 |
+| 5 | 9,600 |
+| 10 | 48,600 |
+
+### Senior floor (upstairs, Level 10+)
+Stairs along the lobby's east wall lead to the upper corridor. Each ground-floor boss has a **Senior**
+version in the office directly above it: 3× HP, 3× score and coins, a gold crown and its own jokes.
+A Senior boss unlocks with **Player Level ≥ `UpstairsMinLevel` (10)** and **1 defeat of its
+ground-floor version** (`BossConfig.UnlockAfterBossId` / `UnlockDefeats` / `MinLevel`). Below the
+level its bar reads "LOCKED: reach Lv 10" and swings show "Reach Level 10 to fight this Senior boss!".
+This spreads experienced players across two floors instead of crowding one boss.
+
+### Global leaderboard
+A board on the lobby's west wall lists the all-time top 10 by lifetime score across all servers
+(`LeaderboardService`, OrderedDataStore `ScoreLeaderboard`). Scores are written from the server's saved
+data every 2 minutes (when changed) and on leave; the board refreshes every minute. Without DataStore
+access (Studio with API access off) it ranks the players in the current server and says so.
+
+### Swing feel
+The swing eases into a short anticipation pause at the top, the hammer head stretches on the
+downswing and squashes on impact, a white trail follows the fast part of the swing, and each confirmed
+hit throws a spark burst on the boss (`SwingPose.headScale` / `trailActive`, local visuals).
+
+### Music
+`AudioController` loops `MusicConfig.Tracks` with fades and a "Music: On/Off" button. The list is
+empty until licensed tracks are added (see `docs/RELEASE.md` §4).
+
+## Boss shouts (2026-10-05)
+Every boss shouts lines about its fictional "job" (`BossShoutConfig`) in a speech bubble above its
+HP bar that everyone nearby sees: one every 8–15 s (`ShoutIdleMin`/`ShoutIdleMax`) and, with a 20 %
+chance, when hit (`ShoutHitChance`, at most one shout per `ShoutCooldown` 4 s). The server picks the
+line so all players see the same shout. Lines are written by us (not players), stay family-friendly,
+and a spec rejects a blocklist of bad words, including for the angry CEO.
+
+## Executive Floor and the CEO (2026-10-05)
+- **Unlock:** defeat **every** ground-floor and Senior boss at least once (Level 10 is implied by the
+  Senior bosses). Rule: `BossConfig.UnlockAfterAllBosses` on the CEO.
+- **Getting there:** the **Executive Elevator** at the west end of the 2nd-floor corridor ("Ride up"
+  prompt; "Ride down" on the 3rd floor). The server checks access; without it a message says what's
+  missing ("defeat every boss once first (N to go)"). Anyone found on the floor without access is
+  sent back down.
+- **Stress spike:** arriving on the Executive Floor sets the Stress Meter to **100 %** (and re-arms Zen).
+- **The CEO:** a 1.6× size, crowned raid boss. **MaxHealth = 150 × the toughest other boss**
+  (`GameConfig.CeoHealthMultiplier`, derived from config: 150 × 600 = **90,000** today). Rewards
+  5,000 score and 1,000 coins, split by damage share like every boss, plus the last-hit bonus.
+  Designed for a team: roughly 30 minutes solo with the best hammer, a few minutes for ten players.

@@ -14,17 +14,20 @@ local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local BossService = require(script.Parent.BossService)
+local BuffService = require(script.Parent.BuffService)
 local CombatRules = require(ReplicatedStorage.Shared.CombatRules)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
-local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
 local HammerTool = require(ServerScriptService.Lib.HammerTool)
+local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
 local RateLimiter = require(ReplicatedStorage.Shared.RateLimiter)
+local MovementGuardService = require(script.Parent.MovementGuardService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
 local RemoteController = require(ServerScriptService.Controllers.RemoteController)
 local RemoteLimits = require(ServerScriptService.Config.RemoteLimits)
 local RewardService = require(script.Parent.RewardService)
 local SessionService = require(script.Parent.SessionService)
+local ShoutService = require(script.Parent.ShoutService)
 local StressRules = require(ReplicatedStorage.Shared.StressRules)
 local StressService = require(script.Parent.StressService)
 local Types = require(ReplicatedStorage.Shared.Types)
@@ -40,6 +43,8 @@ local REMOTE_NAME = "RequestHammerHit"
 local CombatService = {}
 
 local lastHitAt: { [Player]: number } = {}
+-- Server-side crit rolls; clients never decide crits.
+local critRandom = Random.new()
 
 -- Root position of a live character holding a hammer, or nil plus the reason.
 -- The equipped Tool only gates the swing; damage comes from EquippedHammerId.
@@ -121,8 +126,19 @@ local function onHammerHit(player: Player, rawBossInstanceId: unknown): ()
 	if data == nil then
 		return explainDrop(player, "data not loaded")
 	end
-	if not ProgressionRules.isBossUnlocked(live.State.Definition.Id, data.BossDefeats) then
+	if
+		not ProgressionRules.isBossUnlocked(
+			live.State.Definition.Id,
+			data.BossDefeats,
+			LevelRules.levelFor(data.Xp)
+		)
+	then
 		return explainDrop(player, live.State.Definition.Id .. " is locked for this player")
+	end
+
+	-- A teleport or speed hack could otherwise pass the reach check below.
+	if MovementGuardService.isSuspect(player) then
+		return explainDrop(player, "moved implausibly fast recently")
 	end
 
 	local rootPosition, notReadyReason = getSwingPosition(player)
@@ -141,20 +157,21 @@ local function onHammerHit(player: Player, rawBossInstanceId: unknown): ()
 		)
 	end
 
-	local hammer = HammerConfig.ById[data.EquippedHammerId]
-	if hammer == nil then
+	local stats = BuffService.statsFor(player)
+	if stats == nil then
 		return RemoteController.reject(player, REMOTE_NAME, "no equipped hammer")
 	end
 
-	local result = BossService.applyHit(
-		live,
-		player.UserId,
-		CombatRules.computeHitDamage(hammer, live.State.Definition)
-	)
+	local damage, isCrit =
+		CombatRules.hitDamage(stats, live.State.Definition, critRandom:NextNumber())
+	local result = BossService.applyHit(live, player.UserId, damage)
 	if result == nil then
 		return
 	end
 	lastHitAt[player] = now
+	if not result.Defeated then
+		ShoutService.onHit(live)
+	end
 
 	data.TotalHits += 1
 	StressService.noteActivity(player)
@@ -167,6 +184,7 @@ local function onHammerHit(player: Player, rawBossInstanceId: unknown): ()
 		MaxHealth = live.State.Definition.MaxHealth,
 		Damage = result.Applied,
 		HitterUserId = player.UserId,
+		Crit = isCrit,
 		Defeated = result.Defeated,
 	}
 	CombatRemotes.CombatFeedback:FireAllClients(feedback)

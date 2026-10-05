@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
+local HammerRules = require(ReplicatedStorage.Shared.HammerRules)
 local HammerService = require(script.Parent.HammerService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressService = require(script.Parent.ProgressService)
@@ -29,7 +30,10 @@ local ShopService = {}
 
 local function readHammerId(player: Player, remoteName: string, raw: unknown): string?
 	local hammerId = Validate.id(raw, RemoteLimits.MaxIdLength)
-	if hammerId == nil or HammerConfig.ById[hammerId] == nil then
+	if
+		hammerId == nil
+		or (HammerConfig.ById[hammerId] == nil and not HammerRules.isMysteryId(hammerId))
+	then
 		RemoteController.reject(player, remoteName, "invalid hammerId")
 		return nil
 	end
@@ -66,10 +70,9 @@ local function onEquip(player: Player, raw: unknown): ()
 		return
 	end
 
-	if
-		ProgressionRules.ownsHammer(hammerId, data.OwnedHammers)
-		and data.EquippedHammerId ~= hammerId
-	then
+	local owns = ProgressionRules.ownsHammer(hammerId, data.OwnedHammers)
+		or data.MysteryHammers[hammerId] ~= nil
+	if owns and data.EquippedHammerId ~= hammerId then
 		equip(player, hammerId)
 	end
 	ProgressService.sync(player)

@@ -1,8 +1,9 @@
 --!strict
 --[[
-	Shows each player's stress on their character, visible to everyone:
+	Shows each player's state on their character, visible to everyone:
 	  * the face (Lib/MoodFace) follows the mood band of their stress;
-	  * the held hammer glows (light + sparkles) while they're in Zen (0 stress).
+	  * the held hammer glows (light + sparkles) while they're in Zen (0 stress);
+	  * a "Lv N" tag floats above their head (Player Level).
 	Driven by the Player's "Stress" attribute (StressService), so it reacts to
 	hits, defeats, Zen and stress creeping back alike.
 ]]
@@ -18,6 +19,7 @@ local StressRules = require(ReplicatedStorage.Shared.StressRules)
 local MoodService = {}
 
 local GLOW_NAME = "ZenGlow"
+local LEVEL_TAG_NAME = "LevelTag"
 local GLOW_COLOR = Color3.fromRGB(255, 225, 120)
 
 local watched: { [Player]: boolean } = {}
@@ -59,6 +61,34 @@ local function setGlow(tool: Tool, on: boolean): ()
 	end
 end
 
+-- "Lv N" above the head; created once per character, text updated in place.
+local function setLevelTag(head: BasePart, level: number): ()
+	local tag = head:FindFirstChild(LEVEL_TAG_NAME)
+	if tag == nil then
+		local billboard = Instance.new("BillboardGui")
+		billboard.Name = LEVEL_TAG_NAME
+		billboard.Size = UDim2.fromOffset(90, 26)
+		billboard.StudsOffset = Vector3.new(0, 2.6, 0)
+		billboard.MaxDistance = 80
+		billboard.AlwaysOnTop = false
+		local label = Instance.new("TextLabel")
+		label.Name = "Text"
+		label.BackgroundTransparency = 1
+		label.Size = UDim2.fromScale(1, 1)
+		label.Font = Enum.Font.FredokaOne
+		label.TextScaled = true
+		label.TextColor3 = Color3.fromRGB(255, 230, 120)
+		label.TextStrokeTransparency = 0.3
+		label.Parent = billboard
+		billboard.Parent = head
+		tag = billboard
+	end
+	local label = if tag then tag:FindFirstChild("Text") else nil
+	if label and label:IsA("TextLabel") then
+		label.Text = "Lv " .. level
+	end
+end
+
 local function refresh(player: Player): ()
 	local maybeMood = currentMood(player)
 	local character = player.Character
@@ -70,6 +100,10 @@ local function refresh(player: Player): ()
 	local head = character:FindFirstChild("Head")
 	if head and head:IsA("BasePart") then
 		MoodFace.apply(head, mood)
+		local level = player:GetAttribute(Attributes.Level)
+		if typeof(level) == "number" then
+			setLevelTag(head, level)
+		end
 	end
 	for _, child in character:GetChildren() do
 		if child:IsA("Tool") and child:GetAttribute(Attributes.HammerId) ~= nil then
@@ -94,6 +128,9 @@ local function watch(player: Player): ()
 	end
 	watched[player] = true
 	player:GetAttributeChangedSignal(Attributes.Stress):Connect(function()
+		refresh(player)
+	end)
+	player:GetAttributeChangedSignal(Attributes.Level):Connect(function()
 		refresh(player)
 	end)
 	player.CharacterAdded:Connect(function(character: Model)

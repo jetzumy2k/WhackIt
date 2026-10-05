@@ -42,7 +42,8 @@ type Entry = {
 	Visual: Model,
 	Phase: number, -- de-syncs idle motion between bosses
 	Yaw: number,
-	Scale: number,
+	Scale: number, -- current animation scale (1 = normal)
+	BaseScale: number, -- the boss's configured size (BossVisualConfig.Scale)
 	LastHealth: number?,
 	HitAt: number?,
 	DefeatedAt: number?,
@@ -113,6 +114,9 @@ function attach(boss: Model): ()
 	end
 
 	local visual = BossVisual.build(look)
+	if look.Scale ~= 1 then
+		visual:ScaleTo(look.Scale)
+	end
 	visual:PivotTo(body.CFrame)
 	local originalColors: { [BasePart]: Color3 } = {}
 	for _, descendant in visual:GetDescendants() do
@@ -128,6 +132,7 @@ function attach(boss: Model): ()
 		Phase = math.random() * math.pi * 2,
 		Yaw = 0,
 		Scale = 1,
+		BaseScale = look.Scale,
 		LastHealth = numberAttribute(boss, Attributes.Health),
 		HitAt = nil,
 		DefeatedAt = if boss:GetAttribute(Attributes.Defeated) == true then os.clock() else nil,
@@ -192,7 +197,7 @@ local function animate(entry: Entry, now: number, dt: number): ()
 			* CFrame.Angles(lean, 0, 0)
 	)
 	if math.abs(scale - entry.Scale) > 0.001 then
-		entry.Visual:ScaleTo(scale)
+		entry.Visual:ScaleTo(scale * entry.BaseScale)
 		entry.Scale = scale
 	end
 end

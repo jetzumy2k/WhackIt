@@ -1,8 +1,14 @@
 --!strict
--- Boss definitions. List order is the display AND unlock order; ById is for lookups.
+-- Boss definitions. List order is the display order; ById is for lookups.
 -- DamageTakenMultiplier scales hammer damage (see docs/GAMEPLAY_RULES.md).
--- UnlockDefeats: rewarded defeats of the PREVIOUS boss in List needed to unlock
--- this one (0 for the first boss).
+-- Unlocking (Shared/ProgressionRules): a boss with UnlockAfterBossId needs
+-- UnlockDefeats rewarded defeats of that boss, and MinLevel Player Level if set.
+-- Ground-floor bosses chain one after another; Senior bosses (upstairs) need
+-- GameConfig.UpstairsMinLevel and one defeat of their ground-floor version.
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 
 export type BossDefinition = {
 	Id: string,
@@ -12,13 +18,21 @@ export type BossDefinition = {
 	DamageTakenMultiplier: number,
 	ScoreReward: number,
 	CoinReward: number,
+	UnlockAfterBossId: string?,
 	UnlockDefeats: number,
+	MinLevel: number?,
+	-- Unlocks only once every other boss has been defeated at least once (the CEO).
+	UnlockAfterAllBosses: boolean?,
 }
 
 export type BossConfig = {
 	List: { BossDefinition },
 	ById: { [string]: BossDefinition },
 }
+
+-- Senior bosses live upstairs: three times the HP and rewards of their
+-- ground-floor version, for experienced players (GameConfig.UpstairsMinLevel).
+local SENIOR_MIN_LEVEL = GameConfig.UpstairsMinLevel
 
 local list: { BossDefinition } = {
 	{
@@ -40,7 +54,8 @@ local list: { BossDefinition } = {
 		DamageTakenMultiplier = 0.8,
 		ScoreReward = 120,
 		CoinReward = 15,
-		UnlockDefeats = 3,
+		UnlockAfterBossId = "deadline_boss",
+		UnlockDefeats = 1,
 	},
 
 	{
@@ -51,7 +66,8 @@ local list: { BossDefinition } = {
 		DamageTakenMultiplier = 1.2,
 		ScoreReward = 150,
 		CoinReward = 20,
-		UnlockDefeats = 3,
+		UnlockAfterBossId = "meeting_master",
+		UnlockDefeats = 1,
 	},
 
 	{
@@ -62,7 +78,8 @@ local list: { BossDefinition } = {
 		DamageTakenMultiplier = 1.5,
 		ScoreReward = 200,
 		CoinReward = 30,
-		UnlockDefeats = 3,
+		UnlockAfterBossId = "reply_all_boss",
+		UnlockDefeats = 1,
 	},
 
 	{
@@ -73,9 +90,94 @@ local list: { BossDefinition } = {
 		DamageTakenMultiplier = 2.0,
 		ScoreReward = 300,
 		CoinReward = 50,
-		UnlockDefeats = 3,
+		UnlockAfterBossId = "production_bug",
+		UnlockDefeats = 1,
+	},
+
+	{
+		Id = "senior_deadline_boss",
+		DisplayName = "Senior Deadline Boss",
+		Description = "The deadline moved up. To yesterday.",
+		MaxHealth = 300,
+		DamageTakenMultiplier = 1.0,
+		ScoreReward = 300,
+		CoinReward = 30,
+		UnlockAfterBossId = "deadline_boss",
+		UnlockDefeats = 1,
+		MinLevel = SENIOR_MIN_LEVEL,
+	},
+
+	{
+		Id = "senior_meeting_master",
+		DisplayName = "Senior Meeting Master",
+		Description = "Schedules meetings about meetings.",
+		MaxHealth = 360,
+		DamageTakenMultiplier = 0.8,
+		ScoreReward = 360,
+		CoinReward = 45,
+		UnlockAfterBossId = "meeting_master",
+		UnlockDefeats = 1,
+		MinLevel = SENIOR_MIN_LEVEL,
+	},
+
+	{
+		Id = "senior_reply_all_boss",
+		DisplayName = "Senior Reply-All Boss",
+		Description = "CCs the entire company on every thought.",
+		MaxHealth = 240,
+		DamageTakenMultiplier = 1.2,
+		ScoreReward = 450,
+		CoinReward = 60,
+		UnlockAfterBossId = "reply_all_boss",
+		UnlockDefeats = 1,
+		MinLevel = SENIOR_MIN_LEVEL,
+	},
+
+	{
+		Id = "senior_production_bug",
+		DisplayName = "Senior Production Bug",
+		Description = "Only appears on Friday at 4:59 PM.",
+		MaxHealth = 450,
+		DamageTakenMultiplier = 1.5,
+		ScoreReward = 600,
+		CoinReward = 90,
+		UnlockAfterBossId = "production_bug",
+		UnlockDefeats = 1,
+		MinLevel = SENIOR_MIN_LEVEL,
+	},
+
+	{
+		Id = "senior_monday_monster",
+		DisplayName = "Senior Monday Monster",
+		Description = "Every day is Monday now.",
+		MaxHealth = 600,
+		DamageTakenMultiplier = 2.0,
+		ScoreReward = 900,
+		CoinReward = 150,
+		UnlockAfterBossId = "monday_monster",
+		UnlockDefeats = 1,
+		MinLevel = SENIOR_MIN_LEVEL,
 	},
 }
+
+-- The CEO (3rd-floor raid boss): HP is CeoHealthMultiplier x the toughest
+-- other boss, derived so it stays true when other bosses change. A team effort.
+local toughest = 0
+for _, boss in list do
+	toughest = math.max(toughest, boss.MaxHealth)
+end
+table.insert(list, {
+	Id = "the_ceo",
+	DisplayName = "The CEO",
+	Description = "Has never once read the whole email.",
+	MaxHealth = toughest * GameConfig.CeoHealthMultiplier,
+	DamageTakenMultiplier = 1.0,
+	ScoreReward = 5000,
+	CoinReward = 1000,
+	UnlockDefeats = 0,
+	MinLevel = SENIOR_MIN_LEVEL,
+	UnlockAfterAllBosses = true,
+})
 
 local byId: { [string]: BossDefinition } = {}
 for _, boss in list do

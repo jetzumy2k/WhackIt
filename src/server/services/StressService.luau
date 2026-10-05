@@ -15,6 +15,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Attributes = require(ReplicatedStorage.Shared.Attributes)
+local BuffService = require(script.Parent.BuffService)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressService = require(script.Parent.ProgressService)
@@ -39,6 +40,7 @@ local function celebrateZen(player: Player, data: PlayerDataService.PlayerData):
 	data.ZenArmed = false
 	data.ZenLevel += 1
 	SessionService.addCoins(player, GameConfig.ZenBonusCoins)
+	BuffService.grantZenBuff(player)
 	ProgressService.sync(player)
 
 	local payload: Types.ZenAchieved = {
@@ -53,6 +55,19 @@ end
 -- Records an accepted hit: resets the idle timer for stress coming back.
 function StressService.noteActivity(player: Player): ()
 	lastActivityAt[player] = os.clock()
+end
+
+-- Sets stress straight to the maximum (entering the Executive Floor). Re-arms
+-- Zen, since the player now has a full meter to work back down.
+function StressService.spike(player: Player): ()
+	local data = PlayerDataService.get(player)
+	if data == nil then
+		return
+	end
+	data.Stress = GameConfig.MaxStress
+	data.ZenArmed = true
+	lastActivityAt[player] = os.clock()
+	publish(player, data.Stress)
 end
 
 -- Returns the stress actually relieved (less than requested near zero).

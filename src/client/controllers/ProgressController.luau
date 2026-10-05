@@ -30,6 +30,44 @@ local function stringList(value: unknown): { string }?
 	return list
 end
 
+local function parseBuffs(value: unknown): { [string]: { Percent: number, SecondsLeft: number } }
+	local buffs: { [string]: { Percent: number, SecondsLeft: number } } = {}
+	if typeof(value) == "table" then
+		for kind, entry in value :: { [unknown]: unknown } do
+			if typeof(kind) == "string" and typeof(entry) == "table" then
+				local raw = entry :: { [string]: unknown }
+				local percent, seconds = raw.Percent, raw.SecondsLeft
+				if typeof(percent) == "number" and typeof(seconds) == "number" then
+					buffs[kind] = { Percent = percent, SecondsLeft = seconds }
+				end
+			end
+		end
+	end
+	return buffs
+end
+
+local function parseMystery(
+	value: unknown
+): { { Id: string, Damage: number, CritDamagePercent: number } }
+	local list: { { Id: string, Damage: number, CritDamagePercent: number } } = {}
+	if typeof(value) == "table" then
+		for _, entry in value :: { unknown } do
+			if typeof(entry) == "table" then
+				local raw = entry :: { [string]: unknown }
+				local id, damage, crit = raw.Id, raw.Damage, raw.CritDamagePercent
+				if
+					typeof(id) == "string"
+					and typeof(damage) == "number"
+					and typeof(crit) == "number"
+				then
+					table.insert(list, { Id = id, Damage = damage, CritDamagePercent = crit })
+				end
+			end
+		end
+	end
+	return list
+end
+
 -- Server messages are still checked so a malformed one can't break the UI.
 local function parse(payload: unknown): Types.ProfileSnapshot?
 	if typeof(payload) ~= "table" then
@@ -38,14 +76,16 @@ local function parse(payload: unknown): Types.ProfileSnapshot?
 	local data = payload :: { [string]: unknown }
 	local owned = stringList(data.OwnedHammerIds)
 	local unlocked = stringList(data.UnlockedBossIds)
-	local coins, equipped, rawDefeats, zenLevel =
-		data.Coins, data.EquippedHammerId, data.BossDefeats, data.ZenLevel
+	local coins, equipped, rawDefeats, zenLevel, level, xp =
+		data.Coins, data.EquippedHammerId, data.BossDefeats, data.ZenLevel, data.Level, data.Xp
 	if
 		owned == nil
 		or unlocked == nil
 		or typeof(coins) ~= "number"
 		or typeof(equipped) ~= "string"
 		or typeof(zenLevel) ~= "number"
+		or typeof(level) ~= "number"
+		or typeof(xp) ~= "number"
 	then
 		return nil
 	end
@@ -66,6 +106,10 @@ local function parse(payload: unknown): Types.ProfileSnapshot?
 		BossDefeats = defeats,
 		UnlockedBossIds = unlocked,
 		ZenLevel = zenLevel,
+		Level = level,
+		Xp = xp,
+		Buffs = parseBuffs(data.Buffs),
+		MysteryHammers = parseMystery(data.MysteryHammers),
 	}
 end
 
@@ -84,7 +128,9 @@ end
 
 function ProgressController.unlockStatus(bossId: string): ProgressionRules.UnlockStatus?
 	local current = snapshot
-	return if current then ProgressionRules.unlockStatus(bossId, current.BossDefeats) else nil
+	return if current
+		then ProgressionRules.unlockStatus(bossId, current.BossDefeats, current.Level)
+		else nil
 end
 
 function ProgressController.ownsHammer(hammerId: string): boolean

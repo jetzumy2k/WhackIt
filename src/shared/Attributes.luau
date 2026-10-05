@@ -9,9 +9,13 @@ return table.freeze({
 	Health = "Health",
 	MaxHealth = "MaxHealth",
 	Defeated = "Defeated",
+	ShoutText = "ShoutText", -- latest speech-bubble line
+	ShoutSeq = "ShoutSeq", -- increments on every shout, so repeats still show
 
 	-- On each Player
 	Stress = "Stress",
+	Level = "Level", -- Player Level, derived from XP
+	ZenBuffEnds = "ZenBuffEnds", -- workspace:GetServerTimeNow() when the Zen buff ends (0 = none)
 
 	-- On each hammer Tool (server-created); marks it as a hammer
 	HammerId = "HammerId",

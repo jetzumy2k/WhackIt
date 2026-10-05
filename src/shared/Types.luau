@@ -14,6 +14,7 @@ export type CombatFeedback = {
 	Damage: number,
 	HitterUserId: number,
 	Defeated: boolean,
+	Crit: boolean, -- a critical hit (bigger damage number)
 }
 
 -- Combat.BossDefeated (server -> each contributing player).
@@ -45,6 +46,12 @@ export type ProfileSnapshot = {
 	BossDefeats: { [string]: number },
 	UnlockedBossIds: { string },
 	ZenLevel: number,
+	Level: number, -- Player Level (Shared/LevelRules), from Xp
+	Xp: number,
+	-- Active store buffs: kind ("Xp" | "Damage" | "CritDamage") -> percent and play-time left.
+	Buffs: { [string]: { Percent: number, SecondsLeft: number } },
+	-- Owned Mystery Hammers with their rolled stats.
+	MysteryHammers: { { Id: string, Damage: number, CritDamagePercent: number } },
 }
 
 return {}

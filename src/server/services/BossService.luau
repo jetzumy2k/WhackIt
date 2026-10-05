@@ -18,6 +18,7 @@ local BossConfig = require(ReplicatedStorage.Config.BossConfig)
 local BossState = require(ServerScriptService.Lib.BossState)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local OfficeBuilder = require(ServerScriptService.Lib.OfficeBuilder)
+local OutdoorBuilder = require(ServerScriptService.Lib.OutdoorBuilder)
 
 export type LiveBoss = {
 	State: BossState.BossState,
@@ -49,7 +50,7 @@ local function buildModel(
 	local body = Instance.new("Part")
 	body.Name = "Body"
 	body.Anchored = true
-	body.Size = ArenaConfig.PlaceholderBossSize
+	body.Size = spawn.Size
 	body.Color = ArenaConfig.PlaceholderBossColor
 	body.Material = Enum.Material.SmoothPlastic
 	-- Invisible hitbox: each client draws the cartoon monster over it (Shared/BossVisual).
@@ -90,6 +91,17 @@ local function scheduleRespawn(live: LiveBoss): ()
 	end)
 end
 
+-- Every boss that can currently be hit (for ShoutService).
+function BossService.allLive(): { LiveBoss }
+	local list: { LiveBoss } = {}
+	for _, live in liveBosses do
+		if not live.State.Defeated then
+			table.insert(list, live)
+		end
+	end
+	return list
+end
+
 -- Returns the boss only while it can still be hit.
 function BossService.getLive(instanceId: string): LiveBoss?
 	local live = liveBosses[instanceId]
@@ -115,8 +127,9 @@ function BossService.applyHit(live: LiveBoss, userId: number, damage: number): B
 end
 
 function BossService.init(): ()
-	-- The offices the bosses stand in (ArenaConfig.Offices).
+	-- The office building the bosses stand in (ArenaConfig) and its surroundings.
 	OfficeBuilder.build(Workspace)
+	OutdoorBuilder.build(Workspace, Workspace.Terrain)
 
 	local folder = Instance.new("Folder")
 	folder.Name = "Bosses"
