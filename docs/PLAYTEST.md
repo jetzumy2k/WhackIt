@@ -23,7 +23,7 @@ Record the date, build (commit) and result for each run in the PR.
 | 5 | Defeat the boss | HP bar shows `DEFEATED!`, the monster spins and shrinks away, Victory Card `+100 score -5 stress`, Score `100` in HUD and player list |
 | 6 | Wait ~5 s | A fresh boss at `100 / 100` replaces it; hitting works again |
 | 7 | Reset character (Esc → Reset) mid-fight | You respawn holding a new hammer; HUD and HP bars stay; hitting works again |
-| 8 | Output window | No red errors. No `[Remote] rejected` warnings during normal play. In Studio the server prints `[Combat] hit from <name> ignored: <reason>` (max once/s) for swings that don't land, e.g. `out of reach (14.2 > 12 studs)`. If a hit you expected doesn't land, copy that line into your report |
+| 8 | Output window | No red errors. No `[Remote] rejected` warnings during normal play. In Studio the server prints `[Combat] hit from <name> ignored: <reason>` (max once/s) for swings that don't land, e.g. `out of reach (14.2 > 12 studs)`. If a hit you expected doesn't land, copy that line into your report. If the arm doesn't swing, look for `[SwingAnimator] no right-shoulder joint …` and include it |
 
 ### Shared boss (Test → Clients and Servers → 2 or 3 players → Start)
 | # | Check | Expected |

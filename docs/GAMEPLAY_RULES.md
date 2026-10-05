@@ -69,7 +69,8 @@ a lean-back hop on each confirmed hit, and a spin-and-shrink on defeat.
 
 Every player is handed their hammer Tool on spawn (`HammerService`, built by `Lib/HammerTool`).
 Clicking, tapping or pressing R2 starts a full swing (`Shared/SwingPose`, played by the client's
-`Lib/SwingAnimator` on the arm, elbow and waist joints): wind-up over the shoulder, a fast
+`Lib/SwingAnimator` by rotating the shoulder, elbow and waist joint offsets, `Motor6D.C0` or an
+`AnimationConstraint`'s attachment, on top of the playing animations): wind-up over the shoulder, a fast
 downward strike, follow-through and recovery, with Roblox's built-in swing sound on the downswing.
 The hit request is sent at the impact moment (`SwingPose.IMPACT`, 55 % through the swing), so the
 boss reacts as the hammer lands. Joint animation is local, so other clients replay the strike on
