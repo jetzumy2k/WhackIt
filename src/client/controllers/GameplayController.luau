@@ -63,7 +63,7 @@ function GameplayController.getNearestBossInReach(): (string?, string?)
 		local distance = (root.Position - body.Position).Magnitude
 		local bossId = child:GetAttribute(Attributes.BossId)
 		if
-			CombatRules.isInReach(root.Position, body.Position)
+			CombatRules.isInReach(root.Position, body.Position, 0)
 			and distance < nearestDistance
 			and typeof(bossId) == "string"
 		then

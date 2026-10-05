@@ -21,6 +21,8 @@ local GameConfig = table.freeze({
 	-- Studs from the player's root part to the boss centre. Matches how far the swung
 	-- hammer visibly reaches (arm + handle ~5 studs past a 3-stud boss radius).
 	HitReach = 9,
+	-- Extra studs the server allows on reach for network lag; the client uses HitReach exactly.
+	HitReachGrace = 1.5,
 
 	-- Shared bosses (docs/GAMEPLAY_RULES.md)
 	MinRewardDamageShare = 0.1, -- fraction of boss MaxHealth a player must deal to be rewarded

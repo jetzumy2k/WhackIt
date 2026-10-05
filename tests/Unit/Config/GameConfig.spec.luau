@@ -24,6 +24,11 @@ return function()
 			expect(GameConfig.HitCooldownGrace < GameConfig.HitCooldown).to.equal(true)
 		end)
 
+		it("keeps the reach lag grace small next to the reach itself", function()
+			expect(GameConfig.HitReachGrace >= 0).to.equal(true)
+			expect(GameConfig.HitReachGrace <= GameConfig.HitReach / 4).to.equal(true)
+		end)
+
 		it("uses a reward share between 0 and 1 and a positive respawn delay", function()
 			expect(GameConfig.MinRewardDamageShare > 0).to.equal(true)
 			expect(GameConfig.MinRewardDamageShare <= 1).to.equal(true)

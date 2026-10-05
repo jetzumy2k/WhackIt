@@ -92,15 +92,26 @@ return function()
 	describe("CombatRules.isInReach", function()
 		it("accepts positions within HitReach, inclusive", function()
 			local origin = Vector3.new(0, 0, 0)
-			expect(CombatRules.isInReach(origin, Vector3.new(GameConfig.HitReach, 0, 0))).to.equal(
+			expect(CombatRules.isInReach(origin, Vector3.new(GameConfig.HitReach, 0, 0), 0)).to.equal(
 				true
 			)
-			expect(CombatRules.isInReach(origin, origin)).to.equal(true)
+			expect(CombatRules.isInReach(origin, origin, 0)).to.equal(true)
 		end)
 
 		it("rejects positions beyond HitReach", function()
 			local beyond = Vector3.new(GameConfig.HitReach + 0.1, 0, 0)
-			expect(CombatRules.isInReach(Vector3.new(0, 0, 0), beyond)).to.equal(false)
+			expect(CombatRules.isInReach(Vector3.new(0, 0, 0), beyond, 0)).to.equal(false)
+		end)
+
+		it("forgives exactly the server's lag grace and no more", function()
+			local origin = Vector3.new(0, 0, 0)
+			local grace = GameConfig.HitReachGrace
+			-- 9.1 studs: just outside the client's reach, inside the server's.
+			local edge = Vector3.new(GameConfig.HitReach + 0.1, 0, 0)
+			expect(CombatRules.isInReach(origin, edge, 0)).to.equal(false)
+			expect(CombatRules.isInReach(origin, edge, grace)).to.equal(true)
+			local farBeyond = Vector3.new(GameConfig.HitReach + grace + 0.1, 0, 0)
+			expect(CombatRules.isInReach(origin, farBeyond, grace)).to.equal(false)
 		end)
 	end)
 end

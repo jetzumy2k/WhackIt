@@ -46,7 +46,7 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 | Client controllers (Input, Gameplay, UI, Feedback, Audio) | 🟡 4 of 5 (+ BossVisual, HammerPose, Progress, Shop) | Audio deferred: needs uploaded/licensed sound assets |
 | UI screens | 🟡 Code-built placeholder | HUD (Stress Meter, score, hint), boss HP billboards, Victory Card. Art pass in Phase 4 |
 | Arena | 🟡 Placeholder | Floor + spawn in `default.project.json`; bosses are code-built cartoon monsters (`BossVisualConfig`) until real art |
-| Tests (TestEZ) | 🟡 | 137 specs. 108 passed in Studio; 29 new (ProgressionRules, schema v2, reward guard, config) pass static checks, **not yet run in Studio** |
+| Tests (TestEZ) | 🟡 | 139 specs. 137 passed in Studio (2026-10-05); 2 new reach-grace specs pass static checks, not yet run in Studio |
 | Checks script | ✅ | `scripts/check.ps1` (format, lint, type-check, build; `-Tests` for TestEZ) |
 | Docs | 🟡 | `DEVELOPMENT_WORKFLOW`, `GAMEPLAY_RULES`, `REMOTE_CONTRACTS`, `PLAYTEST` current; `DATA_SCHEMA` still a template (Phase 3) |
 | CI | ✅ | `.github/workflows/ci.yml` green on GitHub; `actions/checkout` moved to v7 (Node 24) |
@@ -217,6 +217,6 @@ Security/abuse pass, performance (MicroProfiler, remote traffic, memory per play
 
 ## 7. Immediate next steps
 
-1. **You:** run `build/tests.rbxl` (expect 137 passed) and `docs/PLAYTEST.md` checks 23–32.
+1. **You:** run `build/tests.rbxl` (expect 139 passed) and `docs/PLAYTEST.md` checks 23–32.
 2. PR + CI + merge `feat/phase4-progression`.
 3. Before release: `docs/PLAYTEST.md` checks 9–17 (multiplayer, abuse).

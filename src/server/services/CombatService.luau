@@ -132,11 +132,15 @@ local function onHammerHit(player: Player, rawBossInstanceId: unknown): ()
 	if rootPosition == nil then
 		return explainDrop(player, notReadyReason or "not ready")
 	end
-	if not CombatRules.isInReach(rootPosition, live.Body.Position) then
+	if not CombatRules.isInReach(rootPosition, live.Body.Position, GameConfig.HitReachGrace) then
 		local distance = (rootPosition - live.Body.Position).Magnitude
 		return explainDrop(
 			player,
-			string.format("out of reach (%.1f > %d studs)", distance, GameConfig.HitReach)
+			string.format(
+				"out of reach (%.1f > %.1f studs)",
+				distance,
+				GameConfig.HitReach + GameConfig.HitReachGrace
+			)
 		)
 	end
 
