@@ -1,0 +1,130 @@
+--!strict
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+
+local ArenaConfig = require(ReplicatedStorage.Config.ArenaConfig)
+local BossConfig = require(ReplicatedStorage.Config.BossConfig)
+local OfficeBuilder = require(ServerScriptService.Lib.OfficeBuilder)
+
+-- Free space kept around each boss so players can walk up and swing.
+local BOSS_CLEARANCE = 7
+
+local function build(): Folder
+	local holder = Instance.new("Folder")
+	return OfficeBuilder.build(holder)
+end
+
+local function parts(root: Instance): { BasePart }
+	local list: { BasePart } = {}
+	for _, descendant in root:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			table.insert(list, descendant)
+		end
+	end
+	return list
+end
+
+local function flatDistance(a: Vector3, b: Vector3): number
+	return Vector2.new(a.X - b.X, a.Z - b.Z).Magnitude
+end
+
+-- Whether `point` lies inside the part's (axis-aligned) box.
+local function contains(part: BasePart, point: Vector3): boolean
+	local localPoint = part.CFrame:PointToObjectSpace(point)
+	local half = part.Size / 2
+	return math.abs(localPoint.X) <= half.X
+		and math.abs(localPoint.Y) <= half.Y
+		and math.abs(localPoint.Z) <= half.Z
+end
+
+return function()
+	describe("OfficeBuilder.build", function()
+		it("builds one office per boss", function()
+			local office = build()
+			for _, boss in BossConfig.List do
+				expect(office:FindFirstChild(boss.DisplayName .. " Office")).never.to.equal(nil)
+			end
+			office:Destroy()
+		end)
+
+		it("anchors every part", function()
+			local office = build()
+			for _, p in parts(office) do
+				expect(p.Anchored).to.equal(true)
+			end
+			office:Destroy()
+		end)
+
+		it("puts each boss inside its own office", function()
+			local half = ArenaConfig.OfficeSize / 2
+			for _, entry in ArenaConfig.Offices do
+				for _, spawn in ArenaConfig.BossSpawns do
+					if spawn.BossId == entry.BossId then
+						local offset = spawn.Position - entry.Center
+						expect(math.abs(offset.X) < half.X - BOSS_CLEARANCE).to.equal(true)
+						expect(math.abs(offset.Z) < half.Z - BOSS_CLEARANCE).to.equal(true)
+					end
+				end
+			end
+		end)
+
+		it("keeps furniture clear of every boss", function()
+			local office = build()
+			for _, p in parts(office) do
+				if p:GetAttribute(OfficeBuilder.FURNITURE_ATTRIBUTE) then
+					for _, spawn in ArenaConfig.BossSpawns do
+						expect(flatDistance(p.Position, spawn.Position) >= BOSS_CLEARANCE).to.equal(
+							true
+						)
+					end
+				end
+			end
+			office:Destroy()
+		end)
+
+		it("keeps the walk from each door to its boss free of furniture", function()
+			local office = build()
+			local doorHalf = ArenaConfig.DoorWidth / 2
+			local frontZ = ArenaConfig.OfficeSize.Z / 2
+			for _, entry in ArenaConfig.Offices do
+				for _, p in parts(office) do
+					if p:GetAttribute(OfficeBuilder.FURNITURE_ATTRIBUTE) then
+						local offset = p.Position - entry.Center
+						local inPath = math.abs(offset.X) < doorHalf
+							and offset.Z > 0
+							and offset.Z < frontZ
+						expect(inPath).to.equal(false)
+					end
+				end
+			end
+			office:Destroy()
+		end)
+
+		it("leaves each doorway open", function()
+			local office = build()
+			for _, entry in ArenaConfig.Offices do
+				local doorway = entry.Center
+					+ Vector3.new(0, ArenaConfig.DoorHeight / 2, ArenaConfig.OfficeSize.Z / 2)
+				for _, p in parts(office) do
+					expect(contains(p, doorway)).to.equal(false)
+				end
+			end
+			office:Destroy()
+		end)
+
+		it("keeps the spawn point in the lobby, clear of rooms and props", function()
+			local office = build()
+			local spawn = ArenaConfig.SpawnPosition + Vector3.new(0, 3, 0)
+			for _, p in parts(office) do
+				expect(contains(p, spawn)).to.equal(false)
+			end
+			for _, entry in ArenaConfig.Offices do
+				expect(math.abs(spawn.Z - entry.Center.Z) > ArenaConfig.OfficeSize.Z / 2).to.equal(
+					true
+				)
+			end
+			office:Destroy()
+		end)
+	end)
+end

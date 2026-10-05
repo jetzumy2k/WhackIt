@@ -79,9 +79,13 @@ sound plays on the downswing. The hit request is sent at the impact moment (`Swi
 halfway through the swing), so the boss reacts as the hammer lands. Joint animation is local, so other clients replay the strike on
 the hitter's character when the hit is confirmed. Presses during a swing are ignored.
 
-The floor and player spawn are in `default.project.json` (`Workspace.Arena`). All five bosses stand at
-stations in an arc facing the spawn, 20 studs apart (more than twice `HitReach`, so one swing can only
-reach one boss).
+The map is an office floor (`ArenaConfig.Offices`, built by the server's `Lib/OfficeBuilder` from simple
+parts): each boss stands in **its own 32×32 office** along a carpeted corridor, with a name plate over
+the open doorway, a carpet in the boss's tint, and a desk (monitor joke per boss), chair, filing
+cabinet, plants and a themed poster, all kept clear of the boss and the walk from the door. South
+of the corridor is the lobby (welcome sign, reception desk, couches, water cooler, plants) with the
+player spawn. Offices are 34 studs apart, so one swing can only reach one boss. The base floor and
+spawn are in `default.project.json` (`Workspace.Arena`).
 
 ## Progression (Phase 4, decided 2026-10-05)
 Rules in `src/shared/ProgressionRules.luau` (server enforces, client displays); values in `BossConfig`

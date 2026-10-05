@@ -58,7 +58,7 @@ works but nothing is kept between Play sessions.
 ## Phase 4: rewards, unlocks and shop
 | # | Check | Expected |
 |---|---|---|
-| 23 | Spawn | Five monsters in an arc; only Deadline Boss in colour, the other four grey with "LOCKED: beat …" bars. HUD shows `Score: … Coins: …`; a "Hammers" button bottom-right |
+| 23 | Spawn | You start in the lobby facing a corridor of five offices, each with a name plate over its door; inside each office a monster stands between the desk, cabinet and plants. Only Deadline Boss is in colour, the other four grey with "LOCKED: beat …" bars. HUD shows `Score: … Coins: …`; a "Hammers" button bottom-right |
 | 24 | Swing at a locked boss | Swing plays, toast "Defeat Deadline Boss 3 more times to unlock!", no damage |
 | 25 | Defeat Deadline Boss | Victory Card `+100 score +10 coins -5 stress`; Coins in HUD and player list +10 |
 | 26 | Defeat it 3 times total | Third Victory Card adds "NEW BOSS UNLOCKED: Meeting Master!"; Meeting Master turns colourful and can be hit |
