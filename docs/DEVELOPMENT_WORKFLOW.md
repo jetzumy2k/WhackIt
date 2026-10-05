@@ -5,6 +5,8 @@
 4. Implement the smallest clean change.
 5. Format/lint/type-check: `scripts/check.ps1` (see below).
 6. Run tests: `scripts/check.ps1 -Tests`, or open `build/tests.rbxl` in Studio and press Run (F8).
+   Close the tests place in Studio (File → Close Place, don't save) before re-opening a new
+   build: Studio keeps the old copy in memory and "Open from File" won't reload it.
 7. Playtest in Studio.
 8. Security-test remote-facing systems.
 9. Review the diff.

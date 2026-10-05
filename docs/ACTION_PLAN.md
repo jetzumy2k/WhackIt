@@ -1,6 +1,6 @@
 # WHACK IT OUT! — Progress Review & Action Plan
 
-_Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase1-remotes` (on top of `master` @ `f2faca7`)_
+_Review date: 2026-10-05 · Last status update: 2026-10-05 · `master` after PR #2_
 
 **Status legend:** ✅ Done · 🟡 Partly done / awaiting verification · ⬜ Not started
 
@@ -19,7 +19,7 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 | P3 Cleanup | 🟡 9 of 10 done | §3 |
 | Git: single default branch | ✅ | `master` is default; `main` deleted; its `LICENSE` kept (`53d8a56`) |
 | Phase 0 — Foundation | ✅ Complete | CI green on PR #1 and on `master` (`f2faca7`) |
-| Phase 1 — Core architecture | ✅ Complete (merge pending) | Lifecycle, config, Types, Validate, RateLimiter, RemoteController, REMOTE_CONTRACTS; 46/46 specs pass in Studio |
+| Phase 1 — Core architecture | ✅ Complete (PR #2) | Lifecycle, config, Types, Validate, RateLimiter, RemoteController, REMOTE_CONTRACTS; 46/46 specs pass in Studio |
 | Phases 2–6 | ⬜ | |
 | §5 Design decisions | 🟡 3 of 5 decided | Shared bosses (+ reward/respawn rules) · end on defeat · hammer-driven damage. Open: persistence library, monetization |
 
@@ -42,7 +42,7 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 | Server-only config | ✅ | `ServerScriptService.Config` (`src/server/config`): `RemoteLimits` |
 | Client controllers (Input, Gameplay, UI, Feedback, Audio) | ⬜ None | |
 | UI screens | ⬜ None | |
-| Tests (TestEZ) | 🟡 | 46 passed in Studio (2026-10-05); 7 new `StressRules` specs (53 total) pass static checks, not yet run in Studio |
+| Tests (TestEZ) | ✅ | 53 specs: 53 passed, 0 failed in Studio (2026-10-05). Expected warnings from RemoteController specs |
 | Checks script | ✅ | `scripts/check.ps1` (format, lint, type-check, build; `-Tests` for TestEZ) |
 | Docs | 🟡 | `DEVELOPMENT_WORKFLOW`, `GAMEPLAY_RULES`, `REMOTE_CONTRACTS` current; `DATA_SCHEMA` still a template (Phase 3) |
 | CI | ✅ | `.github/workflows/ci.yml` green on GitHub; `actions/checkout` moved to v7 (Node 24) |
@@ -204,5 +204,4 @@ Security/abuse pass, performance (MicroProfiler, remote traffic, memory per play
 
 ## 7. Immediate next steps
 
-1. Open a PR for `feat/phase1-remotes`, confirm CI is green, merge to `master`.
-2. Start Phase 2: shared-boss vertical slice.
+1. Start Phase 2: shared-boss vertical slice.
