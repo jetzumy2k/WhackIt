@@ -13,7 +13,7 @@ local GameConfig = table.freeze({
 	StartingScore = 0,
 
 	-- Combat
-	HitCooldown = 0.25, -- seconds between accepted hits per player
+	HitCooldown = 0.45, -- seconds per hammer swing = minimum time between accepted hits
 	DefaultHammerId = "squeaky_hammer", -- must exist in HammerConfig
 	MinHitDamage = 1, -- every accepted hit does at least this much
 	HitCooldownGrace = 0.05, -- seconds the server forgives for network jitter on HitCooldown

@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local GameplayController = require(script.Parent.GameplayController)
+local SwingAnimator = require(script.Parent.Parent.Lib.SwingAnimator)
 
 local FeedbackController = {}
 
@@ -17,6 +18,9 @@ local DAMAGE_NUMBER_SECONDS = 0.7
 local DAMAGE_NUMBER_RISE = 3
 local SHAKE_SECONDS = 0.08
 local SHAKE_STRENGTH = 0.35
+-- Other players' swings are shown from the start of the downswing: their hit is
+-- only known once confirmed, so replaying the wind-up would land late.
+local REMOTE_SWING_START = 0.42
 
 local localPlayer = Players.LocalPlayer
 local random = Random.new()
@@ -143,6 +147,11 @@ function FeedbackController.start(): ()
 		showDamageNumber(body, feedback.Damage, isOwnHit, effects)
 		if isOwnHit then
 			shakeCamera()
+		else
+			local hitter = Players:GetPlayerByUserId(feedback.HitterUserId)
+			if hitter and hitter.Character then
+				SwingAnimator.play(hitter.Character, REMOTE_SWING_START)
+			end
 		end
 	end)
 end

@@ -17,9 +17,9 @@ Record the date, build (commit) and result for each run in the PR.
 |---|---|---|
 | 1 | Spawn | Floor; an orange cartoon monster with angry eyes, a toothy mouth and a "DUE TODAY!" sign, bobbing and turning to face you, with name + HP bar `100 / 100`. You hold a red-and-yellow hammer. HUD shows `Stress 100 / 100`, `Score: 0`, hint at the bottom; no hotbar |
 | 2 | Click while far from the boss | Your character swings the hammer (animation + swish sound), "Get closer to the boss!" appears above the hint, the boss doesn't react |
-| 3 | Walk up and click | Swing + swish; the boss flashes white, leans back with a hop, yellow `-10` floats up, small camera shake, HP `90 / 100`, stress drops by 1 |
+| 3 | Walk up and click | A full swing: hammer raised over the shoulder, body leans back, then a fast downward strike with a swish, a little follow-through, back to holding; the boss flashes white, leans back with a hop, yellow `-10` floats up, small camera shake, HP `90 / 100`, stress drops by 1 |
 | 3b | Hammer orientation | The hammer sits in your hand with the head at the far end, and the swing looks like a downward whack. **Report if the hammer points the wrong way.** |
-| 4 | Click as fast as possible | At most ~4 hits per second land |
+| 4 | Click as fast as possible | Swings complete one after another (never cut off mid-swing); about 2 hits per second land |
 | 5 | Defeat the boss | HP bar shows `DEFEATED!`, the monster spins and shrinks away, Victory Card `+100 score -5 stress`, Score `100` in HUD and player list |
 | 6 | Wait ~5 s | A fresh boss at `100 / 100` replaces it; hitting works again |
 | 7 | Reset character (Esc → Reset) mid-fight | You respawn holding a new hammer; HUD and HP bars stay; hitting works again |

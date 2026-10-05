@@ -7,7 +7,7 @@ local RemoteLimits = table.freeze({
 	MaxIdLength = 64,
 
 	-- Per-remote token buckets. These are flood guards, deliberately looser than
-	-- gameplay rules (e.g. GameConfig.HitCooldown = 0.25 s allows 4 accepted hits/s).
+	-- gameplay rules (e.g. GameConfig.HitCooldown = 0.45 s allows ~2 accepted hits/s).
 	RequestHammerHit = table.freeze({
 		Capacity = 10,
 		RefillPerSecond = 8,

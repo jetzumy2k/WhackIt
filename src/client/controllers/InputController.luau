@@ -6,9 +6,10 @@
 	ignoring input already used by GUI. Tool.Activated is also listened to as a
 	backup; the cooldown means one press never swings twice.
 
-	The swing animation and sound play immediately on every swing (even a miss)
-	so the game feels responsive; the boss only reacts once the server confirms.
-	Only the target boss id is sent; the server decides everything else.
+	Each swing is a full wind-up / strike / follow-through (Lib/SwingAnimator)
+	that starts immediately, even for a miss. The hit request is sent at the
+	moment the hammer lands, so the boss reacts in time with the strike. Only the
+	target boss id is sent; the server decides everything else.
 ]]
 
 local Players = game:GetService("Players")
@@ -16,7 +17,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local CombatRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CombatRules"))
+local SwingPose = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SwingPose"))
 local GameplayController = require(script.Parent.GameplayController)
+local SwingAnimator = require(script.Parent.Parent.Lib.SwingAnimator)
 local UIController = require(script.Parent.UIController)
 
 local InputController = {}
@@ -29,12 +32,6 @@ local SWING_KEY_CODES: { [Enum.KeyCode]: boolean } = {
 	[Enum.KeyCode.ButtonR2] = true,
 }
 
--- Roblox's own tool-slash animations (the ones its default Animate script uses),
--- playable in any experience without uploading assets.
-local SLASH_ANIMATION_IDS: { [Enum.HumanoidRigType]: string } = {
-	[Enum.HumanoidRigType.R15] = "rbxassetid://522635514",
-	[Enum.HumanoidRigType.R6] = "rbxassetid://129967390",
-}
 -- Built-in Roblox sound shipped with every client; no uploaded asset needed.
 local SWING_SOUND_ID = "rbxasset://sounds/swordslash.wav"
 local SWING_VOLUME = 0.6
@@ -43,8 +40,8 @@ local TOO_FAR_HINT = "Get closer to the boss!"
 local localPlayer = Players.LocalPlayer
 local requestHammerHit: RemoteEvent
 local lastSwingAt: number? = nil
-local slashTrack: AnimationTrack? = nil
-local slashTrackOwner: Humanoid? = nil
+-- The whoosh plays as the hammer starts coming down, not on the click.
+local WHOOSH_PROGRESS = 0.38
 local hookedTools: { [Tool]: boolean } = {}
 
 local function getHeldHammer(): (Tool?, Humanoid?)
@@ -60,38 +57,7 @@ local function getHeldHammer(): (Tool?, Humanoid?)
 	return tool, humanoid
 end
 
--- Loads the slash animation once per character (a new Humanoid after respawn).
-local function getSlashTrack(humanoid: Humanoid): AnimationTrack?
-	if slashTrack and slashTrackOwner == humanoid then
-		return slashTrack
-	end
-	local animator = humanoid:FindFirstChildOfClass("Animator")
-	local animationId = SLASH_ANIMATION_IDS[humanoid.RigType]
-	if animator == nil or animationId == nil then
-		return nil
-	end
-
-	local animation = Instance.new("Animation")
-	animation.AnimationId = animationId
-	local ok, track = pcall(function(): AnimationTrack
-		return animator:LoadAnimation(animation)
-	end)
-	if not ok then
-		warn("[InputController] could not load swing animation: " .. tostring(track))
-		return nil
-	end
-	track.Priority = Enum.AnimationPriority.Action
-	slashTrack = track
-	slashTrackOwner = humanoid
-	return track
-end
-
-local function playSwing(tool: Tool, humanoid: Humanoid): ()
-	local track = getSlashTrack(humanoid)
-	if track then
-		track:Play(0.05)
-	end
-
+local function playWhoosh(tool: Tool): ()
 	local handle = tool:FindFirstChild("Handle")
 	if handle == nil then
 		return
@@ -110,6 +76,20 @@ local function playSwing(tool: Tool, humanoid: Humanoid): ()
 	end
 end
 
+-- Runs when the hammer comes down: picks the boss in reach at that moment.
+local function onImpact(): ()
+	local tool = getHeldHammer()
+	if tool == nil then
+		return -- died or lost the hammer mid-swing
+	end
+	local bossInstanceId = GameplayController.getNearestHittableBoss()
+	if bossInstanceId then
+		requestHammerHit:FireServer(bossInstanceId)
+	else
+		UIController.showToast(TOO_FAR_HINT)
+	end
+end
+
 local function swing(): ()
 	local tool, humanoid = getHeldHammer()
 	if tool == nil or humanoid == nil then
@@ -117,19 +97,19 @@ local function swing(): ()
 	end
 
 	local now = os.clock()
-	-- No grace on the client, so it never sends hits the server would drop.
+	-- One swing per cooldown; the swing lasts exactly one cooldown, so presses
+	-- during a swing are ignored instead of cutting it short.
 	if not CombatRules.isOffCooldown(now, lastSwingAt, 0) then
 		return
 	end
 	lastSwingAt = now
-	playSwing(tool, humanoid)
 
-	local bossInstanceId = GameplayController.getNearestHittableBoss()
-	if bossInstanceId then
-		requestHammerHit:FireServer(bossInstanceId)
-	else
-		UIController.showToast(TOO_FAR_HINT)
+	local character = humanoid.Parent
+	if character and character:IsA("Model") then
+		SwingAnimator.play(character)
 	end
+	task.delay(SwingAnimator.secondsUntil(WHOOSH_PROGRESS), playWhoosh, tool)
+	task.delay(SwingAnimator.secondsUntil(SwingPose.IMPACT), onImpact)
 end
 
 -- Backup trigger: some setups deliver presses to the Tool rather than raw input.

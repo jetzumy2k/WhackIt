@@ -29,7 +29,7 @@ A hit request is applied only if all of these hold (`CombatService`; details in 
 - the player has a live character holding their hammer;
 - the target boss exists and is not defeated;
 - the player's root is within `GameConfig.HitReach` (12 studs) of the boss centre;
-- at least `HitCooldown − HitCooldownGrace` (0.25 − 0.05 s) since the player's last accepted hit. The client waits the full cooldown; the grace only absorbs network jitter.
+- at least `HitCooldown − HitCooldownGrace` (0.45 − 0.05 s) since the player's last accepted hit. One hammer swing lasts exactly `HitCooldown`, and the client sends one request per swing at the moment of impact; the grace only absorbs network jitter.
 
 ## Shared-boss rules (confirmed 2026-10-05)
 - **Contribution:** the server records accepted damage per player per boss.
@@ -68,6 +68,10 @@ invisible hitbox; each client draws a cartoon monster over it (`Shared/BossVisua
 a lean-back hop on each confirmed hit, and a spin-and-shrink on defeat.
 
 Every player is handed their hammer Tool on spawn (`HammerService`, built by `Lib/HammerTool`).
-Clicking, tapping or pressing R2 swings it with Roblox's built-in slash animation and sound;
-the swing plays immediately, and the boss reacts when the server confirms the hit. The floor and
+Clicking, tapping or pressing R2 starts a full swing (`Shared/SwingPose`, played by the client's
+`Lib/SwingAnimator` on the arm, elbow and waist joints): wind-up over the shoulder, a fast
+downward strike, follow-through and recovery, with Roblox's built-in swing sound on the downswing.
+The hit request is sent at the impact moment (`SwingPose.IMPACT`, 55 % through the swing), so the
+boss reacts as the hammer lands. Joint animation is local, so other clients replay the strike on
+the hitter's character when the hit is confirmed. Presses during a swing are ignored. The floor and
 player spawn are in `default.project.json` (`Workspace.Arena`). Phase 2 spawns one Deadline Boss.
