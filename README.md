@@ -1,6 +1,6 @@
 # WHACK IT OUT! Claude Code Development Kit
 
-Put `CLAUDE.md` at the repository root and copy `skills/` into the project.
+Put `CLAUDE.md` at the repository root and copy `.claude/skills/` into the project.
 
 Use the most specific skill before implementing a subsystem.
 

@@ -84,7 +84,7 @@ A feature is complete only after relevant formatting/static checks, tests, Studi
 ## Claude operating procedure
 Before changing code:
 1. Read this file.
-2. Read the relevant skill in `skills/`.
+2. Read the relevant skill in `.claude/skills/`.
 3. Inspect existing implementation and dependencies.
 4. State the smallest viable change.
 5. Implement only the necessary files.
@@ -101,4 +101,4 @@ Do not claim verification that was not actually performed.
 Implementation + security review + tests/justification + error handling + acceptable performance + documentation + formatting/lint + clean understandable diff.
 
 ## Available skills
-See `skills/*/SKILL.md`. Use the most specific skill for each task.
+See `.claude/skills/*/SKILL.md`. Use the most specific skill for each task.
