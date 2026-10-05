@@ -212,8 +212,8 @@ Flow: input → client cooldown sanity → `RequestHammerHit` → server validat
 ### Phase 5 — Monetization — ➡ Superseded by Phase 8
 Originally skipped for v1 (decision #5). Built later as Phase 8 at the user's request.
 
-### Phase 8 — Crits, Zen buff, XP and the Robux store — 🟡 Code done, awaiting Studio tests
-**Done (code, static checks, specs written):**
+### Phase 8 — Crits, Zen buff, XP and the Robux store — 🟡 Specs pass, awaiting playtest
+**Done (code, static checks, ✅ 266/266 specs in Studio, 2026-10-05):**
 - Server-rolled crits.
 - Zen buff (+10 damage, +5 % crit for 3 min).
 - XP separate from Score (Level follows XP).
@@ -225,7 +225,7 @@ Originally skipped for v1 (decision #5). Built later as Phase 8 at the user's re
 - Docs: `docs/STORE.md`.
 
 **Open:**
-- **You:** run the specs and `PLAYTEST.md` 59–70.
+- **You:** run `PLAYTEST.md` 59–70.
 - **You:** create the 34 Developer Products and paste their ids into `StoreConfig.PRODUCT_IDS`.
 - **You:** update the questionnaire (paid random items).
 
@@ -239,7 +239,7 @@ Security/abuse pass, performance (MicroProfiler, remote traffic, memory per play
 
 ## 7. Immediate next steps
 
-1. **You:** run `build/tests.rbxl` (all specs should pass) and `PLAYTEST.md` 42–70.
+1. ✅ `build/tests.rbxl`: 266/266 passed. **You:** run `PLAYTEST.md` 42–70.
 2. ✅ Music: 5 licensed APM tracks added (two user-suggested IDs were free *models*, not audio, and were rejected).
 3. ✅ Monetization built (Phase 8). **You:** create the Developer Products (`docs/STORE.md` setup checklist) and run `PLAYTEST.md` 59–70.
 4. PR + CI + merge (Phases 6–8), then the RC gate in `docs/RELEASE.md` and a private beta.
