@@ -1,19 +1,27 @@
 --!strict
 --[[
-	Keyframed hammer swing as pure math: given progress 0..1 through a swing,
+	Hammer carry and swing as pure math: given progress 0..1 through a swing,
 	returns joint angles. Shared so specs can check it; applied to characters by
 	the client's SwingAnimator.
 
-	Angles are degrees in joint space (R15):
+	Angles are degrees in the body's front-to-back plane:
 	  Shoulder   0 = arm hanging, 90 = arm straight forward, 180 = straight up
-	  Elbow      positive bends the forearm forward
+	  Elbow      bends the forearm further forward/up
+	  Grip       tilts the hammer in the fist (wrist); 0 = handle continues the forearm
 	  WaistPitch positive leans the upper body back
 	  WaistYaw   negative turns the right shoulder back (wind-up)
+
+	Where the hammer points = Shoulder + Elbow + Grip (see hammerAngle):
+	~90 is straight out in front, ~180 straight up, >180 tipped back over the shoulder.
+
+	The swing starts and ends at REST (hammer carried on the shoulder); the
+	hammer is out in front only around IMPACT.
 ]]
 
 export type Pose = {
 	Shoulder: number,
 	Elbow: number,
+	Grip: number,
 	WaistPitch: number,
 	WaistYaw: number,
 }
@@ -29,7 +37,7 @@ type Keyframe = {
 local SwingPose = {}
 
 -- The hammer meets the boss here; the hit request is sent at this moment.
-SwingPose.IMPACT = 0.55
+SwingPose.IMPACT = 0.5
 
 local function easeOutQuad(alpha: number): number
 	return 1 - (1 - alpha) * (1 - alpha)
@@ -43,31 +51,47 @@ local function easeInOutSine(alpha: number): number
 	return -(math.cos(math.pi * alpha) - 1) / 2
 end
 
--- Holding pose: matches the arm-forward pose of Roblox's tool-hold animation.
-SwingPose.HOLD = table.freeze({ Shoulder = 90, Elbow = 15, WaistPitch = 0, WaistYaw = 0 }) :: Pose
+-- What Roblox's tool-hold animation already does (arm forward). Offsets are
+-- applied relative to it, because that animation keeps playing underneath.
+SwingPose.ANIMATOR_HOLD = table.freeze({
+	Shoulder = 90,
+	Elbow = 15,
+	Grip = 0,
+	WaistPitch = 0,
+	WaistYaw = 0,
+}) :: Pose
+
+-- Carried on the shoulder: fist up near the shoulder, hammer tipped back over it.
+SwingPose.REST = table.freeze({
+	Shoulder = 40,
+	Elbow = 110,
+	Grip = 70,
+	WaistPitch = 0,
+	WaistYaw = 0,
+}) :: Pose
 
 local KEYFRAMES: { Keyframe } = {
-	{ At = 0, Pose = SwingPose.HOLD, Ease = easeOutQuad },
-	-- Wind-up: hammer raised up and back over the shoulder, body coiled.
+	{ At = 0, Pose = SwingPose.REST, Ease = easeOutQuad },
+	-- Wind-up: arm lifted high, hammer still cocked back over the head.
 	{
-		At = 0.4,
-		Pose = { Shoulder = 205, Elbow = 70, WaistPitch = 10, WaistYaw = -20 },
+		At = 0.3,
+		Pose = { Shoulder = 170, Elbow = 40, Grip = 10, WaistPitch = 8, WaistYaw = -15 },
 		Ease = easeOutQuad,
 	},
-	-- Strike: accelerates down into the target in front.
+	-- Strike: arm and wrist snap forward; the hammer is out in front at the boss.
 	{
 		At = SwingPose.IMPACT,
-		Pose = { Shoulder = 70, Elbow = 5, WaistPitch = -15, WaistYaw = 10 },
+		Pose = { Shoulder = 75, Elbow = 5, Grip = 0, WaistPitch = -12, WaistYaw = 10 },
 		Ease = easeInQuad,
 	},
 	-- Follow-through: a little past the target.
 	{
-		At = 0.7,
-		Pose = { Shoulder = 55, Elbow = 10, WaistPitch = -18, WaistYaw = 12 },
+		At = 0.62,
+		Pose = { Shoulder = 60, Elbow = 10, Grip = -5, WaistPitch = -15, WaistYaw = 12 },
 		Ease = easeOutQuad,
 	},
-	-- Recover back to holding.
-	{ At = 1, Pose = SwingPose.HOLD, Ease = easeInOutSine },
+	-- Return: the hammer swings back up onto the shoulder.
+	{ At = 1, Pose = SwingPose.REST, Ease = easeInOutSine },
 }
 
 local function lerp(a: number, b: number, alpha: number): number
@@ -84,20 +108,18 @@ function SwingPose.at(progress: number): Pose
 			return {
 				Shoulder = lerp(from.Shoulder, to.Shoulder, alpha),
 				Elbow = lerp(from.Elbow, to.Elbow, alpha),
+				Grip = lerp(from.Grip, to.Grip, alpha),
 				WaistPitch = lerp(from.WaistPitch, to.WaistPitch, alpha),
 				WaistYaw = lerp(from.WaistYaw, to.WaistYaw, alpha),
 			}
 		end
 	end
-	return SwingPose.HOLD
+	return SwingPose.REST
 end
 
--- How strongly the swing overrides the normal animation: eases in at the start
--- and out at the end so the arm never snaps between poses.
-function SwingPose.blend(progress: number): number
-	local blendIn = math.clamp(progress / 0.1, 0, 1)
-	local blendOut = math.clamp((1 - progress) / 0.15, 0, 1)
-	return easeInOutSine(math.min(blendIn, blendOut))
+-- Direction the hammer points in the front-to-back plane (see header).
+function SwingPose.hammerAngle(pose: Pose): number
+	return pose.Shoulder + pose.Elbow + pose.Grip
 end
 
 return SwingPose

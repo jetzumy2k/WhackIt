@@ -15,10 +15,10 @@ Record the date, build (commit) and result for each run in the PR.
 ### Solo (Test → Play, F5)
 | # | Check | Expected |
 |---|---|---|
-| 1 | Spawn | Floor; an orange cartoon monster with angry eyes, a toothy mouth and a "DUE TODAY!" sign, bobbing and turning to face you, with name + HP bar `100 / 100`. You hold a red-and-yellow hammer. HUD shows `Stress 100 / 100`, `Score: 0`, hint at the bottom; no hotbar |
+| 1 | Spawn | Floor; an orange cartoon monster with angry eyes, a toothy mouth and a "DUE TODAY!" sign, bobbing and turning to face you, with name + HP bar `100 / 100`. You carry a red-and-yellow hammer resting on your right shoulder. HUD shows `Stress 100 / 100`, `Score: 0`, hint at the bottom; no hotbar |
 | 2 | Click while far from the boss | Your character swings the hammer (animation + swish sound), "Get closer to the boss!" appears above the hint, the boss doesn't react |
-| 3 | Walk up and click | A full swing: hammer raised over the shoulder, body leans back, then a fast downward strike with a swish, a little follow-through, back to holding; the boss flashes white, leans back with a hop, yellow `-10` floats up, small camera shake, HP `90 / 100`, stress drops by 1 |
-| 3b | Hammer orientation | The handle sticks out past your fist with the head at the far end (never back along your forearm), and on the downswing the head comes forward and down into the boss. **Report if the hammer points the wrong way.** |
+| 3 | Walk up and click | A full swing: arm lifts with the hammer cocked back, then a fast strike with a swish that puts the hammer out in front on the boss, a little follow-through, and the hammer swings back onto your shoulder; the boss flashes white, leans back with a hop, yellow `-10` floats up, small camera shake, HP `90 / 100`, stress drops by 1 |
+| 3b | Hammer orientation | At rest the hammer lies back over your shoulder; at the hit it points out in front, head on the boss; then it returns to the shoulder. **Report where the head ends up if any of these look wrong (e.g. pointing down, sideways, or into your body).** |
 | 4 | Click as fast as possible | Swings complete one after another (never cut off mid-swing); about 2 hits per second land |
 | 5 | Defeat the boss | HP bar shows `DEFEATED!`, the monster spins and shrinks away, Victory Card `+100 score -5 stress`, Score `100` in HUD and player list |
 | 6 | Wait ~5 s | A fresh boss at `100 / 100` replaces it; hitting works again |

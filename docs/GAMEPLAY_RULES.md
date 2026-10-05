@@ -68,12 +68,14 @@ invisible hitbox; each client draws a cartoon monster over it (`Shared/BossVisua
 a lean-back hop on each confirmed hit, and a spin-and-shrink on defeat.
 
 Every player is handed their hammer Tool on spawn (`HammerService`, built by `Lib/HammerTool`).
-Clicking, tapping or pressing R2 starts a full swing (`Shared/SwingPose`, played by the client's
-`Lib/SwingAnimator` by rotating the shoulder, elbow and waist joint offsets, `Motor6D.C0` or an
-`AnimationConstraint`'s attachment, on top of the playing animations): wind-up over the shoulder, a fast
-downward strike, follow-through and recovery, with Roblox's built-in swing sound on the downswing.
-The hit request is sent at the impact moment (`SwingPose.IMPACT`, 55 % through the swing), so the
-boss reacts as the hammer lands. Joint animation is local, so other clients replay the strike on
+While held, the hammer rests on the shoulder (`SwingPose.REST`). Clicking, tapping or pressing R2
+plays one swing: the arm lifts with the hammer cocked back, then arm and wrist snap forward so the
+hammer is out in front at the boss, follow through, and the hammer swings back onto the shoulder.
+The client's `Lib/SwingAnimator` (driven by `HammerPoseController` for every hammer holder) rotates
+the shoulder, elbow, waist and wrist (`RightGrip`) joint offsets, `Motor6D.C0`/`Weld.C0` or an
+`AnimationConstraint`'s attachment, on top of Roblox's tool-hold animation. Roblox's built-in swing
+sound plays on the downswing. The hit request is sent at the impact moment (`SwingPose.IMPACT`,
+halfway through the swing), so the boss reacts as the hammer lands. Joint animation is local, so other clients replay the strike on
 the hitter's character when the hit is confirmed. Presses during a swing are ignored.
 
 The floor and player spawn are in `default.project.json` (`Workspace.Arena`). Phase 2 spawns one

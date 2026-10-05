@@ -12,4 +12,7 @@ return table.freeze({
 
 	-- On each Player
 	Stress = "Stress",
+
+	-- On each hammer Tool (server-created); marks it as a hammer
+	HammerId = "HammerId",
 })

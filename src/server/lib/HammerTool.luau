@@ -14,6 +14,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Attributes = require(ReplicatedStorage.Shared.Attributes)
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
 
 local HammerTool = {}
@@ -23,7 +24,7 @@ local HEAD_SIZE = Vector3.new(1.9, 1.35, 1.35) -- cylinder: length along its X a
 local GRIP = CFrame.new(0, 0, 1.2)
 
 -- Name of the Tool attribute marking it as a hammer (checked by CombatService).
-HammerTool.HAMMER_ID_ATTRIBUTE = "HammerId"
+HammerTool.HAMMER_ID_ATTRIBUTE = Attributes.HammerId
 
 local function prop(name: string, size: Vector3, color: Color3): Part
 	local part = Instance.new("Part")
