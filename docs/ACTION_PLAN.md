@@ -1,6 +1,6 @@
 # WHACK IT OUT! — Progress Review & Action Plan
 
-_Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase1-config` (on top of `master` @ `53d8a56`)_
+_Review date: 2026-10-05 · Last status update: 2026-10-05 · `master` after PR #2_
 
 **Status legend:** ✅ Done · 🟡 Partly done / awaiting verification · ⬜ Not started
 
@@ -15,11 +15,11 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 | P1-3 Format gate fails (CRLF) | ✅ | `06043a6` — `.gitattributes` LF |
 | P1-4 `--!strict` unenforced | ✅ | `06043a6` — luau-lsp + strict `.luaurc` |
 | P1-5 No test harness | ✅ | `06043a6` — harness + first spec; 4/4 passed in Studio (2026-10-05) |
-| P2-1 … P2-8 Standards issues | 🟡 3 of 8 done (P2-2, P2-3, P2-6); P2-7 partly | §3 |
+| P2-1 … P2-8 Standards issues | 🟡 7 of 8 done; P2-7 partly (CLAUDE.md layout tree) | §3 |
 | P3 Cleanup | 🟡 9 of 10 done | §3 |
 | Git: single default branch | ✅ | `master` is default; `main` deleted; its `LICENSE` kept (`53d8a56`) |
-| Phase 0 — Foundation | 🟡 7 of 7 steps; CI not yet run on GitHub | `.github/workflows/ci.yml` added; confirm green on first push |
-| Phase 1 — Core architecture | 🟡 2 of 6 steps | Lifecycle loader; config hardening + hammer-driven damage |
+| Phase 0 — Foundation | ✅ Complete | CI green on PR #1 and on `master` (`f2faca7`) |
+| Phase 1 — Core architecture | ✅ Complete (PR #2) | Lifecycle, config, Types, Validate, RateLimiter, RemoteController, REMOTE_CONTRACTS; 46/46 specs pass in Studio |
 | Phases 2–6 | ⬜ | |
 | §5 Design decisions | 🟡 3 of 5 decided | Shared bosses (+ reward/respawn rules) · end on defeat · hammer-driven damage. Open: persistence library, monetization |
 
@@ -27,7 +27,7 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 
 ## 1. Where the project stands
 
-**Stage:** foundation in place (build, format, lint, type-check, test harness). No gameplay code exists yet.
+**Stage:** foundation and core server plumbing in place (boot, config, combat formula, remote validation and rate limiting). No gameplay services yet.
 
 | Area | Status | Notes |
 |---|---|---|
@@ -36,15 +36,16 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 | Boot pattern | ✅ | `Shared/Lifecycle`: all `init()` then all `start()`, name-ordered |
 | Shared config | ✅ Hardened | `GameConfig`, `BossConfig` (5 bosses), `HammerConfig` (1 hammer): frozen, `List` + `ById`, duplicate ids fail at load |
 | Combat formula | ✅ | `Shared/CombatRules.computeHitDamage`, documented in `docs/GAMEPLAY_RULES.md` |
-| Shared types | 🟡 Stub | `PlayerStats` only |
-| Remotes | 🟡 Declared in `default.project.json` | `Combat.RequestHammerHit`, `Combat.CombatFeedback`; no server handlers. `Round.RoundState` removed (no round timer) |
-| Server services (Boss, Combat, Stress, PlayerData, Reward, Purchase, Session, RemoteController) | ⬜ None | |
+| Shared types | ✅ | `Types`: `BossInstanceId`, `CombatFeedback` payload (PascalCase). Unused camelCase `PlayerStats` removed. `PlayerData` arrives with Phase 3 |
+| Remotes | 🟡 Contracted, not yet handled | `RequestHammerHit(bossInstanceId)` and `CombatFeedback` specified in `REMOTE_CONTRACTS.md`; handlers bind via `RemoteController` in Phase 2 |
+| Server services (Boss, Combat, Stress, PlayerData, Reward, Purchase, Session, RemoteController) | 🟡 1 of 8 | `RemoteController` done (guards, rate limits, error containment, throttled reject logs) |
+| Server-only config | ✅ | `ServerScriptService.Config` (`src/server/config`): `RemoteLimits` |
 | Client controllers (Input, Gameplay, UI, Feedback, Audio) | ⬜ None | |
 | UI screens | ⬜ None | |
-| Tests (TestEZ) | ✅ | 19 specs (Boss/Hammer/GameConfig, CombatRules): 19 passed, 0 failed in Studio (2026-10-05) |
+| Tests (TestEZ) | ✅ | 53 specs: 53 passed, 0 failed in Studio (2026-10-05). Expected warnings from RemoteController specs |
 | Checks script | ✅ | `scripts/check.ps1` (format, lint, type-check, build; `-Tests` for TestEZ) |
-| Docs | 🟡 | `DEVELOPMENT_WORKFLOW`, `GAMEPLAY_RULES` current; `DATA_SCHEMA`, `REMOTE_CONTRACTS` still templates |
-| CI | 🟡 Added | `.github/workflows/ci.yml` (Ubuntu, pwsh `scripts/check.ps1`); not yet run on GitHub |
+| Docs | 🟡 | `DEVELOPMENT_WORKFLOW`, `GAMEPLAY_RULES`, `REMOTE_CONTRACTS` current; `DATA_SCHEMA` still a template (Phase 3) |
+| CI | ✅ | `.github/workflows/ci.yml` green on GitHub; `actions/checkout` moved to v7 (Node 24) |
 | License | ✅ | MIT `LICENSE` on `master` |
 
 **Content-rule check:** all five bosses (Deadline Boss, Meeting Master, Reply-All Boss, Production Bug, Monday Monster) are fictional everyday annoyances with no real people, groups, or political references. ✅ Keep it that way in art direction too: render them as cartoon monsters/objects, not as human "bosses/managers", and keep hit reactions squash-and-stretch, no blood.
@@ -97,14 +98,14 @@ P0 = crash/data loss/security catastrophe · P1 = major failure / blocks next ph
 
 | # | Status | Finding | Fix |
 |---|---|---|---|
-| P2-1 | ⬜ | `RequestHammerHit` contract takes a config `{ bossId }` from the client. With shared bosses (decided), several boss instances can be in the world. | Payload: a server-issued boss **instance** id (bounded string), never a config id or damage. Server checks the instance exists, is alive and is within reach, plus cooldown. Phase 1 step 5. |
+| P2-1 | ✅ | `RequestHammerHit` contract takes a config `{ bossId }` from the client. With shared bosses (decided), several boss instances can be in the world. | Payload: a server-issued boss **instance** id (bounded string), never a config id or damage. Server checks the instance exists, is alive and is within reach, plus cooldown. **Done:** contract in `REMOTE_CONTRACTS.md`; enforcement code lands with `CombatService` in Phase 2. |
 | P2-2 | ✅ | Config tables were mutable; `BossConfig` had no lookup. | All config deep-frozen; `List` + `ById`; duplicate ids error at require; specs check freezing, indexing, values. |
 | P2-3 | ✅ | Damage rules were duplicated/ambiguous. | Hammer-driven: `max(MinHitDamage, round(hammer.Damage × boss.DamageTakenMultiplier))`. `HitDamage` → `DamageTakenMultiplier`, `DefaultHitDamage` → `DefaultHammerId`. Multipliers chosen so hits-to-defeat match the old balance (spec-guarded). |
-| P2-4 | ⬜ | Stress Meter has no rules. | Add `StressReliefPerHit` / formula to config + docs. |
-| P2-5 | ⬜ | Naming: `Types.PlayerStats` camelCase vs `DATA_SCHEMA.md` PascalCase. | Pick one (recommend PascalCase) and apply everywhere. |
+| P2-4 | ✅ | Stress Meter had no rules. | Damage-proportional relief + defeat bonus: `StressRules` (`reliefForHit`, `applyRelief`), `GameConfig.StressReliefPerDamage` / `DefeatStressRelief`, documented in `GAMEPLAY_RULES.md`, specs. |
+| P2-5 | ✅ | Naming: `Types.PlayerStats` camelCase vs `DATA_SCHEMA.md` PascalCase. | PascalCase for data/payload fields; `PlayerStats` removed; `Types` documents the rule. |
 | P2-6 | ✅ | Timed rounds vs defeat→reward→replay loop. | Decided: shared bosses, end on defeat. `RoundDuration` and `Round.RoundState` removed. Shared-boss reward/respawn rules confirmed; numeric values land in config in Phase 2. |
 | P2-7 | 🟡 | Docs referenced `skills/`; CLAUDE.md "preferred repository" layout differs from actual. | ✅ `skills/` paths fixed (`ef7aefd`). **Open:** CLAUDE.md layout tree still shows `src/ReplicatedStorage/...` instead of `src/server`, `src/client`, `src/config`, `src/shared`. |
-| P2-8 | ⬜ | Nothing marks which config values are server-only. | Rule: client-hidden values (anti-cheat thresholds, reward tables) go in `ServerStorage`/server modules. |
+| P2-8 | ✅ | Nothing marked which config values are server-only. | Server-only config lives in `src/server/config` → `ServerScriptService.Config` (never replicated). First resident: `RemoteLimits`. |
 
 ### P3 — cleanup
 
@@ -156,7 +157,7 @@ None of these are due yet; each is mapped to the phase where it lands.
 
 Each phase ends with the CLAUDE.md testing gate: `scripts/check.ps1` (format, lint, type-check, build), TestEZ specs, Studio playtest, multiplayer + security tests where remotes are involved, diff review, docs updated.
 
-### Phase 0 — Fix the foundation — 🟡 7 of 7 done, CI awaiting first run
+### Phase 0 — Fix the foundation — ✅ Complete
 Goal: a clean clone builds, formats, lints, type-checks, and runs the test suite.
 
 1. ✅ `.gitattributes` (LF), renormalize, StyLua. → P1-3
@@ -167,15 +168,15 @@ Goal: a clean clone builds, formats, lints, type-checks, and runs the test suite
 6. ✅ Delete `package.json`; fix `skills/` paths in README/CLAUDE.md (`ef7aefd`). → P3, P2-7
 7. ✅ `scripts/check.ps1` · `.github/workflows/ci.yml` (Ubuntu runner, Rokit via `CompeyDev/setup-rokit` pinned by commit SHA, runs `check.ps1`; TestEZ stays local because CI has no Studio)
 
-**Done when:** fresh clone passes all gates ✅, specs pass in Studio ✅, CI green on GitHub ⬜ (after push).
+**Done when:** fresh clone passes all gates ✅, specs pass in Studio ✅, CI green on GitHub ✅.
 
-### Phase 1 — Core architecture skeleton — 🟡 2 of 6 done
-1. ⬜ `Shared/Types.luau`: `BossDefinition`, `HammerDefinition`, `EncounterState`, `PlayerData`, remote payload types.
+### Phase 1 — Core architecture skeleton — ✅ Complete
+1. ✅ `Shared/Types.luau`: `BossInstanceId`, `CombatFeedback`. Boss/hammer definitions stay exported from their config modules; boss instance state and `PlayerData` are added with the services that own them (Phase 2/3).
 2. ✅ Config hardening: frozen tables, `List`/`ById`, `HammerConfig`, `CombatRules.computeHitDamage`, specs. → P2-2, P2-3
 3. ✅ Service loader pattern (`init()` / `start()`): `Shared/Lifecycle`. Circular-require rule to enforce in review.
-4. ⬜ **RemoteController** (server): single place that binds remotes, with reusable validators: player present, payload `typeof`, table size/depth caps, string length caps, numbers finite/non-NaN/in-range, per-player token-bucket rate limiter, state-check hook. Invalid → drop + rate-limited log.
-5. ⬜ Rewrite `docs/REMOTE_CONTRACTS.md` as the real contract table; `RequestHammerHit` takes a server-issued boss instance id. → P2-1
-6. ⬜ Specs: validators (NaN, inf, huge, negative, wrong types, oversized tables), rate limiter.
+4. ✅ **RemoteController** (`src/server/controllers`): sender-present check, argument cap, per-player token bucket (`Shared/RateLimiter`), handler error containment, throttled reject log; payload checks via `Shared/Validate`. Table size/depth caps not needed: all payloads are scalar (documented). State checks belong to each handler (Phase 2).
+5. ✅ `docs/REMOTE_CONTRACTS.md` rewritten; `RequestHammerHit(bossInstanceId)` takes a server-issued boss instance id. → P2-1
+6. ✅ Specs: Validate (15), RateLimiter (7), RemoteController (5). 46/46 pass in Studio.
 
 ### Phase 2 — Vertical slice: one shared boss, full loop, no persistence — ⬜
 Server: `SessionService` (join/leave, per-player state), `BossService` (spawns shared boss instances with server-issued ids, authoritative HP, per-player damage contribution, respawn after defeat), `CombatService` (validates hit: boss instance alive, live character, reach, cooldown; damage via `CombatRules`), `StressService` (stress from config formula, P2-4).
@@ -203,5 +204,4 @@ Security/abuse pass, performance (MicroProfiler, remote traffic, memory per play
 
 ## 7. Immediate next steps
 
-1. Push `feat/phase1-config`, confirm the CI workflow goes green on GitHub, then merge to `master`.
-2. Continue Phase 1: shared types, RemoteController + validators + rate limiter with specs, real `REMOTE_CONTRACTS.md` (P2-1).
+1. Start Phase 2: shared-boss vertical slice.

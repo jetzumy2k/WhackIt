@@ -3,9 +3,11 @@
 local GameConfig = table.freeze({
 	GameName = "Whack It Out!",
 
-	-- Stress system
+	-- Stress system (player's own meter; whacking relieves it, see docs/GAMEPLAY_RULES.md)
 	MaxStress = 100,
 	StartingStress = 100,
+	StressReliefPerDamage = 0.1, -- stress relieved per point of accepted damage
+	DefeatStressRelief = 5, -- bonus for each reward-qualifying player when a boss is defeated
 
 	-- Score
 	StartingScore = 0,

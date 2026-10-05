@@ -28,6 +28,11 @@
         "$path": "scripts/TestRunner.server.luau"
       },
 
+      "Config": {
+        "$className": "Folder",
+        "$path": { "optional": "src/server/config" }
+      },
+
       "Services": {
         "$className": "Folder",
         "$path": { "optional": "src/server/services" }

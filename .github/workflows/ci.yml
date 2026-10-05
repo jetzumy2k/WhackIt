@@ -15,7 +15,7 @@ jobs:
     # which CI runners don't have, so they're run locally (see DEVELOPMENT_WORKFLOW.md).
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Pinned to the v0.2.1 commit; installs every tool in rokit.toml.
       - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab
