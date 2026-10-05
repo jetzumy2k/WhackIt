@@ -53,7 +53,7 @@ local list: { BossDefinition } = {
 		ScoreReward = 120,
 		CoinReward = 15,
 		UnlockAfterBossId = "deadline_boss",
-		UnlockDefeats = 3,
+		UnlockDefeats = 1,
 	},
 
 	{
@@ -65,7 +65,7 @@ local list: { BossDefinition } = {
 		ScoreReward = 150,
 		CoinReward = 20,
 		UnlockAfterBossId = "meeting_master",
-		UnlockDefeats = 3,
+		UnlockDefeats = 1,
 	},
 
 	{
@@ -77,7 +77,7 @@ local list: { BossDefinition } = {
 		ScoreReward = 200,
 		CoinReward = 30,
 		UnlockAfterBossId = "reply_all_boss",
-		UnlockDefeats = 3,
+		UnlockDefeats = 1,
 	},
 
 	{
@@ -89,7 +89,7 @@ local list: { BossDefinition } = {
 		ScoreReward = 300,
 		CoinReward = 50,
 		UnlockAfterBossId = "production_bug",
-		UnlockDefeats = 3,
+		UnlockDefeats = 1,
 	},
 
 	{

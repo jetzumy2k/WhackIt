@@ -120,10 +120,10 @@ The full boss reward (100 % share, solo):
 | Boss | Score | Coins | Unlocks after |
 |---|---|---|---|
 | Deadline Boss | 100 | 10 | always open |
-| Meeting Master | 120 | 15 | 3 defeats of Deadline Boss |
-| Reply-All Boss | 150 | 20 | 3 defeats of Meeting Master |
-| Production Bug | 200 | 30 | 3 defeats of Reply-All Boss |
-| Monday Monster | 300 | 50 | 3 defeats of Production Bug |
+| Meeting Master | 120 | 15 | 1 defeat of Deadline Boss |
+| Reply-All Boss | 150 | 20 | 1 defeat of Meeting Master |
+| Production Bug | 200 | 30 | 1 defeat of Reply-All Boss |
+| Monday Monster | 300 | 50 | 1 defeat of Production Bug (lowered from 3 on 2026-10-05) |
 
 Score is the lifetime leaderboard number and never goes down; coins are spent in the hammer shop.
 Locked bosses are drawn greyed out with "LOCKED: beat <previous> xN"; swings at them don't count and
