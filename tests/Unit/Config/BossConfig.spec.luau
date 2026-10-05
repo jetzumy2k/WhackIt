@@ -1,41 +1,59 @@
 --!strict
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
 
 local BossConfig = require(ReplicatedStorage.Config.BossConfig)
-
-local function isPositiveFinite(value: number): boolean
-	-- value == value rejects NaN.
-	return value == value and value > 0 and value < math.huge
-end
+local Checks = require(ServerScriptService.Tests.Helpers.Checks)
 
 return function()
 	describe("BossConfig", function()
 		it("defines at least one boss", function()
-			expect(#BossConfig > 0).to.equal(true)
+			expect(#BossConfig.List > 0).to.equal(true)
 		end)
 
 		it("uses unique, non-empty ids", function()
 			local seen: { [string]: boolean } = {}
-			for _, boss in BossConfig do
-				expect(#boss.Id > 0).to.equal(true)
+			for _, boss in BossConfig.List do
+				expect(Checks.isNonEmptyString(boss.Id)).to.equal(true)
 				expect(seen[boss.Id]).to.equal(nil)
 				seen[boss.Id] = true
 			end
 		end)
 
+		it("indexes every listed boss by id", function()
+			local count = 0
+			for id, boss in BossConfig.ById do
+				expect(boss.Id).to.equal(id)
+				count += 1
+			end
+			expect(count).to.equal(#BossConfig.List)
+			for _, boss in BossConfig.List do
+				expect(BossConfig.ById[boss.Id]).to.equal(boss)
+			end
+		end)
+
 		it("has display text for every boss", function()
-			for _, boss in BossConfig do
-				expect(#boss.DisplayName > 0).to.equal(true)
-				expect(#boss.Description > 0).to.equal(true)
+			for _, boss in BossConfig.List do
+				expect(Checks.isNonEmptyString(boss.DisplayName)).to.equal(true)
+				expect(Checks.isNonEmptyString(boss.Description)).to.equal(true)
 			end
 		end)
 
 		it("uses positive, finite numeric stats", function()
-			for _, boss in BossConfig do
-				expect(isPositiveFinite(boss.MaxHealth)).to.equal(true)
-				expect(isPositiveFinite(boss.HitDamage)).to.equal(true)
-				expect(isPositiveFinite(boss.ScoreReward)).to.equal(true)
+			for _, boss in BossConfig.List do
+				expect(Checks.isPositiveFinite(boss.MaxHealth)).to.equal(true)
+				expect(Checks.isPositiveFinite(boss.DamageTakenMultiplier)).to.equal(true)
+				expect(Checks.isPositiveFinite(boss.ScoreReward)).to.equal(true)
+			end
+		end)
+
+		it("is read-only at every level", function()
+			expect(table.isfrozen(BossConfig)).to.equal(true)
+			expect(table.isfrozen(BossConfig.List)).to.equal(true)
+			expect(table.isfrozen(BossConfig.ById)).to.equal(true)
+			for _, boss in BossConfig.List do
+				expect(table.isfrozen(boss)).to.equal(true)
 			end
 		end)
 	end)

@@ -1,8 +1,7 @@
 --!strict
 
-local GameConfig = {
+local GameConfig = table.freeze({
 	GameName = "Whack It Out!",
-	Version = "0.1.0",
 
 	-- Stress system
 	MaxStress = 100,
@@ -12,14 +11,12 @@ local GameConfig = {
 	StartingScore = 0,
 
 	-- Combat
-	HitCooldown = 0.25,
-	DefaultHitDamage = 10,
-
-	-- Round
-	RoundDuration = 60,
+	HitCooldown = 0.25, -- seconds between accepted hits per player
+	DefaultHammerId = "squeaky_hammer", -- must exist in HammerConfig
+	MinHitDamage = 1, -- every accepted hit does at least this much
 
 	-- Player
-	RespawnTime = 3,
-}
+	RespawnTime = 3, -- seconds
+})
 
 return GameConfig
