@@ -30,14 +30,6 @@
           "CombatFeedback": {
             "$className": "RemoteEvent"
           }
-        },
-
-        "Round": {
-          "$className": "Folder",
-
-          "RoundState": {
-            "$className": "RemoteEvent"
-          }
         }
       }
     },
@@ -75,12 +67,6 @@
       "Screens": {
         "$className": "Folder",
         "$path": { "optional": "src/gui/screens" }
-      }
-    },
-
-    "Workspace": {
-      "$properties": {
-        "Gravity": 196.2
       }
     },
 

@@ -25,6 +25,8 @@ wally install      # TestEZ into DevPackages/ (dev-only; never shipped)
 | Build | Rojo | `default.project.json` -> `build/WhackItOut.rbxl`, `test.project.json` -> `build/tests.rbxl` |
 | Unit tests (`-Tests`) | TestEZ via run-in-roblox | every `*.spec.luau` under `tests/` |
 
+CI (`.github/workflows/ci.yml`) runs the same `scripts/check.ps1` on every push to `master` and every pull request. It cannot run TestEZ (no Studio on CI runners), so run the specs locally before merging.
+
 run-in-roblox listens on fixed port 50312. If Windows has reserved it
 (`netsh interface ipv4 show excludedportrange protocol=tcp`), run the tests from Studio instead.
 
