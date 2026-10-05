@@ -57,4 +57,25 @@ return function()
 			end
 		end)
 	end)
+	describe("BossConfig progression", function()
+		it("gives positive coin rewards", function()
+			for _, boss in BossConfig.List do
+				expect(Checks.isPositiveFinite(boss.CoinReward)).to.equal(true)
+			end
+		end)
+
+		it(
+			"needs nothing for the first boss and at least one defeat for every later boss",
+			function()
+				for index, boss in BossConfig.List do
+					if index == 1 then
+						expect(boss.UnlockDefeats).to.equal(0)
+					else
+						expect(boss.UnlockDefeats >= 1).to.equal(true)
+						expect(boss.UnlockDefeats % 1).to.equal(0)
+					end
+				end
+			end
+		)
+	end)
 end

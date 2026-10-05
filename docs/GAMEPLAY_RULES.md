@@ -78,5 +78,34 @@ sound plays on the downswing. The hit request is sent at the impact moment (`Swi
 halfway through the swing), so the boss reacts as the hammer lands. Joint animation is local, so other clients replay the strike on
 the hitter's character when the hit is confirmed. Presses during a swing are ignored.
 
-The floor and player spawn are in `default.project.json` (`Workspace.Arena`). Phase 2 spawns one
-Deadline Boss.
+The floor and player spawn are in `default.project.json` (`Workspace.Arena`). All five bosses stand at
+stations in an arc facing the spawn, 20 studs apart (more than twice `HitReach`, so one swing can only
+reach one boss).
+
+## Progression (Phase 4, decided 2026-10-05)
+Rules in `src/shared/ProgressionRules.luau` (server enforces, client displays); values in `BossConfig`
+and `HammerConfig`.
+
+### Rewards per defeat (qualifying contributors, once per boss life)
+| Boss | Score | Coins | Unlocks after |
+|---|---|---|---|
+| Deadline Boss | 100 | 10 | always open |
+| Meeting Master | 120 | 15 | 3 defeats of Deadline Boss |
+| Reply-All Boss | 150 | 20 | 3 defeats of Meeting Master |
+| Production Bug | 200 | 30 | 3 defeats of Reply-All Boss |
+| Monday Monster | 300 | 50 | 3 defeats of Production Bug |
+
+Score is the lifetime leaderboard number and never goes down; coins are spent in the hammer shop.
+Locked bosses are drawn greyed out with "LOCKED: beat <previous> xN"; swings at them don't count and
+show "Defeat <previous> N more times to unlock!".
+
+### Hammer shop ("Hammers" button)
+| Hammer | Damage | Price |
+|---|---|---|
+| Squeaky Hammer | 10 | free (default) |
+| Bouncy Mallet | 14 | 150 coins |
+| Bubble-Wrap Hammer | 18 | 400 coins |
+| Rainbow Mega Mallet | 25 | 1000 coins |
+
+A bought hammer is equipped immediately; any owned hammer can be re-equipped. Pricier hammers always
+hit harder (spec-enforced).

@@ -41,16 +41,18 @@ function GameplayController.findBoss(instanceId: string): Model?
 	return nil
 end
 
--- Nearest boss that is alive and within reach of the local character, or nil.
--- This only avoids pointless requests; the server re-checks everything.
-function GameplayController.getNearestHittableBoss(): string?
+-- Nearest living boss within reach of the local character: its instance id
+-- and BossConfig id, or nil. Locked bosses are included so the caller can say
+-- why a swing won't count. The server re-checks everything.
+function GameplayController.getNearestBossInReach(): (string?, string?)
 	local character = Players.LocalPlayer.Character
 	local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
 	if bossesFolder == nil or root == nil or not root:IsA("BasePart") then
-		return nil
+		return nil, nil
 	end
 
 	local nearestId: string? = nil
+	local nearestBossId: string? = nil
 	local nearestDistance = math.huge
 	for _, child in bossesFolder:GetChildren() do
 		local body = if child:IsA("Model") then child.PrimaryPart else nil
@@ -59,12 +61,18 @@ function GameplayController.getNearestHittableBoss(): string?
 			continue
 		end
 		local distance = (root.Position - body.Position).Magnitude
-		if CombatRules.isInReach(root.Position, body.Position) and distance < nearestDistance then
+		local bossId = child:GetAttribute(Attributes.BossId)
+		if
+			CombatRules.isInReach(root.Position, body.Position)
+			and distance < nearestDistance
+			and typeof(bossId) == "string"
+		then
 			nearestId = id
+			nearestBossId = bossId
 			nearestDistance = distance
 		end
 	end
-	return nearestId
+	return nearestId, nearestBossId
 end
 
 function GameplayController.start(): ()

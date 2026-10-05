@@ -14,6 +14,7 @@ local Attributes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild
 local BossConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("BossConfig"))
 local GameConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("GameConfig"))
 local GameplayController = require(script.Parent.GameplayController)
+local ProgressController = require(script.Parent.ProgressController)
 
 local UIController = {}
 
@@ -95,23 +96,25 @@ local function buildHud(): (ScreenGui, Frame)
 	localPlayer:GetAttributeChangedSignal(Attributes.Stress):Connect(refreshStress)
 	refreshStress()
 
-	-- Score, under the Stress Meter.
+	-- Score and coins, under the Stress Meter (from the server's leaderstats).
 	local scoreLabel = makeLabel("Score", gui)
 	scoreLabel.AnchorPoint = Vector2.new(0.5, 0)
 	scoreLabel.Position = UDim2.new(0.5, 0, 0, 48)
-	scoreLabel.Size = UDim2.new(0.3, 0, 0, 26)
-	scoreLabel.Text = "Score: 0"
+	scoreLabel.Size = UDim2.new(0.4, 0, 0, 26)
+	scoreLabel.Text = "Score: 0   Coins: 0"
 	task.spawn(function()
 		local leaderstats = localPlayer:WaitForChild("leaderstats")
 		local score = leaderstats:WaitForChild("Score")
-		if not score:IsA("IntValue") then
+		local coins = leaderstats:WaitForChild("Coins")
+		if not score:IsA("IntValue") or not coins:IsA("IntValue") then
 			return
 		end
-		local function refreshScore(): ()
-			scoreLabel.Text = "Score: " .. score.Value
+		local function refreshStats(): ()
+			scoreLabel.Text = string.format("Score: %d   Coins: %d", score.Value, coins.Value)
 		end
-		score.Changed:Connect(refreshScore)
-		refreshScore()
+		score.Changed:Connect(refreshStats)
+		coins.Changed:Connect(refreshStats)
+		refreshStats()
 	end)
 
 	-- How to play, bottom centre.
@@ -203,12 +206,27 @@ function attachBossBar(model: Model, billboardParent: Instance): ()
 			return
 		end
 		setFill(fill, health, maxHealth)
-		healthLabel.Text = if model:GetAttribute(Attributes.Defeated) == true
-			then "DEFEATED!"
-			else string.format("%d / %d", health, maxHealth)
+		local status = if typeof(bossId) == "string"
+			then ProgressController.unlockStatus(bossId)
+			else nil
+		local previous = if status and status.PreviousBossId
+			then BossConfig.ById[status.PreviousBossId]
+			else nil
+		if status and not status.Unlocked and previous then
+			healthLabel.Text =
+				string.format("LOCKED: beat %s x%d", previous.DisplayName, status.DefeatsNeeded)
+		elseif model:GetAttribute(Attributes.Defeated) == true then
+			healthLabel.Text = "DEFEATED!"
+		else
+			healthLabel.Text = string.format("%d / %d", health, maxHealth)
+		end
 	end
 	model:GetAttributeChangedSignal(Attributes.Health):Connect(refresh)
 	model:GetAttributeChangedSignal(Attributes.Defeated):Connect(refresh)
+	local progressConnection = ProgressController.Changed:Connect(refresh)
+	model.Destroying:Connect(function()
+		progressConnection:Disconnect()
+	end)
 	refresh()
 
 	billboard.Parent = billboardParent
@@ -228,8 +246,8 @@ local function showVictoryCard(card: Frame, payload: unknown): ()
 		return
 	end
 	local data = payload :: { [string]: unknown }
-	local bossId, rewarded, score, stress =
-		data.BossId, data.Rewarded, data.ScoreAwarded, data.StressRelieved
+	local bossId, rewarded, score, coins, stress =
+		data.BossId, data.Rewarded, data.ScoreAwarded, data.CoinsAwarded, data.StressRelieved
 	if typeof(bossId) ~= "string" or typeof(rewarded) ~= "boolean" then
 		return
 	end
@@ -237,13 +255,33 @@ local function showVictoryCard(card: Frame, payload: unknown): ()
 	local definition = BossConfig.ById[bossId]
 	local bossName = if definition then definition.DisplayName else "Boss"
 	local text = card:FindFirstChild("Text") :: TextLabel
-	if rewarded and typeof(score) == "number" and typeof(stress) == "number" then
-		text.Text = string.format(
-			"%s defeated!\n+%d score   -%d stress",
-			bossName,
-			score,
-			math.floor(stress + 0.5)
-		)
+	if
+		rewarded
+		and typeof(score) == "number"
+		and typeof(coins) == "number"
+		and typeof(stress) == "number"
+	then
+		local lines = {
+			bossName .. " defeated!",
+			string.format(
+				"+%d score   +%d coins   -%d stress",
+				score,
+				coins,
+				math.floor(stress + 0.5)
+			),
+		}
+		local unlocked = data.UnlockedBossIds
+		if typeof(unlocked) == "table" then
+			for _, unlockedId in unlocked :: { unknown } do
+				local unlockedBoss = if typeof(unlockedId) == "string"
+					then BossConfig.ById[unlockedId]
+					else nil
+				if unlockedBoss then
+					table.insert(lines, "NEW BOSS UNLOCKED: " .. unlockedBoss.DisplayName .. "!")
+				end
+			end
+		end
+		text.Text = table.concat(lines, "\n")
 	else
 		text.Text = string.format("%s defeated!\nHit it more next time to earn a reward.", bossName)
 	end

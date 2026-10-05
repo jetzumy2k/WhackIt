@@ -22,7 +22,18 @@ export type BossDefeated = {
 	BossId: string,
 	Rewarded: boolean, -- false when the player's share was below MinRewardDamageShare
 	ScoreAwarded: number,
+	CoinsAwarded: number,
 	StressRelieved: number,
+	UnlockedBossIds: { string }, -- bosses this defeat newly unlocked for the player
+}
+
+-- Profile.Sync (server -> one player): their own progression, for the UI only.
+export type ProfileSnapshot = {
+	Coins: number,
+	OwnedHammerIds: { string },
+	EquippedHammerId: string,
+	BossDefeats: { [string]: number },
+	UnlockedBossIds: { string },
 }
 
 return {}

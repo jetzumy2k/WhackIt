@@ -54,3 +54,17 @@ works but nothing is kept between Play sessions.
 | 20 | Output on join/leave | No `[PlayerData]` warnings or red errors |
 | 21 | API access off | A "mock" note from ProfileStore may appear; play works; progress resets next session |
 | 22 | Two Studio test servers can't share a session; on a live server, joining a second server with the same account | The first server kicks you with "Your progress was opened on another server…" and nothing is lost |
+
+## Phase 4: rewards, unlocks and shop
+| # | Check | Expected |
+|---|---|---|
+| 23 | Spawn | Five monsters in an arc; only Deadline Boss in colour, the other four grey with "LOCKED: beat …" bars. HUD shows `Score: … Coins: …`; a "Hammers" button bottom-right |
+| 24 | Swing at a locked boss | Swing plays, toast "Defeat Deadline Boss 3 more times to unlock!", no damage |
+| 25 | Defeat Deadline Boss | Victory Card `+100 score +10 coins -5 stress`; Coins in HUD and player list +10 |
+| 26 | Defeat it 3 times total | Third Victory Card adds "NEW BOSS UNLOCKED: Meeting Master!"; Meeting Master turns colourful and can be hit |
+| 27 | Open Hammers with < 150 coins | Squeaky Hammer "Equipped"; others "Need 150/400/1000" (greyed) |
+| 28 | Earn 150 coins, Buy Bouncy Mallet | Coins −150, hammer in hand changes to the blue/white mallet, row shows "Equipped"; hits do 14 × boss multiplier |
+| 29 | Equip Squeaky Hammer again | Hammer swaps back; damage back to 10 × multiplier |
+| 30 | Stop and Play again (API access on) | Coins, bought hammers, equipped hammer and unlocked bosses are all kept |
+| 31 | Rapid double-click Buy | Bought once; coins deducted once |
+| 32 | Command bar: `game.ReplicatedStorage.Remotes.Shop.BuyHammer:FireServer("rainbow_mega_mallet")` without enough coins | Nothing bought; no error |

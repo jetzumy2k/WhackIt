@@ -19,6 +19,8 @@ export type BossState = {
 	Defeated: boolean,
 	-- UserId -> damage actually applied (overkill is not credited).
 	Contributions: { [number]: number },
+	-- UserIds already rewarded for this boss life (rewards are granted once).
+	Rewarded: { [number]: boolean },
 }
 
 export type HitResult = {
@@ -36,6 +38,7 @@ function BossState.new(definition: BossConfig.BossDefinition, instanceId: string
 		Health = definition.MaxHealth,
 		Defeated = false,
 		Contributions = {},
+		Rewarded = {},
 	}
 end
 
@@ -73,6 +76,17 @@ function BossState.qualifyingUserIds(state: BossState, minShare: number): { numb
 	end
 	table.sort(userIds)
 	return userIds
+end
+
+-- Records that `userId` is being rewarded for this defeated boss. Returns false
+-- if the boss isn't defeated or the player was already rewarded, so a reward
+-- can never be granted twice for the same boss life.
+function BossState.markRewarded(state: BossState, userId: number): boolean
+	if not state.Defeated or state.Rewarded[userId] then
+		return false
+	end
+	state.Rewarded[userId] = true
+	return true
 end
 
 return BossState

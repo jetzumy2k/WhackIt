@@ -13,6 +13,12 @@ local RemoteLimits = table.freeze({
 		RefillPerSecond = 8,
 	}),
 
+	-- Shop buy/equip: a few quick clicks are fine; sustained spam is not.
+	Shop = table.freeze({
+		Capacity = 5,
+		RefillPerSecond = 2,
+	}),
+
 	-- At most one rejection warning per player every 5 seconds, so a flooding
 	-- client can't flood the server log too.
 	RejectLog = table.freeze({

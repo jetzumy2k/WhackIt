@@ -13,22 +13,34 @@ validation live in `src/server/lib/PlayerDataSchema.luau`; storage settings in
 | Session locking | ProfileStore | One server owns a profile at a time, so progress can't be duplicated by joining two servers |
 | Auto-save | ProfileStore | Periodic, plus on leave (`EndSession`) and server shutdown |
 
-## Schema v1 (current)
+## Schema v2 (current)
 ```lua
 type PlayerData = {
-    SchemaVersion: number,        -- 1
+    SchemaVersion: number,        -- 2
     Score: number,                -- lifetime score (integer, 0..2^50); shown in leaderstats
     Stress: number,               -- Stress Meter, 0..GameConfig.MaxStress, carries over between sessions
     TotalHits: number,            -- accepted hammer hits (integer, 0..2^50)
     TotalBossesDefeated: number,  -- defeats the player was rewarded for (integer, 0..2^50)
-    EquippedHammerId: string,     -- must exist in HammerConfig
+    EquippedHammerId: string,     -- must exist in HammerConfig and be owned
+    -- v2
+    Coins: number,                -- spendable currency (integer, 0..2^50); never lowers Score
+    OwnedHammers: {[string]: true}, -- bought hammers by id; free (Price 0) hammers are always owned
+    BossDefeats: {[string]: number}, -- rewarded defeats per boss id; drives boss unlocks
 }
 ```
-New players start from `PlayerDataSchema.template()`: `StartingScore`, `StartingStress`, zero counters,
-`DefaultHammerId`.
+New players start from `PlayerDataSchema.template()`: `StartingScore`, `StartingStress`, `StartingCoins`,
+zero counters, `DefaultHammerId`, nothing bought, no defeats.
 
-Who writes what (server only): `SessionService.addScore` → `Score`; `StressService.relieve` → `Stress`;
-`CombatService` → `TotalHits` (each accepted hit) and `TotalBossesDefeated` (each rewarded defeat).
+### Migrations
+| To | What it does |
+|---|---|
+| v1 | First versioned schema (data without `SchemaVersion` counts as v0) |
+| v2 | `Coins = 0`, `OwnedHammers = {}`, `BossDefeats = { deadline_boss = TotalBossesDefeated }` (only the Deadline Boss existed in v1, so unlock progress carries over) |
+
+Who writes what (server only): `SessionService.addScore` → `Score`; `SessionService.addCoins` /
+`trySpendCoins` → `Coins`; `SessionService.setEquippedHammer` → `EquippedHammerId`; `StressService.relieve`
+→ `Stress`; `CombatService` → `TotalHits`; `RewardService` → `TotalBossesDefeated`, `BossDefeats`;
+`ShopService` → `OwnedHammers`.
 
 ## Load rules (`PlayerDataService`)
 1. `StartSessionAsync` retries until it succeeds or the player leaves.
@@ -37,8 +49,10 @@ Who writes what (server only): `SessionService.addScore` → `Score`; `StressSer
 3. **Migrate** from the stored `SchemaVersion` (missing = v0) up to the current version.
 4. **Data from a newer schema → refuse**: the profile is released untouched and the player is kicked
    ("saved by a newer version… rejoin"). This protects data during rolling updates.
-5. **Validate and repair** (`sanitize`): non-finite or negative counters → defaults, fractions rounded
-   down, huge values capped, stress clamped, unknown hammer → default. Unknown extra fields are kept.
+5. **Validate and repair** (`sanitize`): non-finite or negative counters (incl. coins) → defaults,
+   fractions rounded down, huge values capped, stress clamped; `OwnedHammers` / `BossDefeats` rebuilt
+   keeping only known ids with valid values; an equipped hammer that isn't owned → default. Unknown
+   extra fields are kept.
 6. Only then do sessions, score, stress and hits become available. Hits from a player whose data hasn't
    loaded are ignored.
 7. If another server takes over the profile, the player is kicked from this one.

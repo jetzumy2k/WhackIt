@@ -1,6 +1,8 @@
 --!strict
--- Boss definitions. List order is the display order; ById is for lookups.
+-- Boss definitions. List order is the display AND unlock order; ById is for lookups.
 -- DamageTakenMultiplier scales hammer damage (see docs/GAMEPLAY_RULES.md).
+-- UnlockDefeats: rewarded defeats of the PREVIOUS boss in List needed to unlock
+-- this one (0 for the first boss).
 
 export type BossDefinition = {
 	Id: string,
@@ -9,6 +11,8 @@ export type BossDefinition = {
 	MaxHealth: number,
 	DamageTakenMultiplier: number,
 	ScoreReward: number,
+	CoinReward: number,
+	UnlockDefeats: number,
 }
 
 export type BossConfig = {
@@ -24,6 +28,8 @@ local list: { BossDefinition } = {
 		MaxHealth = 100,
 		DamageTakenMultiplier = 1.0,
 		ScoreReward = 100,
+		CoinReward = 10,
+		UnlockDefeats = 0,
 	},
 
 	{
@@ -33,6 +39,8 @@ local list: { BossDefinition } = {
 		MaxHealth = 120,
 		DamageTakenMultiplier = 0.8,
 		ScoreReward = 120,
+		CoinReward = 15,
+		UnlockDefeats = 3,
 	},
 
 	{
@@ -42,6 +50,8 @@ local list: { BossDefinition } = {
 		MaxHealth = 80,
 		DamageTakenMultiplier = 1.2,
 		ScoreReward = 150,
+		CoinReward = 20,
+		UnlockDefeats = 3,
 	},
 
 	{
@@ -51,6 +61,8 @@ local list: { BossDefinition } = {
 		MaxHealth = 150,
 		DamageTakenMultiplier = 1.5,
 		ScoreReward = 200,
+		CoinReward = 30,
+		UnlockDefeats = 3,
 	},
 
 	{
@@ -60,6 +72,8 @@ local list: { BossDefinition } = {
 		MaxHealth = 200,
 		DamageTakenMultiplier = 2.0,
 		ScoreReward = 300,
+		CoinReward = 50,
+		UnlockDefeats = 3,
 	},
 }
 

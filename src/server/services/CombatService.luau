@@ -21,8 +21,10 @@ local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
 local HammerTool = require(ServerScriptService.Lib.HammerTool)
 local RateLimiter = require(ReplicatedStorage.Shared.RateLimiter)
 local PlayerDataService = require(script.Parent.PlayerDataService)
+local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
 local RemoteController = require(ServerScriptService.Controllers.RemoteController)
 local RemoteLimits = require(ServerScriptService.Config.RemoteLimits)
+local RewardService = require(script.Parent.RewardService)
 local SessionService = require(script.Parent.SessionService)
 local StressRules = require(ReplicatedStorage.Shared.StressRules)
 local StressService = require(script.Parent.StressService)
@@ -81,25 +83,15 @@ local function rewardContributors(live: BossService.LiveBoss): ()
 			continue -- left before the defeat; nothing to grant
 		end
 
-		local rewarded = qualifying[userId] == true
-		local scoreAwarded = 0
-		local stressRelieved = 0
-		if rewarded then
-			scoreAwarded = state.Definition.ScoreReward
-			SessionService.addScore(player, scoreAwarded)
-			stressRelieved = StressService.relieve(player, GameConfig.DefeatStressRelief)
-			local data = PlayerDataService.get(player)
-			if data then
-				data.TotalBossesDefeated += 1
-			end
-		end
-
+		local grant = if qualifying[userId] then RewardService.grantDefeat(player, state) else nil
 		local payload: Types.BossDefeated = {
 			BossInstanceId = state.InstanceId,
 			BossId = state.Definition.Id,
-			Rewarded = rewarded,
-			ScoreAwarded = scoreAwarded,
-			StressRelieved = stressRelieved,
+			Rewarded = grant ~= nil,
+			ScoreAwarded = if grant then grant.Score else 0,
+			CoinsAwarded = if grant then grant.Coins else 0,
+			StressRelieved = if grant then grant.StressRelieved else 0,
+			UnlockedBossIds = if grant then grant.UnlockedBossIds else {},
 		}
 		CombatRemotes.BossDefeated:FireClient(player, payload)
 	end
@@ -128,6 +120,14 @@ local function onHammerHit(player: Player, rawBossInstanceId: unknown): ()
 		return explainDrop(player, "boss " .. bossInstanceId .. " is gone or defeated")
 	end
 
+	local data = PlayerDataService.get(player)
+	if data == nil then
+		return explainDrop(player, "data not loaded")
+	end
+	if not ProgressionRules.isBossUnlocked(live.State.Definition.Id, data.BossDefeats) then
+		return explainDrop(player, live.State.Definition.Id .. " is locked for this player")
+	end
+
 	local rootPosition, notReadyReason = getSwingPosition(player)
 	if rootPosition == nil then
 		return explainDrop(player, notReadyReason or "not ready")
@@ -140,7 +140,7 @@ local function onHammerHit(player: Player, rawBossInstanceId: unknown): ()
 		)
 	end
 
-	local hammer = HammerConfig.ById[session.EquippedHammerId]
+	local hammer = HammerConfig.ById[data.EquippedHammerId]
 	if hammer == nil then
 		return RemoteController.reject(player, REMOTE_NAME, "no equipped hammer")
 	end
@@ -155,10 +155,7 @@ local function onHammerHit(player: Player, rawBossInstanceId: unknown): ()
 	end
 	lastHitAt[player] = now
 
-	local data = PlayerDataService.get(player)
-	if data then
-		data.TotalHits += 1
-	end
+	data.TotalHits += 1
 
 	StressService.relieve(player, StressRules.reliefForHit(result.Applied))
 

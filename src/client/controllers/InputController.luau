@@ -16,9 +16,11 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
+local BossConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("BossConfig"))
 local CombatRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CombatRules"))
 local SwingPose = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SwingPose"))
 local GameplayController = require(script.Parent.GameplayController)
+local ProgressController = require(script.Parent.ProgressController)
 local SwingAnimator = require(script.Parent.Parent.Lib.SwingAnimator)
 local UIController = require(script.Parent.UIController)
 
@@ -76,18 +78,40 @@ local function playWhoosh(tool: Tool): ()
 	end
 end
 
+-- "Defeat Deadline Boss 2 more times to unlock!"
+local function lockedHint(bossId: string): string
+	local status = ProgressController.unlockStatus(bossId)
+	local previous = if status and status.PreviousBossId
+		then BossConfig.ById[status.PreviousBossId]
+		else nil
+	if status == nil or previous == nil then
+		return "This boss is locked."
+	end
+	local times = if status.DefeatsNeeded == 1 then "time" else "times"
+	return string.format(
+		"Defeat %s %d more %s to unlock!",
+		previous.DisplayName,
+		status.DefeatsNeeded,
+		times
+	)
+end
+
 -- Runs when the hammer comes down: picks the boss in reach at that moment.
 local function onImpact(): ()
 	local tool = getHeldHammer()
 	if tool == nil then
 		return -- died or lost the hammer mid-swing
 	end
-	local bossInstanceId = GameplayController.getNearestHittableBoss()
-	if bossInstanceId then
-		requestHammerHit:FireServer(bossInstanceId)
-	else
+	local bossInstanceId, bossId = GameplayController.getNearestBossInReach()
+	if bossInstanceId == nil or bossId == nil then
 		UIController.showToast(TOO_FAR_HINT)
+		return
 	end
+	if not ProgressController.isBossUnlocked(bossId) then
+		UIController.showToast(lockedHint(bossId))
+		return
+	end
+	requestHammerHit:FireServer(bossInstanceId)
 end
 
 local function swing(): ()

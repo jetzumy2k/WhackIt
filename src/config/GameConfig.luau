@@ -9,8 +9,9 @@ local GameConfig = table.freeze({
 	StressReliefPerDamage = 0.1, -- stress relieved per point of accepted damage
 	DefeatStressRelief = 5, -- bonus for each reward-qualifying player when a boss is defeated
 
-	-- Score
+	-- Score and coins
 	StartingScore = 0,
+	StartingCoins = 0,
 
 	-- Combat
 	HitCooldown = 0.45, -- seconds per hammer swing = minimum time between accepted hits

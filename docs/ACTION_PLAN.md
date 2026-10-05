@@ -1,6 +1,6 @@
 # WHACK IT OUT! — Progress Review & Action Plan
 
-_Review date: 2026-10-05 · Last status update: 2026-10-05 · `master` after PR #4_
+_Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase4-progression`_
 
 **Status legend:** ✅ Done · 🟡 Partly done / awaiting verification · ⬜ Not started
 
@@ -22,7 +22,8 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · `master` after PR 
 | Phase 1 — Core architecture | ✅ Complete (PR #2) | Lifecycle, config, Types, Validate, RateLimiter, RemoteController, REMOTE_CONTRACTS; 46/46 specs pass in Studio |
 | Phase 2 — Shared-boss vertical slice | ✅ Accepted for now (2026-10-05, solo playtest after 6 rounds); multiplayer/abuse playtest checks 9–17 still to run | 5 services, 6 client controllers, arena, 93 specs |
 | Phase 3 — Persistence | ✅ Complete (PR #4): 108/108 specs; save playtest reported no errors or warnings (2026-10-05) | ProfileStore via `PlayerDataService`, schema v1 with migrations and validation |
-| Phases 4–6 | ⬜ | |
+| Phase 4 — Rewards, progression, content | 🟡 Implemented; specs + playtest pending | Coins, boss unlocks, hammer shop, five boss stations, schema v2 |
+| Phases 5–6 | ⬜ | |
 | §5 Design decisions | 🟡 3 of 5 decided | Shared bosses (+ reward/respawn rules) · end on defeat · hammer-driven damage. Open: persistence library, monetization |
 
 ---
@@ -40,12 +41,12 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · `master` after PR 
 | Combat & stress rules | ✅ | `Shared/CombatRules` (damage, cooldown, reach), `Shared/StressRules`, documented in `docs/GAMEPLAY_RULES.md` |
 | Shared types | ✅ | `Types`: `BossInstanceId`, `CombatFeedback` payload (PascalCase). Unused camelCase `PlayerStats` removed. `PlayerData` arrives with Phase 3 |
 | Remotes | ✅ Handled | `RequestHammerHit` → `CombatService`; `CombatFeedback`, `BossDefeated` sent by server; replicated attributes documented in `REMOTE_CONTRACTS.md` |
-| Server services (Boss, Combat, Stress, PlayerData, Reward, Purchase, Session, RemoteController) | 🟡 6 of 8 (+ `HammerService`) | `RemoteController`, `SessionService`, `BossService` (+ `Lib/BossState`), `CombatService`, `StressService`, `PlayerDataService` (+ `Lib/PlayerDataSchema`); `HammerService` (+ `Lib/HammerTool`) hands out the hammer Tool. Score is granted inside `CombatService`; `RewardService` (Phase 4) takes that over |
+| Server services (Boss, Combat, Stress, PlayerData, Reward, Purchase, Session, RemoteController) | 🟡 7 of 8 (+ `HammerService`, `ShopService`, `ProgressService`) | `RemoteController`, `SessionService`, `BossService` (+ `Lib/BossState`), `CombatService`, `StressService`, `PlayerDataService` (+ `Lib/PlayerDataSchema`), `RewardService`; `PurchaseService` (real-money) is Phase 5 |
 | Server-only config | ✅ | `ServerScriptService.Config` (`src/server/config`): `RemoteLimits` |
-| Client controllers (Input, Gameplay, UI, Feedback, Audio) | 🟡 4 of 5 (+ `BossVisualController`) | Input (hammer Tool swing), Gameplay, UI, Feedback, BossVisual (cartoon monster + animations). Audio in Phase 4 (swing uses a built-in Roblox sound) |
+| Client controllers (Input, Gameplay, UI, Feedback, Audio) | 🟡 4 of 5 (+ BossVisual, HammerPose, Progress, Shop) | Audio deferred: needs uploaded/licensed sound assets |
 | UI screens | 🟡 Code-built placeholder | HUD (Stress Meter, score, hint), boss HP billboards, Victory Card. Art pass in Phase 4 |
 | Arena | 🟡 Placeholder | Floor + spawn in `default.project.json`; bosses are code-built cartoon monsters (`BossVisualConfig`) until real art |
-| Tests (TestEZ) | ✅ | 108 specs (unit + an integration spec against ProfileStore's mock): 108 passed, 0 failed in Studio (2026-10-05) |
+| Tests (TestEZ) | 🟡 | 137 specs. 108 passed in Studio; 29 new (ProgressionRules, schema v2, reward guard, config) pass static checks, **not yet run in Studio** |
 | Checks script | ✅ | `scripts/check.ps1` (format, lint, type-check, build; `-Tests` for TestEZ) |
 | Docs | 🟡 | `DEVELOPMENT_WORKFLOW`, `GAMEPLAY_RULES`, `REMOTE_CONTRACTS`, `PLAYTEST` current; `DATA_SCHEMA` still a template (Phase 3) |
 | CI | ✅ | `.github/workflows/ci.yml` green on GitHub; `actions/checkout` moved to v7 (Node 24) |
@@ -199,7 +200,10 @@ Flow: input → client cooldown sanity → `RequestHammerHit` → server validat
 `PlayerDataService`: schema v1 (`docs/DATA_SCHEMA.md` made real), defaults, validation, migration pipeline (`v0→v1` test), session locking, autosave, `BindToClose`, retry/backoff within budget, **load failure = kick with friendly message, never overwrite**. Erasure script.
 **Specs:** migration, corrupt-data rejection, failed-load path never saves. **Manual:** Studio with API access on, rejoin, two-server simulation.
 
-### Phase 4 — Rewards, progression & content — ⬜
+### Phase 4 — Rewards, progression & content — 🟡 Implemented, verification pending
+
+**Status:** ✅ code · ✅ static checks · ⬜ 137 specs in Studio · ⬜ playtest (`docs/PLAYTEST.md` checks 23–32). Decisions (2026-10-05): score + coins, bosses unlock in order, hammers bought with coins, all five bosses at stations. Deferred: global leaderboard (OrderedDataStore) and audio (needs licensed assets).
+
 `RewardService` (coins/score only on server-confirmed defeat; idempotent per encounter id), boss unlocks, hammer ownership/selection (server-validated), all 5 bosses with cartoon reactions, `AudioController`, particles, mobile-friendly UI, leaderboard (OrderedDataStore, throttled).
 **Specs:** reward granted exactly once per defeat; locked boss / unowned hammer requests rejected.
 
@@ -213,5 +217,6 @@ Security/abuse pass, performance (MicroProfiler, remote traffic, memory per play
 
 ## 7. Immediate next steps
 
-1. Phase 4: rewards, progression and content.
-2. Before release: `docs/PLAYTEST.md` checks 9–17 (multiplayer, abuse).
+1. **You:** run `build/tests.rbxl` (expect 137 passed) and `docs/PLAYTEST.md` checks 23–32.
+2. PR + CI + merge `feat/phase4-progression`.
+3. Before release: `docs/PLAYTEST.md` checks 9–17 (multiplayer, abuse).

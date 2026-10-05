@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ArenaConfig = require(ReplicatedStorage.Config.ArenaConfig)
 local BossConfig = require(ReplicatedStorage.Config.BossConfig)
+local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 
 return function()
 	describe("ArenaConfig", function()
@@ -27,6 +28,29 @@ return function()
 		it("is read-only", function()
 			expect(table.isfrozen(ArenaConfig)).to.equal(true)
 			expect(table.isfrozen(ArenaConfig.BossSpawns)).to.equal(true)
+		end)
+	end)
+	describe("ArenaConfig stations", function()
+		it("has exactly one station per boss", function()
+			local seen: { [string]: number } = {}
+			for _, spawn in ArenaConfig.BossSpawns do
+				seen[spawn.BossId] = (seen[spawn.BossId] or 0) + 1
+			end
+			for _, boss in BossConfig.List do
+				expect(seen[boss.Id]).to.equal(1)
+			end
+		end)
+
+		it("spaces stations so one swing can only reach one boss", function()
+			for i, a in ArenaConfig.BossSpawns do
+				for j, b in ArenaConfig.BossSpawns do
+					if i < j then
+						expect((a.Position - b.Position).Magnitude > 2 * GameConfig.HitReach).to.equal(
+							true
+						)
+					end
+				end
+			end
 		end)
 	end)
 end

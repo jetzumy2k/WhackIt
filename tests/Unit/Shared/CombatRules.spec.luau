@@ -13,6 +13,7 @@ local function hammerWith(damage: number): HammerConfig.HammerDefinition
 		DisplayName = "Test",
 		Description = "Test",
 		Damage = damage,
+		Price = 0,
 		HeadColor = Color3.new(1, 1, 1),
 		HandleColor = Color3.new(1, 1, 1),
 	}
@@ -26,6 +27,8 @@ local function bossWith(multiplier: number): BossConfig.BossDefinition
 		MaxHealth = 100,
 		DamageTakenMultiplier = multiplier,
 		ScoreReward = 1,
+		CoinReward = 1,
+		UnlockDefeats = 0,
 	}
 end
 
