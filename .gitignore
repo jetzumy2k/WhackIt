@@ -6,3 +6,52 @@
 /*.rbxl.lock
 
 sourcemap.json
+sourcemap.test.json
+
+# Roblox / Rojo
+*.rbxl
+*.rbxlx
+*.rbxm
+*.rbxmx
+
+# Rojo temporary files
+.rojo/
+
+# Wally packages
+Packages/
+DevPackages/
+
+# Build/output directories
+build/
+dist/
+out/
+
+# Test output
+test-results/
+coverage/
+
+# Luau tooling
+# Roblox API definitions for luau-lsp, downloaded by scripts/check.ps1
+/globalTypes.d.luau
+.selene/
+.stylua/
+
+# Operating system
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Windows
+*.tmp
+*.temp
+
+# VS Code
+.vscode/settings.json
+
+# Logs
+*.log
+
+# Environment / secrets
+.env
+.env.*
+!.env.example

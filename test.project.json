@@ -1,0 +1,46 @@
+{
+  "name": "WhackItOut-Tests",
+  "tree": {
+    "$className": "DataModel",
+
+    "ReplicatedStorage": {
+      "Packages": {
+        "$className": "Folder",
+        "$path": { "optional": "Packages" }
+      },
+
+      "DevPackages": {
+        "$className": "Folder",
+        "$path": { "optional": "DevPackages" }
+      },
+
+      "Shared": {
+        "$path": "src/shared"
+      },
+
+      "Config": {
+        "$path": "src/config"
+      }
+    },
+
+    "ServerScriptService": {
+      "TestRunner": {
+        "$path": "scripts/TestRunner.server.luau"
+      },
+
+      "Services": {
+        "$className": "Folder",
+        "$path": { "optional": "src/server/services" }
+      },
+
+      "Controllers": {
+        "$className": "Folder",
+        "$path": { "optional": "src/server/controllers" }
+      },
+
+      "Tests": {
+        "$path": "tests"
+      }
+    }
+  }
+}

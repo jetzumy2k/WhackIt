@@ -4,6 +4,11 @@
     "$className": "DataModel",
 
     "ReplicatedStorage": {
+      "Packages": {
+        "$className": "Folder",
+        "$path": { "optional": "Packages" }
+      },
+
       "Shared": {
         "$path": "src/shared"
       },
@@ -13,31 +18,63 @@
       },
 
       "Remotes": {
-        "$path": "src/remotes"
+        "$className": "Folder",
+
+        "Combat": {
+          "$className": "Folder",
+
+          "RequestHammerHit": {
+            "$className": "RemoteEvent"
+          },
+
+          "CombatFeedback": {
+            "$className": "RemoteEvent"
+          }
+        },
+
+        "Round": {
+          "$className": "Folder",
+
+          "RoundState": {
+            "$className": "RemoteEvent"
+          }
+        }
       }
     },
 
     "ServerScriptService": {
+      "Main": {
+        "$path": "src/server/Main.server.luau"
+      },
+
       "Services": {
-        "$path": "src/server/services"
+        "$className": "Folder",
+        "$path": { "optional": "src/server/services" }
       },
 
       "Controllers": {
-        "$path": "src/server/controllers"
+        "$className": "Folder",
+        "$path": { "optional": "src/server/controllers" }
       }
     },
 
     "StarterPlayer": {
       "StarterPlayerScripts": {
+        "Main": {
+          "$path": "src/client/Main.client.luau"
+        },
+
         "Controllers": {
-          "$path": "src/client/controllers"
+          "$className": "Folder",
+          "$path": { "optional": "src/client/controllers" }
         }
       }
     },
 
     "StarterGui": {
       "Screens": {
-        "$path": "src/gui/screens"
+        "$className": "Folder",
+        "$path": { "optional": "src/gui/screens" }
       }
     },
 

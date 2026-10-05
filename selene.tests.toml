@@ -1,0 +1,4 @@
+std = "testez"
+
+[rules]
+incorrect_standard_library_use = "warn"

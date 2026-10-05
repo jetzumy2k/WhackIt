@@ -1,0 +1,14 @@
+[package]
+name = "jetzumy2k/whack-it-out"
+description = "Whack It Out - Stress Relief Simulator"
+version = "0.1.0"
+license = "MIT"
+authors = ["Joselito Tapangan"]
+realm = "shared"
+private = true
+registry = "https://github.com/UpliftGames/wally-index"
+
+[dependencies]
+
+[dev-dependencies]
+TestEZ = "roblox/testez@0.4.1"

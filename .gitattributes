@@ -1,0 +1,10 @@
+# Force LF everywhere so StyLua (line_endings = "Unix") passes on Windows checkouts.
+* text=auto eol=lf
+
+*.rbxl binary
+*.rbxm binary
+*.png binary
+*.jpg binary
+*.ogg binary
+*.mp3 binary
+*.fbx binary
