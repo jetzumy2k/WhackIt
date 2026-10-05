@@ -65,6 +65,14 @@ return function()
 			expect(GameConfig.LastHitBonusShare <= 0.25).to.equal(true)
 		end)
 
+		it("sprints faster than walking but under the server's movement limit", function()
+			local MovementLimits = require(ServerScriptService.Config.MovementLimits)
+			expect(Checks.isPositiveFinite(GameConfig.WalkSpeed)).to.equal(true)
+			expect(GameConfig.SprintSpeed > GameConfig.WalkSpeed).to.equal(true)
+			-- Leave headroom for lag bursts so sprinting never trips the movement guard.
+			expect(GameConfig.SprintSpeed * 1.5 <= MovementLimits.MaxHorizontalSpeed).to.equal(true)
+		end)
+
 		it("is read-only", function()
 			expect(table.isfrozen(GameConfig)).to.equal(true)
 		end)

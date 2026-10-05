@@ -126,3 +126,11 @@ works but nothing is kept between Play sessions.
 | 68 | Admin tab: "Close now" | Store shows "The store is closed right now" for other players (a second client loses the Store button); "Open now" brings it back |
 | 69 | Admin tab: schedule from 1 minute from now for 2 minutes | Store opens at the start time and closes at the end time (within ~5 s), without anyone pressing anything |
 | 70 | Non-admin (published game, another account) | No Admin tab; firing `AdminSetMode` from the console is rejected (`[Remote] rejected AdminSetMode … not an admin`) |
+
+## Stairs and sprint
+| # | Check | Expected |
+|---|---|---|
+| 71 | Walk from the spawn to the stairs (lobby, east side) and up | Open floor in front of the bottom step; you walk straight on and up to the upper corridor without getting stuck |
+| 72 | Hold Shift while walking; release | Noticeably faster run with a slight camera zoom-out; back to normal speed on release; no `[MovementGuard]` lines in the server Output |
+| 73 | Touch (Studio device emulator) / gamepad: tap Sprint or press L3, then move; stop | Button turns green and you run; about half a second after stopping, sprint switches off (button grey) |
+| 74 | Sprint up to a boss and swing straight away | Hits land normally |

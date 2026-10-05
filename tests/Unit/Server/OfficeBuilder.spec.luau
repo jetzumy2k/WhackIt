@@ -158,6 +158,37 @@ return function()
 			expect(ArenaConfig.Stairs.StepDepth >= 1).to.equal(true)
 		end)
 
+		it("leaves open floor in front of the bottom step to walk onto the stairs", function()
+			local office = build()
+			local stairs = ArenaConfig.Stairs
+			-- Room to approach: the front wall's inner face is well beyond the first step.
+			expect(ArenaConfig.BuildingSouthZ - 0.5 - stairs.BottomZ >= 6).to.equal(true)
+			-- Where a player stands to step on, at body height, across the stair's width.
+			for _, dx in { -2, 0, 2 } do
+				for _, dz in { 1, 3 } do
+					local standAt = Vector3.new(stairs.X + dx, 2.5, stairs.BottomZ + dz)
+					for _, p in parts(office) do
+						if p.CanCollide and contains(p, standAt) then
+							error(
+								string.format(
+									"%s blocks the foot of the stairs at %s",
+									p.Name,
+									tostring(standAt)
+								)
+							)
+						end
+					end
+				end
+			end
+			office:Destroy()
+		end)
+
+		it("keeps the top step's landing on this side of the upper corridor", function()
+			local stairs = ArenaConfig.Stairs
+			local steps = math.round(ArenaConfig.UpperFloorY / stairs.StepHeight)
+			expect(stairs.BottomZ - steps * stairs.StepDepth >= 0).to.equal(true)
+		end)
+
 		it("leaves the top of the stairs open to the upper corridor", function()
 			local office = build()
 			local stairs = ArenaConfig.Stairs

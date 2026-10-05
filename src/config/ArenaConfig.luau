@@ -170,8 +170,10 @@ local ArenaConfig = table.freeze({
 	Stairs = table.freeze({
 		X = 32, -- centre line
 		Width = 6,
-		BottomZ = 32, -- first step starts here and climbs toward -Z
-		StepDepth = 2,
+		-- First step starts here and climbs toward -Z. Leaves open floor between the
+		-- foot of the stairs and the lobby's front wall (BuildingSouthZ) to walk on.
+		BottomZ = 24,
+		StepDepth = 1.5,
 		StepHeight = 1,
 	}),
 

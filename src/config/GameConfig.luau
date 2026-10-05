@@ -44,6 +44,11 @@ local GameConfig = table.freeze({
 	CeoHealthMultiplier = 150,
 
 	-- Combat
+	-- Movement (client-applied; the server's MovementGuard still caps speed).
+	WalkSpeed = 16, -- Roblox default
+	SprintSpeed = 26, -- hold Shift / L3 / the Sprint button
+	SprintFieldOfView = 78, -- slight zoom-out while sprinting (default 70)
+
 	HitCooldown = 0.45, -- seconds per hammer swing = minimum time between accepted hits
 	DefaultHammerId = "squeaky_hammer", -- must exist in HammerConfig
 	MinHitDamage = 1, -- every accepted hit does at least this much

@@ -153,7 +153,7 @@ Reach is checked against the character's position, which Roblox lets each client
 server samples every character's root position every `MovementLimits.SampleInterval` (0.5 s); a
 horizontal move faster than `MaxHorizontalSpeed` (50 studs/s; walking is 16) flags the player and
 `RequestHammerHit` is ignored for `SuspectSeconds` (5 s). Respawns start fresh. This blocks teleporting
-to a boss and large speed hacks; small boosts under the limit are an accepted v1 limitation.
+to a boss and large speed hacks; small boosts under the limit are an accepted v1 limitation. Sprint (`GameConfig.SprintSpeed` 26) stays well under the limit.
 
 ## Removed
 - `Round.RoundState`: removed 2026-10-05; encounters end on defeat, there is no round timer.

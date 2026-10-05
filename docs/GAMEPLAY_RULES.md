@@ -165,7 +165,7 @@ above every head. Existing players start with XP equal to their score (schema v4
 | 10 | 48,600 |
 
 ### Senior floor (upstairs, Level 10+)
-Stairs along the lobby's east wall lead to the upper corridor. Each ground-floor boss has a **Senior**
+Stairs along the lobby's east wall lead to the upper corridor. Their foot is 9 studs from the front wall, so there's open floor to walk onto them. Each ground-floor boss has a **Senior**
 version in the office directly above it: 3× HP, 3× score and coins, a gold crown and its own jokes.
 A Senior boss unlocks with **Player Level ≥ `UpstairsMinLevel` (10)** and **1 defeat of its
 ground-floor version** (`BossConfig.UnlockAfterBossId` / `UnlockDefeats` / `MinLevel`). Below the
@@ -177,6 +177,15 @@ A board on the lobby's west wall lists the all-time top 10 by lifetime score acr
 (`LeaderboardService`, OrderedDataStore `ScoreLeaderboard`). Scores are written from the server's saved
 data every 2 minutes (when changed) and on leave; the board refreshes every minute. Without DataStore
 access (Studio with API access off) it ranks the players in the current server and says so.
+
+### Sprint
+Hold **Shift** (keyboard), press the **left stick (L3)** (gamepad) or tap the **Sprint** button (touch)
+to run at `SprintSpeed` (26) instead of `WalkSpeed` (16), with a slight camera zoom-out. A toggle
+(L3 or the touch button) switches off once the character has run and then stopped. The client applies
+the speed. The server's movement guard (50 studs/s) still applies; the config spec makes sure
+sprinting stays well under it.
+Note: a player who turned on Roblox's own *Shift Lock* setting will toggle it with Shift too
+(it's off by default).
 
 ### Swing feel
 The swing eases into a short anticipation pause at the top, the hammer head stretches on the
