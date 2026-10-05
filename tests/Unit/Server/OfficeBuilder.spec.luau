@@ -98,7 +98,10 @@ return function()
 				for _, p in parts(office) do
 					if p:GetAttribute(OfficeBuilder.FURNITURE_ATTRIBUTE) then
 						local offset = p.Position - entry.Center
-						local inPath = math.abs(offset.X) < doorHalf
+						-- Only furniture on this office's own floor can be in the way.
+						local sameFloor = offset.Y >= 0 and offset.Y < ArenaConfig.OfficeSize.Y
+						local inPath = sameFloor
+							and math.abs(offset.X) < doorHalf
 							and offset.Z > 0
 							and offset.Z < frontZ
 						expect(inPath).to.equal(false)

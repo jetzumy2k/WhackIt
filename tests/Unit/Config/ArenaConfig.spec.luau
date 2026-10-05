@@ -81,7 +81,9 @@ return function()
 
 		it("stands every boss on its floor, whatever its size", function()
 			for _, spawn in ArenaConfig.BossSpawns do
-				expect(math.abs(spawn.Position.Y - spawn.Size.Y / 2 - spawn.FloorY) < 1e-6).to.equal(
+				-- Vector3 stores 32-bit floats (e.g. 30 + 6.4 reads back as 36.4000015),
+				-- so compare to a thousandth of a stud.
+				expect(math.abs(spawn.Position.Y - spawn.Size.Y / 2 - spawn.FloorY) < 1e-3).to.equal(
 					true
 				)
 			end
