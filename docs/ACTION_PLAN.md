@@ -19,7 +19,7 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 | P3 Cleanup | 🟡 9 of 10 done | §3 |
 | Git: single default branch | ✅ | `master` is default; `main` deleted; its `LICENSE` kept (`53d8a56`) |
 | Phase 0 — Foundation | ✅ Complete | CI green on PR #1 and on `master` (`f2faca7`) |
-| Phase 1 — Core architecture | 🟡 6 of 6 implemented; new specs awaiting Studio run | Lifecycle, config, Types, Validate, RateLimiter, RemoteController, REMOTE_CONTRACTS |
+| Phase 1 — Core architecture | ✅ Complete (merge pending) | Lifecycle, config, Types, Validate, RateLimiter, RemoteController, REMOTE_CONTRACTS; 46/46 specs pass in Studio |
 | Phases 2–6 | ⬜ | |
 | §5 Design decisions | 🟡 3 of 5 decided | Shared bosses (+ reward/respawn rules) · end on defeat · hammer-driven damage. Open: persistence library, monetization |
 
@@ -42,7 +42,7 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 | Server-only config | ✅ | `ServerScriptService.Config` (`src/server/config`): `RemoteLimits` |
 | Client controllers (Input, Gameplay, UI, Feedback, Audio) | ⬜ None | |
 | UI screens | ⬜ None | |
-| Tests (TestEZ) | 🟡 | 46 specs. The first 19 passed in Studio; 27 new (Validate 15, RateLimiter 7, RemoteController 5) type-check but are **not yet run in Studio** |
+| Tests (TestEZ) | ✅ | 46 specs: 46 passed, 0 failed in Studio (2026-10-05). Expected warnings from RemoteController specs; reject-log throttling observed working |
 | Checks script | ✅ | `scripts/check.ps1` (format, lint, type-check, build; `-Tests` for TestEZ) |
 | Docs | 🟡 | `DEVELOPMENT_WORKFLOW`, `GAMEPLAY_RULES`, `REMOTE_CONTRACTS` current; `DATA_SCHEMA` still a template (Phase 3) |
 | CI | ✅ | `.github/workflows/ci.yml` green on GitHub; `actions/checkout` moved to v7 (Node 24) |
@@ -170,13 +170,13 @@ Goal: a clean clone builds, formats, lints, type-checks, and runs the test suite
 
 **Done when:** fresh clone passes all gates ✅, specs pass in Studio ✅, CI green on GitHub ✅.
 
-### Phase 1 — Core architecture skeleton — 🟡 6 of 6 implemented, Studio test run pending
+### Phase 1 — Core architecture skeleton — ✅ Complete
 1. ✅ `Shared/Types.luau`: `BossInstanceId`, `CombatFeedback`. Boss/hammer definitions stay exported from their config modules; boss instance state and `PlayerData` are added with the services that own them (Phase 2/3).
 2. ✅ Config hardening: frozen tables, `List`/`ById`, `HammerConfig`, `CombatRules.computeHitDamage`, specs. → P2-2, P2-3
 3. ✅ Service loader pattern (`init()` / `start()`): `Shared/Lifecycle`. Circular-require rule to enforce in review.
 4. ✅ **RemoteController** (`src/server/controllers`): sender-present check, argument cap, per-player token bucket (`Shared/RateLimiter`), handler error containment, throttled reject log; payload checks via `Shared/Validate`. Table size/depth caps not needed: all payloads are scalar (documented). State checks belong to each handler (Phase 2).
 5. ✅ `docs/REMOTE_CONTRACTS.md` rewritten; `RequestHammerHit(bossInstanceId)` takes a server-issued boss instance id. → P2-1
-6. 🟡 Specs: Validate (15), RateLimiter (7), RemoteController (5). Pass static checks; **run in Studio to close Phase 1**.
+6. ✅ Specs: Validate (15), RateLimiter (7), RemoteController (5). 46/46 pass in Studio.
 
 ### Phase 2 — Vertical slice: one shared boss, full loop, no persistence — ⬜
 Server: `SessionService` (join/leave, per-player state), `BossService` (spawns shared boss instances with server-issued ids, authoritative HP, per-player damage contribution, respawn after defeat), `CombatService` (validates hit: boss instance alive, live character, reach, cooldown; damage via `CombatRules`), `StressService` (stress from config formula, P2-4).
@@ -204,7 +204,6 @@ Security/abuse pass, performance (MicroProfiler, remote traffic, memory per play
 
 ## 7. Immediate next steps
 
-1. **You:** rebuild and run `build/tests.rbxl` in Studio (F8): expect `[Tests] PASSED: 46 test(s)`.
-2. Open a PR for `feat/phase1-remotes`, confirm CI is green, merge to `master`.
-3. Define Stress Meter rules (P2-4) before Phase 2.
-4. Start Phase 2: shared-boss vertical slice.
+1. Open a PR for `feat/phase1-remotes`, confirm CI is green, merge to `master`.
+2. Define Stress Meter rules (P2-4) before Phase 2.
+3. Start Phase 2: shared-boss vertical slice.
