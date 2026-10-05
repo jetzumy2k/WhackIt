@@ -19,6 +19,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("GameConfig"))
+local Attributes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Attributes"))
 local SwingPose = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SwingPose"))
 
 local SwingAnimator = {}
@@ -40,6 +41,18 @@ type Holder = {
 	SwingStartProgress: number,
 	MissingSince: number?, -- when the shoulder joint was first found missing
 }
+
+-- The held hammer's head: original size (for squash and stretch) and its trail.
+type HammerHead = {
+	Part: BasePart,
+	BaseSize: Vector3,
+	Trail: Trail,
+}
+
+local TRAIL_SECONDS = 0.18
+local TRAIL_COLOR = Color3.fromRGB(255, 255, 255)
+
+local heads: { [BasePart]: HammerHead } = {}
 
 local IS_STUDIO = RunService:IsStudio()
 
@@ -165,6 +178,65 @@ local function hinge(joint: Joint?, degrees: number, aboutZ: boolean?): ()
 	joint.Set(joint.Base * rotation)
 end
 
+-- Finds the held hammer's head and prepares it (once) for effects.
+local function hammerHead(character: Model): HammerHead?
+	for _, child in character:GetChildren() do
+		if child:IsA("Tool") and child:GetAttribute(Attributes.HammerId) ~= nil then
+			local part = child:FindFirstChild("Head")
+			if part == nil or not part:IsA("BasePart") then
+				return nil
+			end
+			local existing = heads[part]
+			if existing then
+				return existing
+			end
+
+			-- Trail between the two faces of the mallet head (its length runs along X).
+			local half = part.Size.X / 2
+			local a0 = Instance.new("Attachment")
+			a0.Name = "TrailStart"
+			a0.Position = Vector3.new(-half, 0, 0)
+			a0.Parent = part
+			local a1 = Instance.new("Attachment")
+			a1.Name = "TrailEnd"
+			a1.Position = Vector3.new(half, 0, 0)
+			a1.Parent = part
+			local trail = Instance.new("Trail")
+			trail.Attachment0 = a0
+			trail.Attachment1 = a1
+			trail.Lifetime = TRAIL_SECONDS
+			trail.Color = ColorSequence.new(TRAIL_COLOR)
+			trail.Transparency = NumberSequence.new(0.35, 1)
+			trail.LightEmission = 0.6
+			trail.FaceCamera = true
+			trail.Enabled = false
+			trail.Parent = part
+
+			local head: HammerHead = { Part = part, BaseSize = part.Size, Trail = trail }
+			heads[part] = head
+			part.Destroying:Connect(function()
+				heads[part] = nil
+			end)
+			return head
+		end
+	end
+	return nil
+end
+
+local function applyHeadEffects(character: Model, progress: number): ()
+	local head = hammerHead(character)
+	if head == nil then
+		return
+	end
+	local scale = SwingPose.headScale(progress)
+	local base = head.BaseSize
+	local size = Vector3.new(base.X * scale.Length, base.Y * scale.Width, base.Z * scale.Width)
+	if head.Part.Size ~= size then
+		head.Part.Size = size
+	end
+	head.Trail.Enabled = SwingPose.trailActive(progress)
+end
+
 local function apply(holder: Holder, pose: SwingPose.Pose): ()
 	local base = SwingPose.ANIMATOR_HOLD
 	local elbowDelta = pose.Elbow - base.Elbow
@@ -228,6 +300,7 @@ local function step(): ()
 			end
 		end
 		apply(holder, SwingPose.at(progress))
+		applyHeadEffects(character, progress)
 	end
 
 	if next(holders) == nil and connection then

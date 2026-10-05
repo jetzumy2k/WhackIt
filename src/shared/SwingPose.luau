@@ -74,9 +74,15 @@ local KEYFRAMES: { Keyframe } = {
 	{ At = 0, Pose = SwingPose.REST, Ease = easeOutQuad },
 	-- Wind-up: arm lifted high, hammer still cocked back over the head.
 	{
-		At = 0.3,
-		Pose = { Shoulder = 170, Elbow = 40, Grip = 10, WaistPitch = 8, WaistYaw = -15 },
+		At = 0.24,
+		Pose = { Shoulder = 165, Elbow = 45, Grip = 12, WaistPitch = 6, WaistYaw = -12 },
 		Ease = easeOutQuad,
+	},
+	-- Anticipation: a slow extra coil at the top before the strike.
+	{
+		At = 0.34,
+		Pose = { Shoulder = 178, Elbow = 38, Grip = 8, WaistPitch = 10, WaistYaw = -18 },
+		Ease = easeInOutSine,
 	},
 	-- Strike: arm and wrist snap forward; the hammer is out in front at the boss.
 	{
@@ -115,6 +121,44 @@ function SwingPose.at(progress: number): Pose
 		end
 	end
 	return SwingPose.REST
+end
+
+export type HeadScale = {
+	Length: number, -- along the mallet head's axis
+	Width: number, -- across it
+}
+
+local STRETCH_START = 0.36
+local SQUASH_PEAK = 0.53
+local SQUASH_END = 0.6
+local STRETCH: HeadScale = { Length = 1.25, Width = 0.9 }
+local SQUASH: HeadScale = { Length = 0.8, Width = 1.2 }
+local NORMAL: HeadScale = { Length = 1, Width = 1 }
+
+local function lerpScale(from: HeadScale, to: HeadScale, alpha: number): HeadScale
+	return {
+		Length = lerp(from.Length, to.Length, alpha),
+		Width = lerp(from.Width, to.Width, alpha),
+	}
+end
+
+-- Cartoon squash and stretch for the hammer head: it stretches on the
+-- downswing, squashes on impact and settles back.
+function SwingPose.headScale(progress: number): HeadScale
+	local t = math.clamp(progress, 0, 1)
+	if t < STRETCH_START or t >= SQUASH_END then
+		return NORMAL
+	elseif t < SwingPose.IMPACT then
+		return lerpScale(NORMAL, STRETCH, (t - STRETCH_START) / (SwingPose.IMPACT - STRETCH_START))
+	elseif t < SQUASH_PEAK then
+		return lerpScale(STRETCH, SQUASH, (t - SwingPose.IMPACT) / (SQUASH_PEAK - SwingPose.IMPACT))
+	end
+	return lerpScale(SQUASH, NORMAL, (t - SQUASH_PEAK) / (SQUASH_END - SQUASH_PEAK))
+end
+
+-- Whether the swing trail should be drawn (the fast part of the swing).
+function SwingPose.trailActive(progress: number): boolean
+	return progress > 0.34 and progress < 0.62
 end
 
 -- Direction the hammer points in the front-to-back plane (see header).

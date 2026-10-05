@@ -17,7 +17,9 @@ local FLASH_SECONDS = 0.12
 local DAMAGE_NUMBER_SECONDS = 0.7
 local DAMAGE_NUMBER_RISE = 3
 local SHAKE_SECONDS = 0.08
-local SHAKE_STRENGTH = 0.35
+local SHAKE_STRENGTH = 0.6
+local BURST_PARTICLES = 14
+local BURST_SECONDS = 1
 -- Other players' swings are shown from the start of the downswing: their hit is
 -- only known once confirmed, so replaying the wind-up would land late.
 local REMOTE_SWING_START = 0.42
@@ -103,6 +105,26 @@ local function showDamageNumber(
 	Debris:AddItem(billboard, DAMAGE_NUMBER_SECONDS)
 end
 
+-- A short burst of sparks where the hammer meets the boss (Roblox's default
+-- particle texture, so no uploaded assets).
+local function impactBurst(body: BasePart): ()
+	local attachment = Instance.new("Attachment")
+	attachment.Name = "ImpactBurst"
+	attachment.Position = Vector3.new(0, body.Size.Y / 4, 0)
+	attachment.Parent = body
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Enabled = false
+	emitter.Color = ColorSequence.new(Color3.fromRGB(255, 240, 150))
+	emitter.LightEmission = 0.8
+	emitter.Size = NumberSequence.new(0.9, 0)
+	emitter.Lifetime = NumberRange.new(0.3, 0.6)
+	emitter.Speed = NumberRange.new(12, 20)
+	emitter.SpreadAngle = Vector2.new(180, 180)
+	emitter.Parent = attachment
+	emitter:Emit(BURST_PARTICLES)
+	Debris:AddItem(attachment, BURST_SECONDS)
+end
+
 local function shakeCamera(): ()
 	local character = localPlayer.Character
 	local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
@@ -145,6 +167,7 @@ function FeedbackController.start(): ()
 			flash(visual)
 		end
 		showDamageNumber(body, feedback.Damage, isOwnHit, effects)
+		impactBurst(body)
 		if isOwnHit then
 			shakeCamera()
 		else
