@@ -20,18 +20,26 @@ local OfficeBuilder = {}
 
 OfficeBuilder.FURNITURE_ATTRIBUTE = "Furniture"
 
-local WALL_COLOR = Color3.fromRGB(236, 232, 224)
+-- Comfortable, darker "gamer room" palette: muted slate surfaces, warm dim
+-- lights, thin coloured LED accents. Specs cap brightness (no glare).
+local WALL_COLOR = Color3.fromRGB(78, 84, 104)
 local WALL_THICKNESS = 1
-local SLAB_COLOR = Color3.fromRGB(205, 200, 192)
+local SLAB_COLOR = Color3.fromRGB(52, 56, 70)
 local WOOD = Color3.fromRGB(150, 105, 70)
 local METAL = Color3.fromRGB(120, 125, 135)
 local DARK = Color3.fromRGB(40, 42, 50)
 local LEAF = Color3.fromRGB(70, 160, 80)
 local POT = Color3.fromRGB(190, 110, 70)
-local PAPER = Color3.fromRGB(250, 248, 240)
+local PAPER = Color3.fromRGB(196, 192, 182)
 local GLASS = Color3.fromRGB(170, 210, 235)
-local LIGHT_COLOR = Color3.fromRGB(255, 244, 220)
-local CORRIDOR_CARPET = Color3.fromRGB(80, 90, 110)
+local LIGHT_COLOR = Color3.fromRGB(255, 205, 150) -- warm amber
+local LIGHT_PANEL_COLOR = Color3.fromRGB(150, 130, 110)
+local LIGHT_BRIGHTNESS = 0.7
+local LED_GROUND = Color3.fromRGB(60, 190, 210) -- cool cyan accent strip
+local LED_UPPER = Color3.fromRGB(150, 90, 220) -- purple accent strip
+-- How much darker office carpets are than their configured tint.
+local CARPET_DEEPEN = 0.4
+local CORRIDOR_CARPET = Color3.fromRGB(46, 52, 68)
 local CORRIDOR = { MinZ = -20, MaxZ = 0 }
 local LOBBY = { HalfWidth = 36 }
 local RAIL_HEIGHT = 3.5
@@ -87,23 +95,27 @@ local function sign(p: Part, face: Enum.NormalId, text: string, textColor: Color
 	label.Parent = gui
 end
 
--- A glowing panel just under a ceiling, with a light that fills the room.
+-- A soft (non-glowing) ceiling panel with a dim warm light under it.
 local function ceilingLight(parent: Instance, position: Vector3, range: number): ()
-	local panel = part(
-		parent,
-		"CeilingLight",
-		Vector3.new(6, 0.3, 6),
-		position,
-		LIGHT_COLOR,
-		Enum.Material.Neon
-	)
+	local panel = part(parent, "CeilingLight", Vector3.new(6, 0.3, 6), position, LIGHT_PANEL_COLOR)
 	panel.CastShadow = false
 	local light = Instance.new("PointLight")
 	light.Color = LIGHT_COLOR
 	light.Range = range
-	light.Brightness = 1.4
+	light.Brightness = LIGHT_BRIGHTNESS
 	light.Shadows = false
 	light.Parent = panel
+end
+
+-- A thin, dim coloured LED strip along a ceiling edge (decoration only).
+local function ledStrip(parent: Instance, length: number, position: Vector3, color: Color3): ()
+	local strip =
+		part(parent, "LedStrip", Vector3.new(length, 0.2, 0.2), position, color, Enum.Material.Neon)
+	strip.Transparency = 0.35
+	strip.CastShadow = false
+	strip.CanCollide = false
+	strip.CanQuery = false
+	strip.CanTouch = false
 end
 
 local function plant(parent: Instance, position: Vector3): ()
@@ -270,11 +282,11 @@ local function buildOffice(parent: Instance, entry: ArenaConfig.Office): ()
 		"Carpet",
 		Vector3.new(size.X, 0.1, size.Z),
 		center + Vector3.new(0, 0.05, 0),
-		entry.CarpetColor,
+		entry.CarpetColor:Lerp(Color3.new(0, 0, 0), CARPET_DEEPEN),
 		Enum.Material.Fabric
 	)
 	walls(room, center)
-	ceilingLight(room, center + Vector3.new(0, size.Y - 0.3, 0), 28)
+	ceilingLight(room, center + Vector3.new(0, size.Y - 0.3, 0), 24)
 
 	-- Name plate above the door, readable from the corridor.
 	local plate = part(
@@ -481,12 +493,16 @@ local function buildCommonAreas(parent: Instance): ()
 
 	-- Lights: corridors on both storeys, and the lobby atrium.
 	for x = -68, 68, 34 do
-		ceilingLight(area, Vector3.new(x, officeHeight - 0.3, corridorZ), 24)
-		ceilingLight(area, Vector3.new(x, roofY - 0.3, corridorZ), 24)
+		ceilingLight(area, Vector3.new(x, officeHeight - 0.3, corridorZ), 22)
+		ceilingLight(area, Vector3.new(x, roofY - 0.3, corridorZ), 22)
 	end
 	for _, x in { -18, 18 } do
-		ceilingLight(area, Vector3.new(x, roofY - 0.3, 18), 40)
+		ceilingLight(area, Vector3.new(x, roofY - 0.3, 18), 34)
 	end
+	-- Accent LED strips along both corridors' office-side ceiling edges.
+	local stripZ = CORRIDOR.MinZ + 0.8
+	ledStrip(area, half * 2 - 2, Vector3.new(0, officeHeight - 0.4, stripZ), LED_GROUND)
+	ledStrip(area, half * 2 - 2, Vector3.new(0, roofY - 0.4, stripZ), LED_UPPER)
 
 	-- Welcome sign over the corridor entrance, facing the spawn.
 	local welcome = part(

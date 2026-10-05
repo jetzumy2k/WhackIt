@@ -95,7 +95,9 @@ the hitter's character when the hit is confirmed. Presses during a swing are ign
 
 The map is a two-storey office building (`ArenaConfig.Offices`, built by the server's `Lib/OfficeBuilder`
 from simple parts; ceilings with lights, office windows, a roof, and outdoor grass, street, trees and a
-city skyline from `Lib/OutdoorBuilder`): each boss stands in **its own 32×32 office** along a carpeted corridor, with a name plate over
+city skyline from `Lib/OutdoorBuilder`). The interior uses a darker, eye-friendly palette: muted slate
+walls and ceilings, deepened carpets, dim warm lights (brightness ≤ 1, no glowing panels) and thin
+cyan/purple LED accent strips; specs cap surface brightness so it can't drift back to glare: each boss stands in **its own 32×32 office** along a carpeted corridor, with a name plate over
 the open doorway, a carpet in the boss's tint, and a desk (monitor joke per boss), chair, filing
 cabinet, plants and a themed poster, all kept clear of the boss and the walk from the door. South
 of the corridor is the lobby (welcome sign, reception desk, couches, water cooler, plants) with the

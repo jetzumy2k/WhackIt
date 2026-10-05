@@ -166,4 +166,62 @@ return function()
 			end
 		end)
 	end)
+	describe("OfficeBuilder eye comfort", function()
+		-- Perceived brightness, 0 (black) .. 1 (white).
+		local function luminance(color: Color3): number
+			return 0.2126 * color.R + 0.7152 * color.G + 0.0722 * color.B
+		end
+
+		local SURFACE_NAMES = {
+			"Wall",
+			"Slab",
+			"Roof",
+			"Lintel",
+			"LobbyFront",
+			"Carpet",
+		}
+		local function isLargeSurface(p: BasePart): boolean
+			for _, fragment in SURFACE_NAMES do
+				if string.find(p.Name, fragment, 1, true) then
+					return true
+				end
+			end
+			return false
+		end
+
+		it("keeps walls, ceilings and carpets muted (no near-white surfaces)", function()
+			local office = build()
+			local checked = 0
+			for _, p in parts(office) do
+				if isLargeSurface(p) and p.Material ~= Enum.Material.Glass then
+					checked += 1
+					expect(luminance(p.Color) <= 0.45).to.equal(true)
+				end
+			end
+			expect(checked > 0).to.equal(true)
+			office:Destroy()
+		end)
+
+		it("keeps every light dim", function()
+			local office = build()
+			for _, light in office:GetDescendants() do
+				if light:IsA("PointLight") then
+					expect(light.Brightness <= 1).to.equal(true)
+				end
+			end
+			office:Destroy()
+		end)
+
+		it("uses glowing Neon only for thin accent strips", function()
+			local office = build()
+			for _, p in parts(office) do
+				if p.Material == Enum.Material.Neon then
+					local thinnest = math.min(p.Size.X, p.Size.Y, p.Size.Z)
+					expect(thinnest <= 0.3).to.equal(true)
+					expect(p.Transparency > 0).to.equal(true)
+				end
+			end
+			office:Destroy()
+		end)
+	end)
 end
