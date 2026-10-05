@@ -237,7 +237,9 @@ function attachBossBar(model: Model, billboardParent: Instance): ()
 		local previous = if status and status.PreviousBossId
 			then BossConfig.ById[status.PreviousBossId]
 			else nil
-		if status and not status.Unlocked and previous then
+		if status and status.LevelNeeded > 0 then
+			healthLabel.Text = string.format("LOCKED: reach Lv %d", status.LevelNeeded)
+		elseif status and not status.Unlocked and previous then
 			healthLabel.Text =
 				string.format("LOCKED: beat %s x%d", previous.DisplayName, status.DefeatsNeeded)
 		elseif model:GetAttribute(Attributes.Defeated) == true then

@@ -14,6 +14,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local BossState = require(ServerScriptService.Lib.BossState)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
+local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressService = require(script.Parent.ProgressService)
 local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
@@ -63,22 +64,29 @@ function RewardService.grantDefeat(player: Player, state: BossState.BossState): 
 		data.ZenLevel
 	)
 
+	-- Captured before anything changes: both the defeat count and a level-up
+	-- from the added score can unlock bosses.
+	local unlockedBefore =
+		asSet(ProgressionRules.unlockedBossIds(data.BossDefeats, LevelRules.levelFor(data.Score)))
+
 	SessionService.addScore(player, reward.Score)
 	SessionService.addCoins(player, reward.Coins)
 
 	local stressRelieved = 0
-	local newlyUnlocked: { string } = {}
 	if reward.Qualifies then
-		local unlockedBefore = asSet(ProgressionRules.unlockedBossIds(data.BossDefeats))
 		data.TotalBossesDefeated += 1
 		data.BossDefeats[definition.Id] = (data.BossDefeats[definition.Id] or 0) + 1
-		for _, bossId in ProgressionRules.unlockedBossIds(data.BossDefeats) do
-			if not unlockedBefore[bossId] then
-				table.insert(newlyUnlocked, bossId)
-			end
-		end
 		-- Last, so a Zen moment it may trigger sees the updated coins.
 		stressRelieved = StressService.relieve(player, GameConfig.DefeatStressRelief)
+	end
+
+	local newlyUnlocked: { string } = {}
+	for _, bossId in
+		ProgressionRules.unlockedBossIds(data.BossDefeats, LevelRules.levelFor(data.Score))
+	do
+		if not unlockedBefore[bossId] then
+			table.insert(newlyUnlocked, bossId)
+		end
 	end
 
 	ProgressService.sync(player)

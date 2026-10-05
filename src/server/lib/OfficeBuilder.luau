@@ -1,11 +1,13 @@
 --!strict
 --[[
-	Builds the office floor (ArenaConfig) out of simple anchored parts: one
-	office per boss along a corridor, plus the lobby. Placeholder art in the
-	same cartoon style as the bosses; replace with modelled assets later.
+	Builds the two-storey office building (ArenaConfig) out of simple anchored
+	parts: one office per boss on each floor along a corridor, a double-height
+	lobby with stairs to the upper corridor, ceiling lights, windows and a roof.
+	Placeholder art in the same cartoon style as the bosses; replace with
+	modelled assets later. The outdoor surroundings are Lib/OutdoorBuilder.
 
 	Every part is anchored. Furniture is tagged with the "Furniture" attribute so
-	specs can check it never crowds the boss or blocks the doorway.
+	specs can check it never crowds a boss or blocks a doorway.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,15 +22,19 @@ OfficeBuilder.FURNITURE_ATTRIBUTE = "Furniture"
 
 local WALL_COLOR = Color3.fromRGB(236, 232, 224)
 local WALL_THICKNESS = 1
+local SLAB_COLOR = Color3.fromRGB(205, 200, 192)
 local WOOD = Color3.fromRGB(150, 105, 70)
 local METAL = Color3.fromRGB(120, 125, 135)
 local DARK = Color3.fromRGB(40, 42, 50)
 local LEAF = Color3.fromRGB(70, 160, 80)
 local POT = Color3.fromRGB(190, 110, 70)
 local PAPER = Color3.fromRGB(250, 248, 240)
+local GLASS = Color3.fromRGB(170, 210, 235)
+local LIGHT_COLOR = Color3.fromRGB(255, 244, 220)
 local CORRIDOR_CARPET = Color3.fromRGB(80, 90, 110)
 local CORRIDOR = { MinZ = -20, MaxZ = 0 }
-local LOBBY = { HalfWidth = 36, MaxZ = 34 }
+local LOBBY = { HalfWidth = 36 }
+local RAIL_HEIGHT = 3.5
 
 local function part(
 	parent: Instance,
@@ -56,6 +62,13 @@ local function furniture(p: Part): Part
 	return p
 end
 
+local function glass(parent: Instance, name: string, size: Vector3, position: Vector3): Part
+	local pane = part(parent, name, size, position, GLASS, Enum.Material.Glass)
+	pane.Transparency = 0.45
+	pane.CastShadow = false
+	return pane
+end
+
 -- Readable text on one face of a part.
 local function sign(p: Part, face: Enum.NormalId, text: string, textColor: Color3): ()
 	local gui = Instance.new("SurfaceGui")
@@ -72,6 +85,25 @@ local function sign(p: Part, face: Enum.NormalId, text: string, textColor: Color
 	label.TextColor3 = textColor
 	label.Text = text
 	label.Parent = gui
+end
+
+-- A glowing panel just under a ceiling, with a light that fills the room.
+local function ceilingLight(parent: Instance, position: Vector3, range: number): ()
+	local panel = part(
+		parent,
+		"CeilingLight",
+		Vector3.new(6, 0.3, 6),
+		position,
+		LIGHT_COLOR,
+		Enum.Material.Neon
+	)
+	panel.CastShadow = false
+	local light = Instance.new("PointLight")
+	light.Color = LIGHT_COLOR
+	light.Range = range
+	light.Brightness = 1.4
+	light.Shadows = false
+	light.Parent = panel
 end
 
 local function plant(parent: Instance, position: Vector3): ()
@@ -141,19 +173,51 @@ local function filingCabinet(parent: Instance, at: Vector3): ()
 	end
 end
 
--- Walls with a doorway in the front (+Z) wall.
+-- Walls with a doorway in the front (+Z) wall and a window in the back wall.
 local function walls(parent: Instance, center: Vector3): ()
 	local size = ArenaConfig.OfficeSize
 	local halfW, halfD, height = size.X / 2, size.Z / 2, size.Y
 	local y = height / 2
 
+	-- Back wall: solid below and above a wide window, with solid sides.
+	local windowHalf, windowBottom, windowTop = 10, 4, 10
+	local backZ = -halfD
 	part(
 		parent,
-		"BackWall",
-		Vector3.new(size.X, height, WALL_THICKNESS),
-		center + Vector3.new(0, y, -halfD),
+		"BackWallLow",
+		Vector3.new(size.X, windowBottom, WALL_THICKNESS),
+		center + Vector3.new(0, windowBottom / 2, backZ),
 		WALL_COLOR
 	)
+	part(
+		parent,
+		"BackWallHigh",
+		Vector3.new(size.X, height - windowTop, WALL_THICKNESS),
+		center + Vector3.new(0, (windowTop + height) / 2, backZ),
+		WALL_COLOR
+	)
+	local sideWidth = halfW - windowHalf
+	for _, side in { -1, 1 } do
+		part(
+			parent,
+			"BackWallSide",
+			Vector3.new(sideWidth, windowTop - windowBottom, WALL_THICKNESS),
+			center
+				+ Vector3.new(
+					side * (windowHalf + sideWidth / 2),
+					(windowBottom + windowTop) / 2,
+					backZ
+				),
+			WALL_COLOR
+		)
+	end
+	glass(
+		parent,
+		"Window",
+		Vector3.new(windowHalf * 2, windowTop - windowBottom, 0.3),
+		center + Vector3.new(0, (windowBottom + windowTop) / 2, backZ)
+	)
+
 	part(
 		parent,
 		"LeftWall",
@@ -170,13 +234,13 @@ local function walls(parent: Instance, center: Vector3): ()
 	)
 
 	local doorHalf = ArenaConfig.DoorWidth / 2
-	local sideWidth = halfW - doorHalf
+	local frontSide = halfW - doorHalf
 	for _, side in { -1, 1 } do
 		part(
 			parent,
 			"FrontWall",
-			Vector3.new(sideWidth, height, WALL_THICKNESS),
-			center + Vector3.new(side * (doorHalf + sideWidth / 2), y, halfD),
+			Vector3.new(frontSide, height, WALL_THICKNESS),
+			center + Vector3.new(side * (doorHalf + frontSide / 2), y, halfD),
 			WALL_COLOR
 		)
 	end
@@ -210,6 +274,7 @@ local function buildOffice(parent: Instance, entry: ArenaConfig.Office): ()
 		Enum.Material.Fabric
 	)
 	walls(room, center)
+	ceilingLight(room, center + Vector3.new(0, size.Y - 0.3, 0), 28)
 
 	-- Name plate above the door, readable from the corridor.
 	local plate = part(
@@ -221,8 +286,8 @@ local function buildOffice(parent: Instance, entry: ArenaConfig.Office): ()
 	)
 	sign(plate, Enum.NormalId.Back, definition.DisplayName .. "'s Office", Color3.new(1, 1, 1))
 
-	-- Furniture hugs the back corners and front corners, leaving the middle
-	-- (around the boss) and the path from the door clear.
+	-- Furniture hugs the walls and corners, leaving the middle (around the
+	-- boss) and the path from the door clear.
 	desk(room, center + Vector3.new(-9, 0, -11), entry.ScreenText)
 	filingCabinet(room, center + Vector3.new(11, 0, -13))
 	plant(room, center + Vector3.new(-13, 0, 12))
@@ -232,72 +297,198 @@ local function buildOffice(parent: Instance, entry: ArenaConfig.Office): ()
 		part(
 			room,
 			"Poster",
-			Vector3.new(8, 5, 0.2),
-			center + Vector3.new(7, 7, -halfD + 0.7),
+			Vector3.new(6, 3.4, 0.2),
+			center + Vector3.new(11, 11.6, -halfD + 0.7),
 			PAPER
 		)
 	)
 	sign(poster, Enum.NormalId.Back, entry.PosterText, Color3.fromRGB(60, 60, 80))
+	local whiteboard = furniture(
+		part(room, "Whiteboard", Vector3.new(0.2, 4, 8), center + Vector3.new(-15.3, 7, 2), PAPER)
+	)
+	sign(whiteboard, Enum.NormalId.Right, "TODO: relax", Color3.fromRGB(40, 90, 200))
+end
+
+local function buildStairs(parent: Instance): ()
+	local stairs = ArenaConfig.Stairs
+	local steps = math.round(ArenaConfig.UpperFloorY / stairs.StepHeight)
+	for index = 1, steps do
+		local height = index * stairs.StepHeight
+		local z = stairs.BottomZ - (index - 0.5) * stairs.StepDepth
+		part(
+			parent,
+			"Step",
+			Vector3.new(stairs.Width, height, stairs.StepDepth),
+			Vector3.new(stairs.X, height / 2, z),
+			Color3.fromRGB(185, 175, 160),
+			Enum.Material.WoodPlanks
+		)
+	end
+	-- Landing joining the top step to the upper corridor floor.
+	local topZ = stairs.BottomZ - steps * stairs.StepDepth
+	part(
+		parent,
+		"StairLanding",
+		Vector3.new(stairs.Width, 1, topZ - CORRIDOR.MaxZ),
+		Vector3.new(stairs.X, ArenaConfig.UpperFloorY - 0.5, (topZ + CORRIDOR.MaxZ) / 2),
+		SLAB_COLOR
+	)
+	-- Handrail on the open (west) side.
+	local railLength = stairs.BottomZ - topZ
+	local rail = part(
+		parent,
+		"StairRail",
+		Vector3.new(0.4, 0.4, math.sqrt(railLength ^ 2 + ArenaConfig.UpperFloorY ^ 2)),
+		Vector3.new(
+			stairs.X - stairs.Width / 2,
+			ArenaConfig.UpperFloorY / 2 + RAIL_HEIGHT,
+			(stairs.BottomZ + topZ) / 2
+		),
+		METAL,
+		Enum.Material.Metal
+	)
+	rail.Orientation = Vector3.new(math.deg(math.atan2(ArenaConfig.UpperFloorY, railLength)), 0, 0)
 end
 
 local function buildCommonAreas(parent: Instance): ()
 	local area = Instance.new("Model")
-	area.Name = "Lobby And Corridor"
+	area.Name = "Lobby And Corridors"
 	area.Parent = parent
 
-	local officeSize = ArenaConfig.OfficeSize
-	local lastOffice = ArenaConfig.Offices[#ArenaConfig.Offices].Center
-	local corridorHalf = lastOffice.X + officeSize.X / 2 + 2
+	local officeHeight = ArenaConfig.OfficeSize.Y
+	local upperY = ArenaConfig.UpperFloorY
+	local roofY = ArenaConfig.RoofY
+	local half = ArenaConfig.BuildingHalfWidth
+	local northZ, southZ = ArenaConfig.BuildingNorthZ, ArenaConfig.BuildingSouthZ
 	local corridorDepth = CORRIDOR.MaxZ - CORRIDOR.MinZ
 	local corridorZ = (CORRIDOR.MinZ + CORRIDOR.MaxZ) / 2
+	local stairs = ArenaConfig.Stairs
 
+	-- Floors, slab between storeys (also the ground floor's ceiling) and roof.
 	part(
 		area,
 		"CorridorCarpet",
-		Vector3.new(corridorHalf * 2, 0.1, corridorDepth),
+		Vector3.new(half * 2, 0.1, corridorDepth),
 		Vector3.new(0, 0.05, corridorZ),
 		CORRIDOR_CARPET,
 		Enum.Material.Fabric
 	)
+	part(
+		area,
+		"UpperSlab",
+		Vector3.new(half * 2, upperY - officeHeight, CORRIDOR.MaxZ - northZ),
+		Vector3.new(0, (officeHeight + upperY) / 2, (CORRIDOR.MaxZ + northZ) / 2),
+		SLAB_COLOR
+	)
+	part(
+		area,
+		"UpperCorridorCarpet",
+		Vector3.new(half * 2, 0.1, corridorDepth),
+		Vector3.new(0, upperY + 0.05, corridorZ),
+		CORRIDOR_CARPET,
+		Enum.Material.Fabric
+	)
+	part(
+		area,
+		"Roof",
+		Vector3.new(half * 2, 1, southZ - northZ),
+		Vector3.new(0, roofY + 0.5, (southZ + northZ) / 2),
+		SLAB_COLOR
+	)
+
+	-- Full-height end walls (seal the building from the outside).
 	for _, side in { -1, 1 } do
 		part(
 			area,
-			"CorridorEndWall",
-			Vector3.new(WALL_THICKNESS, officeSize.Y, corridorDepth),
-			Vector3.new(side * corridorHalf, officeSize.Y / 2, corridorZ),
+			"EndWall",
+			Vector3.new(WALL_THICKNESS, roofY, CORRIDOR.MaxZ - northZ),
+			Vector3.new(side * half, roofY / 2, (CORRIDOR.MaxZ + northZ) / 2),
 			WALL_COLOR
 		)
-		-- Lobby side walls.
-		part(
-			area,
-			"LobbyWall",
-			Vector3.new(WALL_THICKNESS, officeSize.Y, LOBBY.MaxZ),
-			Vector3.new(side * LOBBY.HalfWidth, officeSize.Y / 2, LOBBY.MaxZ / 2),
-			WALL_COLOR
-		)
-		-- Corridor walls from the lobby out to the corridor ends.
-		local span = corridorHalf - LOBBY.HalfWidth
+
+		-- Corridor walls between the lobby and the building ends, both storeys.
+		local span = half - LOBBY.HalfWidth
 		part(
 			area,
 			"CorridorSouthWall",
-			Vector3.new(span, officeSize.Y, WALL_THICKNESS),
-			Vector3.new(side * (LOBBY.HalfWidth + span / 2), officeSize.Y / 2, CORRIDOR.MaxZ),
+			Vector3.new(span, roofY, WALL_THICKNESS),
+			Vector3.new(side * (LOBBY.HalfWidth + span / 2), roofY / 2, CORRIDOR.MaxZ),
 			WALL_COLOR
 		)
-		-- Plants along the corridor between offices.
-		for _, x in { 17, 51 } do
-			plant(area, Vector3.new(side * x, 0, CORRIDOR.MinZ + 2.5))
+
+		-- Double-height lobby side walls.
+		part(
+			area,
+			"LobbyWall",
+			Vector3.new(WALL_THICKNESS, roofY, southZ - CORRIDOR.MaxZ),
+			Vector3.new(side * LOBBY.HalfWidth, roofY / 2, (southZ + CORRIDOR.MaxZ) / 2),
+			WALL_COLOR
+		)
+
+		-- Plants along both corridors between offices.
+		for _, floorY in { 0, upperY } do
+			for _, x in { 17, 51 } do
+				plant(area, Vector3.new(side * x, floorY, CORRIDOR.MinZ + 2.5))
+			end
 		end
 	end
+
+	-- Railing along the upper corridor's edge over the atrium, open at the stairs.
+	local stairWest = stairs.X - stairs.Width / 2
+	local railSegments = {
+		{ From = -LOBBY.HalfWidth, To = stairWest },
+		{ From = stairs.X + stairs.Width / 2, To = LOBBY.HalfWidth },
+	}
+	for _, segment in railSegments do
+		local length = segment.To - segment.From
+		if length > 0 then
+			glass(
+				area,
+				"AtriumRailing",
+				Vector3.new(length, RAIL_HEIGHT, 0.3),
+				Vector3.new(
+					(segment.From + segment.To) / 2,
+					upperY + RAIL_HEIGHT / 2,
+					CORRIDOR.MaxZ + 0.3
+				)
+			)
+		end
+	end
+
+	-- Lobby front: a glass wall between solid bands, facing the street.
 	part(
 		area,
-		"LobbyBackWall",
-		Vector3.new(LOBBY.HalfWidth * 2, officeSize.Y, WALL_THICKNESS),
-		Vector3.new(0, officeSize.Y / 2, LOBBY.MaxZ),
+		"LobbyFrontLow",
+		Vector3.new(LOBBY.HalfWidth * 2, 2, WALL_THICKNESS),
+		Vector3.new(0, 1, southZ),
 		WALL_COLOR
 	)
+	part(
+		area,
+		"LobbyFrontHigh",
+		Vector3.new(LOBBY.HalfWidth * 2, 4, WALL_THICKNESS),
+		Vector3.new(0, roofY - 2, southZ),
+		WALL_COLOR
+	)
+	glass(
+		area,
+		"LobbyFrontGlass",
+		Vector3.new(LOBBY.HalfWidth * 2, roofY - 6, 0.4),
+		Vector3.new(0, 2 + (roofY - 6) / 2, southZ)
+	)
 
-	-- Welcome sign hanging over the corridor, facing the spawn.
+	buildStairs(area)
+
+	-- Lights: corridors on both storeys, and the lobby atrium.
+	for x = -68, 68, 34 do
+		ceilingLight(area, Vector3.new(x, officeHeight - 0.3, corridorZ), 24)
+		ceilingLight(area, Vector3.new(x, roofY - 0.3, corridorZ), 24)
+	end
+	for _, x in { -18, 18 } do
+		ceilingLight(area, Vector3.new(x, roofY - 0.3, 18), 40)
+	end
+
+	-- Welcome sign over the corridor entrance, facing the spawn.
 	local welcome = part(
 		area,
 		"WelcomeSign",
@@ -306,19 +497,28 @@ local function buildCommonAreas(parent: Instance): ()
 		Color3.fromRGB(255, 120, 60)
 	)
 	sign(welcome, Enum.NormalId.Back, "WHACK IT OUT!  Stress Relief Dept.", Color3.new(1, 1, 1))
+	-- On the front wall above the foot of the stairs, facing into the lobby (-Z).
+	local upstairs = part(
+		area,
+		"UpstairsSign",
+		Vector3.new(6, 2.5, 0.4),
+		Vector3.new(stairs.X, 7, ArenaConfig.BuildingSouthZ - 0.8),
+		Color3.fromRGB(60, 70, 110)
+	)
+	sign(upstairs, Enum.NormalId.Front, "Senior Offices (Lv 10+)", Color3.fromRGB(255, 220, 120))
 
-	-- Reception desk, couches, water cooler and plants.
+	-- Reception, couches, water cooler and plants.
 	furniture(
 		part(area, "ReceptionDesk", Vector3.new(12, 3.5, 3), Vector3.new(-22, 1.75, 12), WOOD)
 	)
 	furniture(
 		part(area, "ReceptionTop", Vector3.new(12.4, 0.4, 3.4), Vector3.new(-22, 3.7, 12), PAPER)
 	)
-	-- Two couches against the east lobby wall, facing the room (-X).
 	local couch = Color3.fromRGB(70, 110, 170)
-	for _, z in { 10, 22 } do
-		furniture(part(area, "CouchSeat", Vector3.new(3, 1.6, 8), Vector3.new(32, 0.8, z), couch))
-		furniture(part(area, "CouchBack", Vector3.new(1, 2.4, 8), Vector3.new(34, 2.4, z), couch))
+	for _, x in { -12, 12 } do
+		-- Facing into the lobby (north) from the glass front.
+		furniture(part(area, "CouchSeat", Vector3.new(8, 1.6, 3), Vector3.new(x, 0.8, 30), couch))
+		furniture(part(area, "CouchBack", Vector3.new(8, 2.4, 1), Vector3.new(x, 2.4, 32), couch))
 	end
 	local cooler = furniture(
 		part(
@@ -331,7 +531,7 @@ local function buildCommonAreas(parent: Instance): ()
 	)
 	cooler.Shape = Enum.PartType.Cylinder
 	cooler.Orientation = Vector3.new(0, 0, 90)
-	furniture(
+	local bottle = furniture(
 		part(
 			area,
 			"WaterBottle",
@@ -340,14 +540,14 @@ local function buildCommonAreas(parent: Instance): ()
 			Color3.fromRGB(120, 190, 255),
 			Enum.Material.Glass
 		)
-	).Transparency =
-		0.3
-	for _, x in { -32, 32 } do
+	)
+	bottle.Transparency = 0.3
+	for _, x in { -32, 24 } do
 		plant(area, Vector3.new(x, 0, 31))
 	end
 end
 
--- Builds the whole floor under `parent` and returns its folder.
+-- Builds the whole building under `parent` and returns its folder.
 function OfficeBuilder.build(parent: Instance): Folder
 	local folder = Instance.new("Folder")
 	folder.Name = "Office"

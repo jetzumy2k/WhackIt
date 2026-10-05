@@ -42,12 +42,26 @@ return function()
 		end)
 
 		it("spaces stations so one swing can only reach one boss", function()
+			-- Server reach, including its lag grace.
+			local reach = GameConfig.HitReach + GameConfig.HitReachGrace
+			-- Height of a standing player's root above their floor.
+			local ROOT_HEIGHT = 3
 			for i, a in ArenaConfig.BossSpawns do
 				for j, b in ArenaConfig.BossSpawns do
 					if i < j then
-						expect((a.Position - b.Position).Magnitude > 2 * GameConfig.HitReach).to.equal(
-							true
-						)
+						local floorA = a.Position.Y - 4
+						local floorB = b.Position.Y - 4
+						if floorA == floorB then
+							expect((a.Position - b.Position).Magnitude > 2 * reach).to.equal(true)
+						else
+							-- A player standing on either floor can't reach the other floor's boss.
+							expect(math.abs(floorA + ROOT_HEIGHT - b.Position.Y) > reach).to.equal(
+								true
+							)
+							expect(math.abs(floorB + ROOT_HEIGHT - a.Position.Y) > reach).to.equal(
+								true
+							)
+						end
 					end
 				end
 			end

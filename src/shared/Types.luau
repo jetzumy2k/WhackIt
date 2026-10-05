@@ -45,6 +45,7 @@ export type ProfileSnapshot = {
 	BossDefeats: { [string]: number },
 	UnlockedBossIds: { string },
 	ZenLevel: number,
+	Level: number, -- Player Level (Shared/LevelRules)
 }
 
 return {}

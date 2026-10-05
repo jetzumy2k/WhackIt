@@ -24,11 +24,11 @@ end
 return function()
 	describe("ProgressionRules boss unlocks", function()
 		it("always unlocks the first boss", function()
-			expect(ProgressionRules.isBossUnlocked(FIRST.Id, {})).to.equal(true)
+			expect(ProgressionRules.isBossUnlocked(FIRST.Id, {}, 1)).to.equal(true)
 		end)
 
 		it("locks the second boss until the first is defeated enough times", function()
-			local status = ProgressionRules.unlockStatus(SECOND.Id, {})
+			local status = ProgressionRules.unlockStatus(SECOND.Id, {}, 1)
 			expect(status.Unlocked).to.equal(false)
 			expect(status.PreviousBossId).to.equal(FIRST.Id)
 			expect(status.DefeatsNeeded).to.equal(SECOND.UnlockDefeats)
@@ -36,29 +36,75 @@ return function()
 
 		it("counts down remaining defeats and unlocks at the requirement", function()
 			local almost = { [FIRST.Id] = SECOND.UnlockDefeats - 1 }
-			expect(ProgressionRules.unlockStatus(SECOND.Id, almost).DefeatsNeeded).to.equal(1)
-			expect(ProgressionRules.isBossUnlocked(SECOND.Id, almost)).to.equal(false)
+			expect(ProgressionRules.unlockStatus(SECOND.Id, almost, 1).DefeatsNeeded).to.equal(1)
+			expect(ProgressionRules.isBossUnlocked(SECOND.Id, almost, 1)).to.equal(false)
 
 			local enough = { [FIRST.Id] = SECOND.UnlockDefeats }
-			expect(ProgressionRules.isBossUnlocked(SECOND.Id, enough)).to.equal(true)
-			expect(ProgressionRules.unlockStatus(SECOND.Id, enough).DefeatsNeeded).to.equal(0)
+			expect(ProgressionRules.isBossUnlocked(SECOND.Id, enough, 1)).to.equal(true)
+			expect(ProgressionRules.unlockStatus(SECOND.Id, enough, 1).DefeatsNeeded).to.equal(0)
 		end)
 
 		it("only counts the previous boss, not other bosses", function()
 			-- Lots of first-boss defeats don't unlock the third boss.
 			local defeats = { [FIRST.Id] = 99 }
-			expect(ProgressionRules.isBossUnlocked(THIRD.Id, defeats)).to.equal(false)
+			expect(ProgressionRules.isBossUnlocked(THIRD.Id, defeats, 1)).to.equal(false)
 		end)
 
 		it("treats unknown bosses as locked", function()
-			expect(ProgressionRules.isBossUnlocked("not_a_boss", {})).to.equal(false)
+			expect(ProgressionRules.isBossUnlocked("not_a_boss", {}, 1)).to.equal(false)
 		end)
 
 		it("lists unlocked bosses in order", function()
-			local ids = ProgressionRules.unlockedBossIds({ [FIRST.Id] = SECOND.UnlockDefeats })
+			local ids = ProgressionRules.unlockedBossIds({ [FIRST.Id] = SECOND.UnlockDefeats }, 1)
 			expect(#ids).to.equal(2)
 			expect(ids[1]).to.equal(FIRST.Id)
 			expect(ids[2]).to.equal(SECOND.Id)
+		end)
+	end)
+
+	describe("ProgressionRules Senior bosses (upstairs)", function()
+		local senior = BossConfig.ById["senior_" .. FIRST.Id]
+		local minLevel = GameConfig.UpstairsMinLevel
+
+		it("exists for the first boss and needs the upstairs level", function()
+			expect(senior).never.to.equal(nil)
+			expect(senior.MinLevel).to.equal(minLevel)
+		end)
+
+		it("stays locked below the level even with every defeat done", function()
+			local status =
+				ProgressionRules.unlockStatus(senior.Id, { [FIRST.Id] = 99 }, minLevel - 1)
+			expect(status.Unlocked).to.equal(false)
+			expect(status.LevelNeeded).to.equal(minLevel)
+			expect(status.DefeatsNeeded).to.equal(0)
+		end)
+
+		it("stays locked at the level until its ground-floor version is defeated", function()
+			local status = ProgressionRules.unlockStatus(senior.Id, {}, minLevel)
+			expect(status.Unlocked).to.equal(false)
+			expect(status.LevelNeeded).to.equal(0)
+			expect(status.PreviousBossId).to.equal(FIRST.Id)
+		end)
+
+		it("unlocks with the level and a defeat of the ground-floor version", function()
+			expect(
+				ProgressionRules.isBossUnlocked(
+					senior.Id,
+					{ [FIRST.Id] = senior.UnlockDefeats },
+					minLevel
+				)
+			).to.equal(true)
+		end)
+
+		it("leaves ground-floor bosses unaffected by level", function()
+			expect(ProgressionRules.unlockStatus(FIRST.Id, {}, 1).LevelNeeded).to.equal(0)
+			expect(ProgressionRules.isBossUnlocked(FIRST.Id, {}, 1)).to.equal(true)
+		end)
+
+		it("doesn't list Senior bosses for a new player", function()
+			for _, id in ProgressionRules.unlockedBossIds({ [FIRST.Id] = 99 }, 1) do
+				expect(BossConfig.ById[id].MinLevel).to.equal(nil)
+			end
 		end)
 	end)
 

@@ -18,6 +18,7 @@ local BossConfig = require(ReplicatedStorage.Config.BossConfig)
 local BossState = require(ServerScriptService.Lib.BossState)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local OfficeBuilder = require(ServerScriptService.Lib.OfficeBuilder)
+local OutdoorBuilder = require(ServerScriptService.Lib.OutdoorBuilder)
 
 export type LiveBoss = {
 	State: BossState.BossState,
@@ -115,8 +116,9 @@ function BossService.applyHit(live: LiveBoss, userId: number, damage: number): B
 end
 
 function BossService.init(): ()
-	-- The offices the bosses stand in (ArenaConfig.Offices).
+	-- The office building the bosses stand in (ArenaConfig) and its surroundings.
 	OfficeBuilder.build(Workspace)
+	OutdoorBuilder.build(Workspace, Workspace.Terrain)
 
 	local folder = Instance.new("Folder")
 	folder.Name = "Bosses"

@@ -82,6 +82,32 @@ local function addSign(model: Model, text: string): ()
 	label.Parent = surface
 end
 
+-- A small gold crown on top of the head for Senior bosses.
+local function addCrown(model: Model): ()
+	local gold = Color3.fromRGB(255, 205, 60)
+	local band = addPart(
+		model,
+		"CrownBand",
+		Enum.PartType.Cylinder,
+		Vector3.new(0.8, 2.6, 2.6),
+		CFrame.new(0, 2.7, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		gold
+	)
+	band.Material = Enum.Material.Metal
+	for index = 0, 4 do
+		local angle = index * math.pi * 2 / 5
+		local spike = addPart(
+			model,
+			"CrownSpike",
+			Enum.PartType.Block,
+			Vector3.new(0.4, 0.8, 0.4),
+			CFrame.new(math.cos(angle) * 1.1, 3.4, math.sin(angle) * 1.1),
+			gold
+		)
+		spike.Material = Enum.Material.Metal
+	end
+end
+
 function BossVisual.build(visual: BossVisualConfig.BossVisual): Model
 	local model = Instance.new("Model")
 	model.Name = "Visual"
@@ -183,6 +209,9 @@ function BossVisual.build(visual: BossVisualConfig.BossVisual): Model
 	end
 
 	addSign(model, visual.SignText)
+	if visual.Crown then
+		addCrown(model)
+	end
 
 	model.PrimaryPart = body
 	model.WorldPivot = CFrame.identity

@@ -127,4 +127,43 @@ return function()
 			office:Destroy()
 		end)
 	end)
+	describe("OfficeBuilder upper floor", function()
+		it("builds stairs whose top step meets the upper floor", function()
+			local office = build()
+			local highest = -math.huge
+			local steps = 0
+			for _, p in parts(office) do
+				if p.Name == "Step" then
+					steps += 1
+					highest = math.max(highest, p.Position.Y + p.Size.Y / 2)
+				end
+			end
+			expect(steps > 0).to.equal(true)
+			expect(highest).to.equal(ArenaConfig.UpperFloorY)
+			office:Destroy()
+		end)
+
+		it("keeps every step a comfortable 1-stud climb", function()
+			expect(ArenaConfig.Stairs.StepHeight <= 1).to.equal(true)
+			expect(ArenaConfig.Stairs.StepDepth >= 1).to.equal(true)
+		end)
+
+		it("leaves the top of the stairs open to the upper corridor", function()
+			local office = build()
+			local stairs = ArenaConfig.Stairs
+			-- Just above the landing, where a player steps off the stairs.
+			local stepOff = Vector3.new(stairs.X, ArenaConfig.UpperFloorY + 2, 0.2)
+			for _, p in parts(office) do
+				expect(contains(p, stepOff)).to.equal(false)
+			end
+			office:Destroy()
+		end)
+
+		it("puts Senior offices on the upper floor", function()
+			for _, entry in ArenaConfig.Offices do
+				local isSenior = string.sub(entry.BossId, 1, 7) == "senior_"
+				expect(entry.Center.Y).to.equal(if isSenior then ArenaConfig.UpperFloorY else 0)
+			end
+		end)
+	end)
 end

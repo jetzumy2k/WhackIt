@@ -6,6 +6,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
+local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
 local Types = require(ReplicatedStorage.Shared.Types)
@@ -26,8 +27,12 @@ function ProgressService.snapshot(data: PlayerDataService.PlayerData): Types.Pro
 		OwnedHammerIds = ownedIds,
 		EquippedHammerId = data.EquippedHammerId,
 		BossDefeats = table.clone(data.BossDefeats),
-		UnlockedBossIds = ProgressionRules.unlockedBossIds(data.BossDefeats),
+		UnlockedBossIds = ProgressionRules.unlockedBossIds(
+			data.BossDefeats,
+			LevelRules.levelFor(data.Score)
+		),
 		ZenLevel = data.ZenLevel,
+		Level = LevelRules.levelFor(data.Score),
 	}
 end
 

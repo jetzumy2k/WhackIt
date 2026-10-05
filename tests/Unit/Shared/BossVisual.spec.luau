@@ -57,4 +57,18 @@ return function()
 			end
 		end)
 	end)
+	describe("BossVisual crowns", function()
+		local function hasCrown(model: Model): boolean
+			return model:FindFirstChild("CrownBand") ~= nil
+		end
+
+		it("crowns Senior bosses only", function()
+			local senior = BossVisual.build(BossVisualConfig.senior_deadline_boss)
+			local ground = BossVisual.build(BossVisualConfig.deadline_boss)
+			expect(hasCrown(senior)).to.equal(true)
+			expect(hasCrown(ground)).to.equal(false)
+			senior:Destroy()
+			ground:Destroy()
+		end)
+	end)
 end

@@ -64,15 +64,35 @@ return function()
 			end
 		end)
 
+		it("chains unlocks through existing bosses with whole defeat counts", function()
+			local openFromStart = 0
+			for _, boss in BossConfig.List do
+				local previousId = boss.UnlockAfterBossId
+				if previousId == nil then
+					openFromStart += 1
+					expect(boss.UnlockDefeats).to.equal(0)
+				else
+					expect(BossConfig.ById[previousId]).never.to.equal(nil)
+					expect(previousId).never.to.equal(boss.Id)
+					expect(boss.UnlockDefeats >= 1).to.equal(true)
+					expect(boss.UnlockDefeats % 1).to.equal(0)
+				end
+			end
+			-- At least one boss is open to a brand-new player.
+			expect(openFromStart >= 1).to.equal(true)
+		end)
+
 		it(
-			"needs nothing for the first boss and at least one defeat for every later boss",
+			"gives every ground-floor boss a Senior version that is tougher and pays more",
 			function()
-				for index, boss in BossConfig.List do
-					if index == 1 then
-						expect(boss.UnlockDefeats).to.equal(0)
-					else
-						expect(boss.UnlockDefeats >= 1).to.equal(true)
-						expect(boss.UnlockDefeats % 1).to.equal(0)
+				for _, boss in BossConfig.List do
+					if boss.MinLevel == nil then
+						local senior = BossConfig.ById["senior_" .. boss.Id]
+						expect(senior).never.to.equal(nil)
+						expect(senior.MaxHealth > boss.MaxHealth).to.equal(true)
+						expect(senior.ScoreReward > boss.ScoreReward).to.equal(true)
+						expect(senior.CoinReward > boss.CoinReward).to.equal(true)
+						expect(senior.UnlockAfterBossId).to.equal(boss.Id)
 					end
 				end
 			end

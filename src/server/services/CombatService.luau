@@ -18,6 +18,7 @@ local CombatRules = require(ReplicatedStorage.Shared.CombatRules)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
 local HammerTool = require(ServerScriptService.Lib.HammerTool)
+local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
 local RateLimiter = require(ReplicatedStorage.Shared.RateLimiter)
 local MovementGuardService = require(script.Parent.MovementGuardService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
@@ -122,7 +123,13 @@ local function onHammerHit(player: Player, rawBossInstanceId: unknown): ()
 	if data == nil then
 		return explainDrop(player, "data not loaded")
 	end
-	if not ProgressionRules.isBossUnlocked(live.State.Definition.Id, data.BossDefeats) then
+	if
+		not ProgressionRules.isBossUnlocked(
+			live.State.Definition.Id,
+			data.BossDefeats,
+			LevelRules.levelFor(data.Score)
+		)
+	then
 		return explainDrop(player, live.State.Definition.Id .. " is locked for this player")
 	end
 

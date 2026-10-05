@@ -38,14 +38,15 @@ local function parse(payload: unknown): Types.ProfileSnapshot?
 	local data = payload :: { [string]: unknown }
 	local owned = stringList(data.OwnedHammerIds)
 	local unlocked = stringList(data.UnlockedBossIds)
-	local coins, equipped, rawDefeats, zenLevel =
-		data.Coins, data.EquippedHammerId, data.BossDefeats, data.ZenLevel
+	local coins, equipped, rawDefeats, zenLevel, level =
+		data.Coins, data.EquippedHammerId, data.BossDefeats, data.ZenLevel, data.Level
 	if
 		owned == nil
 		or unlocked == nil
 		or typeof(coins) ~= "number"
 		or typeof(equipped) ~= "string"
 		or typeof(zenLevel) ~= "number"
+		or typeof(level) ~= "number"
 	then
 		return nil
 	end
@@ -66,6 +67,7 @@ local function parse(payload: unknown): Types.ProfileSnapshot?
 		BossDefeats = defeats,
 		UnlockedBossIds = unlocked,
 		ZenLevel = zenLevel,
+		Level = level,
 	}
 end
 
@@ -84,7 +86,9 @@ end
 
 function ProgressController.unlockStatus(bossId: string): ProgressionRules.UnlockStatus?
 	local current = snapshot
-	return if current then ProgressionRules.unlockStatus(bossId, current.BossDefeats) else nil
+	return if current
+		then ProgressionRules.unlockStatus(bossId, current.BossDefeats, current.Level)
+		else nil
 end
 
 function ProgressController.ownsHammer(hammerId: string): boolean
