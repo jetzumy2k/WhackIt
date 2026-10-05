@@ -74,9 +74,16 @@ return function()
 			for _, p in parts(office) do
 				if p:GetAttribute(OfficeBuilder.FURNITURE_ATTRIBUTE) then
 					for _, spawn in ArenaConfig.BossSpawns do
-						expect(flatDistance(p.Position, spawn.Position) >= BOSS_CLEARANCE).to.equal(
-							true
-						)
+						-- Only bosses on the same floor share the room with this furniture.
+						local sameFloor = p.Position.Y >= spawn.FloorY
+							and p.Position.Y < spawn.FloorY + 14
+						if sameFloor then
+							-- Clearance grows with bigger bosses (the CEO).
+							local needed = BOSS_CLEARANCE + spawn.Size.X / 2 - 3
+							expect(flatDistance(p.Position, spawn.Position) >= needed).to.equal(
+								true
+							)
+						end
 					end
 				end
 			end
@@ -219,6 +226,27 @@ return function()
 					local thinnest = math.min(p.Size.X, p.Size.Y, p.Size.Z)
 					expect(thinnest <= 0.3).to.equal(true)
 					expect(p.Transparency > 0).to.equal(true)
+				end
+			end
+			office:Destroy()
+		end)
+	end)
+	describe("OfficeBuilder Executive Floor", function()
+		it("builds an elevator door on the 2nd and the 3rd floor", function()
+			local office = build()
+			local up = office:FindFirstChild("ElevatorUpDoor", true)
+			local down = office:FindFirstChild("ElevatorDownDoor", true)
+			expect(up).never.to.equal(nil)
+			expect(down).never.to.equal(nil)
+			office:Destroy()
+		end)
+
+		it("keeps the elevator arrival spots clear", function()
+			local office = build()
+			local executive = ArenaConfig.Executive
+			for _, point in { executive.ArriveUp, executive.ArriveDown } do
+				for _, p in parts(office) do
+					expect(contains(p, point)).to.equal(false)
 				end
 			end
 			office:Destroy()

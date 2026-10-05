@@ -8,6 +8,7 @@ export type BossVisual = {
 	LimbColor: Color3,
 	SignText: string, -- short joke on the sign the boss carries
 	Crown: boolean, -- Senior bosses wear a gold crown
+	Scale: number, -- visual and hitbox size multiplier (the CEO is bigger)
 }
 
 local BossVisualConfig: { [string]: BossVisual } = table.freeze({
@@ -17,6 +18,7 @@ local BossVisualConfig: { [string]: BossVisual } = table.freeze({
 		LimbColor = Color3.fromRGB(220, 85, 40),
 		SignText = "DUE TODAY!",
 		Crown = false,
+		Scale = 1,
 	}),
 	meeting_master = table.freeze({
 		BodyColor = Color3.fromRGB(150, 100, 220),
@@ -24,6 +26,7 @@ local BossVisualConfig: { [string]: BossVisual } = table.freeze({
 		LimbColor = Color3.fromRGB(115, 70, 185),
 		SignText = "1 MORE MEETING",
 		Crown = false,
+		Scale = 1,
 	}),
 	reply_all_boss = table.freeze({
 		BodyColor = Color3.fromRGB(70, 150, 240),
@@ -31,6 +34,7 @@ local BossVisualConfig: { [string]: BossVisual } = table.freeze({
 		LimbColor = Color3.fromRGB(45, 110, 200),
 		SignText = "RE: RE: RE:",
 		Crown = false,
+		Scale = 1,
 	}),
 	production_bug = table.freeze({
 		BodyColor = Color3.fromRGB(110, 200, 80),
@@ -38,6 +42,7 @@ local BossVisualConfig: { [string]: BossVisual } = table.freeze({
 		LimbColor = Color3.fromRGB(70, 155, 50),
 		SignText = "500 ERROR",
 		Crown = false,
+		Scale = 1,
 	}),
 	monday_monster = table.freeze({
 		BodyColor = Color3.fromRGB(110, 120, 150),
@@ -45,6 +50,7 @@ local BossVisualConfig: { [string]: BossVisual } = table.freeze({
 		LimbColor = Color3.fromRGB(80, 88, 115),
 		SignText = "MONDAY 9AM",
 		Crown = false,
+		Scale = 1,
 	}),
 
 	-- Senior (upstairs) versions: deeper colours and a crown.
@@ -54,6 +60,7 @@ local BossVisualConfig: { [string]: BossVisual } = table.freeze({
 		LimbColor = Color3.fromRGB(160, 50, 25),
 		SignText = "DUE YESTERDAY",
 		Crown = true,
+		Scale = 1,
 	}),
 	senior_meeting_master = table.freeze({
 		BodyColor = Color3.fromRGB(105, 60, 175),
@@ -61,6 +68,7 @@ local BossVisualConfig: { [string]: BossVisual } = table.freeze({
 		LimbColor = Color3.fromRGB(80, 40, 140),
 		SignText = "ALL-DAY SYNC",
 		Crown = true,
+		Scale = 1,
 	}),
 	senior_reply_all_boss = table.freeze({
 		BodyColor = Color3.fromRGB(35, 105, 195),
@@ -68,6 +76,7 @@ local BossVisualConfig: { [string]: BossVisual } = table.freeze({
 		LimbColor = Color3.fromRGB(25, 75, 150),
 		SignText = "RE: FWD: RE:",
 		Crown = true,
+		Scale = 1,
 	}),
 	senior_production_bug = table.freeze({
 		BodyColor = Color3.fromRGB(65, 150, 50),
@@ -75,6 +84,7 @@ local BossVisualConfig: { [string]: BossVisual } = table.freeze({
 		LimbColor = Color3.fromRGB(40, 110, 30),
 		SignText = "FRIDAY DEPLOY",
 		Crown = true,
+		Scale = 1,
 	}),
 	senior_monday_monster = table.freeze({
 		BodyColor = Color3.fromRGB(70, 78, 110),
@@ -82,6 +92,17 @@ local BossVisualConfig: { [string]: BossVisual } = table.freeze({
 		LimbColor = Color3.fromRGB(50, 55, 85),
 		SignText = "MONDAY AGAIN",
 		Crown = true,
+		Scale = 1,
+	}),
+
+	-- The CEO: a big, crowned, suit-grey monster on the Executive Floor.
+	the_ceo = table.freeze({
+		BodyColor = Color3.fromRGB(90, 90, 105),
+		BellyColor = Color3.fromRGB(210, 210, 220),
+		LimbColor = Color3.fromRGB(60, 60, 72),
+		SignText = "Q4 RESULTS?!",
+		Crown = true,
+		Scale = 1.6,
 	}),
 })
 

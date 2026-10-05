@@ -150,4 +150,41 @@ return function()
 			)
 		end)
 	end)
+	describe("ProgressionRules CEO (Executive Floor)", function()
+		local ceoId = "the_ceo"
+		local level = GameConfig.UpstairsMinLevel
+
+		local function allDefeatedExcept(skip: string?): { [string]: number }
+			local defeats: { [string]: number } = {}
+			for _, boss in BossConfig.List do
+				if boss.Id ~= ceoId and boss.Id ~= skip then
+					defeats[boss.Id] = 1
+				end
+			end
+			return defeats
+		end
+
+		it("stays locked while any other boss has never been beaten", function()
+			local status = ProgressionRules.unlockStatus(ceoId, allDefeatedExcept(FIRST.Id), level)
+			expect(status.Unlocked).to.equal(false)
+			expect(status.DefeatsNeeded).to.equal(1)
+		end)
+
+		it("counts how many bosses are still left to beat", function()
+			local status = ProgressionRules.unlockStatus(ceoId, {}, level)
+			expect(status.DefeatsNeeded).to.equal(#BossConfig.List - 1)
+		end)
+
+		it("unlocks once every other boss is beaten at the required level", function()
+			expect(ProgressionRules.isBossUnlocked(ceoId, allDefeatedExcept(nil), level)).to.equal(
+				true
+			)
+		end)
+
+		it("still needs the level", function()
+			expect(ProgressionRules.isBossUnlocked(ceoId, allDefeatedExcept(nil), level - 1)).to.equal(
+				false
+			)
+		end)
+	end)
 end

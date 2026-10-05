@@ -87,6 +87,12 @@ local function lockedHint(bossId: string): string
 	if status and status.LevelNeeded > 0 then
 		return string.format("Reach Level %d to fight this Senior boss!", status.LevelNeeded)
 	end
+	if status and previous == nil and status.DefeatsNeeded > 0 then
+		return string.format(
+			"Defeat every boss once to face this one (%d to go)!",
+			status.DefeatsNeeded
+		)
+	end
 	if status == nil or previous == nil then
 		return "This boss is locked."
 	end

@@ -4,10 +4,11 @@
 	them to enforce; the client uses the same functions only to display what
 	the server will allow.
 
-	A boss unlocks when BOTH hold (BossConfig):
-	  * UnlockAfterBossId set -> at least UnlockDefeats rewarded defeats of it;
-	  * MinLevel set          -> Player Level (Shared/LevelRules) >= MinLevel.
-	Bosses with neither are always unlocked.
+	A boss unlocks when ALL that apply hold (BossConfig):
+	  * UnlockAfterBossId set    -> at least UnlockDefeats rewarded defeats of it;
+	  * UnlockAfterAllBosses set -> every other boss defeated at least once;
+	  * MinLevel set             -> Player Level (Shared/LevelRules) >= MinLevel.
+	Bosses with none of these are always unlocked.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -21,7 +22,7 @@ export type OwnedHammers = { [string]: boolean }
 export type UnlockStatus = {
 	Unlocked: boolean,
 	PreviousBossId: string?, -- the boss to defeat to unlock this one
-	DefeatsNeeded: number, -- remaining defeats of PreviousBossId (0 when met)
+	DefeatsNeeded: number, -- remaining defeats needed (of PreviousBossId, or bosses not yet beaten)
 	LevelNeeded: number, -- Player Level required, or 0 when already met
 }
 
@@ -43,6 +44,14 @@ function ProgressionRules.unlockStatus(
 	local previousId = boss.UnlockAfterBossId
 	if previousId then
 		defeatsNeeded = math.max(0, boss.UnlockDefeats - (defeats[previousId] or 0))
+	end
+	if boss.UnlockAfterAllBosses then
+		-- One defeat still needed for each other boss never beaten.
+		for _, other in BossConfig.List do
+			if other.Id ~= boss.Id and (defeats[other.Id] or 0) < 1 then
+				defeatsNeeded += 1
+			end
+		end
 	end
 	local minLevel = boss.MinLevel
 	local levelNeeded = if minLevel and level < minLevel then minLevel else 0

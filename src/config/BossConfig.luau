@@ -21,6 +21,8 @@ export type BossDefinition = {
 	UnlockAfterBossId: string?,
 	UnlockDefeats: number,
 	MinLevel: number?,
+	-- Unlocks only once every other boss has been defeated at least once (the CEO).
+	UnlockAfterAllBosses: boolean?,
 }
 
 export type BossConfig = {
@@ -157,6 +159,25 @@ local list: { BossDefinition } = {
 		MinLevel = SENIOR_MIN_LEVEL,
 	},
 }
+
+-- The CEO (3rd-floor raid boss): HP is CeoHealthMultiplier x the toughest
+-- other boss, derived so it stays true when other bosses change. A team effort.
+local toughest = 0
+for _, boss in list do
+	toughest = math.max(toughest, boss.MaxHealth)
+end
+table.insert(list, {
+	Id = "the_ceo",
+	DisplayName = "The CEO",
+	Description = "Has never once read the whole email.",
+	MaxHealth = toughest * GameConfig.CeoHealthMultiplier,
+	DamageTakenMultiplier = 1.0,
+	ScoreReward = 5000,
+	CoinReward = 1000,
+	UnlockDefeats = 0,
+	MinLevel = SENIOR_MIN_LEVEL,
+	UnlockAfterAllBosses = true,
+})
 
 local byId: { [string]: BossDefinition } = {}
 for _, boss in list do

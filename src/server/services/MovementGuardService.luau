@@ -75,6 +75,13 @@ local function sample(): ()
 	end
 end
 
+-- The server moved this player on purpose (e.g. the Executive Elevator):
+-- restart their samples at the new spot so it isn't judged as a teleport hack.
+function MovementGuardService.noteTeleport(player: Player): ()
+	lastSample[player] = nil
+	flaggedAt[player] = nil
+end
+
 -- True while the player's hits should be ignored after an implausible move.
 function MovementGuardService.isSuspect(player: Player): boolean
 	return MovementRules.isSuspect(flaggedAt[player], os.clock(), MovementLimits.SuspectSeconds)

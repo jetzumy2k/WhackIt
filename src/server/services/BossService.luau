@@ -50,7 +50,7 @@ local function buildModel(
 	local body = Instance.new("Part")
 	body.Name = "Body"
 	body.Anchored = true
-	body.Size = ArenaConfig.PlaceholderBossSize
+	body.Size = spawn.Size
 	body.Color = ArenaConfig.PlaceholderBossColor
 	body.Material = Enum.Material.SmoothPlastic
 	-- Invisible hitbox: each client draws the cartoon monster over it (Shared/BossVisual).
@@ -89,6 +89,17 @@ local function scheduleRespawn(live: LiveBoss): ()
 		live.Model:Destroy()
 		spawnBoss(live.Spawn)
 	end)
+end
+
+-- Every boss that can currently be hit (for ShoutService).
+function BossService.allLive(): { LiveBoss }
+	local list: { LiveBoss } = {}
+	for _, live in liveBosses do
+		if not live.State.Defeated then
+			table.insert(list, live)
+		end
+	end
+	return list
 end
 
 -- Returns the boss only while it can still be hit.

@@ -9,6 +9,8 @@ return table.freeze({
 	Health = "Health",
 	MaxHealth = "MaxHealth",
 	Defeated = "Defeated",
+	ShoutText = "ShoutText", -- latest speech-bubble line
+	ShoutSeq = "ShoutSeq", -- increments on every shout, so repeats still show
 
 	-- On each Player
 	Stress = "Stress",

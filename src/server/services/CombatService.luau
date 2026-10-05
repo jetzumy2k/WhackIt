@@ -27,6 +27,7 @@ local RemoteController = require(ServerScriptService.Controllers.RemoteControlle
 local RemoteLimits = require(ServerScriptService.Config.RemoteLimits)
 local RewardService = require(script.Parent.RewardService)
 local SessionService = require(script.Parent.SessionService)
+local ShoutService = require(script.Parent.ShoutService)
 local StressRules = require(ReplicatedStorage.Shared.StressRules)
 local StressService = require(script.Parent.StressService)
 local Types = require(ReplicatedStorage.Shared.Types)
@@ -168,6 +169,9 @@ local function onHammerHit(player: Player, rawBossInstanceId: unknown): ()
 		return
 	end
 	lastHitAt[player] = now
+	if not result.Defeated then
+		ShoutService.onHit(live)
+	end
 
 	data.TotalHits += 1
 	StressService.noteActivity(player)

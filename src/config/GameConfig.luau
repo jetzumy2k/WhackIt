@@ -31,6 +31,8 @@ local GameConfig = table.freeze({
 	LevelScoreFactor = 600,
 	-- Senior bosses upstairs need at least this Player Level.
 	UpstairsMinLevel = 10,
+	-- The CEO (3rd floor) has this many times the HP of the toughest other boss.
+	CeoHealthMultiplier = 150,
 
 	-- Combat
 	HitCooldown = 0.45, -- seconds per hammer swing = minimum time between accepted hits
@@ -49,6 +51,12 @@ local GameConfig = table.freeze({
 	MinRewardDamageShare = 0.1,
 	LastHitBonusShare = 0.05, -- extra fraction of the boss's reward for the defeating hit
 	BossRespawnDelay = 5, -- seconds from defeat until a fresh boss appears
+
+	-- Boss shouts (speech bubbles, BossShoutConfig)
+	ShoutIdleMin = 8, -- seconds between a boss's idle shouts, at least...
+	ShoutIdleMax = 15, -- ...and at most
+	ShoutHitChance = 0.2, -- chance a hit makes the boss shout back
+	ShoutCooldown = 4, -- seconds a boss stays quiet after any shout
 
 	-- Player
 	RespawnTime = 3, -- seconds

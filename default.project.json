@@ -66,6 +66,14 @@
           "ZenAchieved": {
             "$className": "RemoteEvent"
           }
+        },
+
+        "Notify": {
+          "$className": "Folder",
+
+          "Toast": {
+            "$className": "RemoteEvent"
+          }
         }
       }
     },

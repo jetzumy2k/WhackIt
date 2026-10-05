@@ -49,8 +49,8 @@ return function()
 			for i, a in ArenaConfig.BossSpawns do
 				for j, b in ArenaConfig.BossSpawns do
 					if i < j then
-						local floorA = a.Position.Y - 4
-						local floorB = b.Position.Y - 4
+						local floorA = a.FloorY
+						local floorB = b.FloorY
 						if floorA == floorB then
 							expect((a.Position - b.Position).Magnitude > 2 * reach).to.equal(true)
 						else
@@ -65,6 +65,33 @@ return function()
 					end
 				end
 			end
+		end)
+	end)
+	describe("ArenaConfig Executive Floor", function()
+		it("puts the CEO on the executive floor", function()
+			local found = false
+			for _, spawn in ArenaConfig.BossSpawns do
+				if spawn.BossId == ArenaConfig.Executive.CeoBossId then
+					found = true
+					expect(spawn.FloorY).to.equal(ArenaConfig.Executive.FloorY)
+				end
+			end
+			expect(found).to.equal(true)
+		end)
+
+		it("stands every boss on its floor, whatever its size", function()
+			for _, spawn in ArenaConfig.BossSpawns do
+				expect(math.abs(spawn.Position.Y - spawn.Size.Y / 2 - spawn.FloorY) < 1e-6).to.equal(
+					true
+				)
+			end
+		end)
+
+		it("lands elevator riders on the right floors", function()
+			local executive = ArenaConfig.Executive
+			expect(executive.ArriveUp.Y > executive.FloorY).to.equal(true)
+			expect(executive.ArriveDown.Y > ArenaConfig.UpperFloorY).to.equal(true)
+			expect(executive.ArriveDown.Y < executive.FloorY).to.equal(true)
 		end)
 	end)
 end

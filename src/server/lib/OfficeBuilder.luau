@@ -563,6 +563,173 @@ local function buildCommonAreas(parent: Instance): ()
 	end
 end
 
+-- An elevator door on the west end wall's inner face, with a sign above it.
+-- ExecutiveService adds the "Ride up" / "Ride down" prompts.
+local function elevatorDoor(parent: Instance, name: string, center: Vector3, label: string): ()
+	local door = part(parent, name, Vector3.new(0.4, 8, 6), center, METAL, Enum.Material.Metal)
+	door.CanCollide = true
+	local signPart = part(
+		parent,
+		name .. "Sign",
+		Vector3.new(0.3, 1.6, 8),
+		center + Vector3.new(0, 5, 0),
+		Color3.fromRGB(60, 50, 40)
+	)
+	sign(signPart, Enum.NormalId.Right, label, Color3.fromRGB(255, 210, 120))
+end
+
+-- The CEO's suite: the whole 3rd floor over the offices and corridor.
+local function buildExecutiveFloor(parent: Instance): ()
+	local executive = ArenaConfig.Executive
+	local floor = executive.FloorY
+	local height = executive.CeilingY - floor
+	local half = ArenaConfig.BuildingHalfWidth
+	local northZ, southZ = executive.NorthZ, executive.SouthZ
+	local depth = southZ - northZ
+	local midZ = (southZ + northZ) / 2
+
+	local suite = Instance.new("Model")
+	suite.Name = "The CEO Office"
+	suite.Parent = parent
+
+	part(
+		suite,
+		"ExecutiveCarpet",
+		Vector3.new(half * 2, 0.1, depth),
+		Vector3.new(0, floor + 0.05, midZ),
+		Color3.fromRGB(80, 40, 50),
+		Enum.Material.Fabric
+	)
+	part(
+		suite,
+		"ExecutiveRoof",
+		Vector3.new(half * 2, 1, depth),
+		Vector3.new(0, executive.CeilingY + 0.5, midZ),
+		SLAB_COLOR
+	)
+
+	-- North wall: a long window strip with the skyline view.
+	local windowBottom, windowTop = 4, 10
+	part(
+		suite,
+		"ExecutiveWallLow",
+		Vector3.new(half * 2, windowBottom, WALL_THICKNESS),
+		Vector3.new(0, floor + windowBottom / 2, northZ),
+		WALL_COLOR
+	)
+	part(
+		suite,
+		"ExecutiveWallHigh",
+		Vector3.new(half * 2, height - windowTop, WALL_THICKNESS),
+		Vector3.new(0, floor + (windowTop + height) / 2, northZ),
+		WALL_COLOR
+	)
+	glass(
+		suite,
+		"ExecutiveWindow",
+		Vector3.new(half * 2, windowTop - windowBottom, 0.3),
+		Vector3.new(0, floor + (windowBottom + windowTop) / 2, northZ)
+	)
+	part(
+		suite,
+		"ExecutiveWallSouth",
+		Vector3.new(half * 2, height, WALL_THICKNESS),
+		Vector3.new(0, floor + height / 2, southZ),
+		WALL_COLOR
+	)
+	for _, side in { -1, 1 } do
+		part(
+			suite,
+			"ExecutiveEndWall",
+			Vector3.new(WALL_THICKNESS, height, depth),
+			Vector3.new(side * half, floor + height / 2, midZ),
+			WALL_COLOR
+		)
+	end
+
+	for x = -60, 60, 30 do
+		for _, z in { -40, -14 } do
+			ceilingLight(suite, Vector3.new(x, executive.CeilingY - 0.3, z), 30)
+		end
+	end
+
+	-- The CEO's desk faces into the room from the north wall.
+	local deskAt = Vector3.new(0, floor, -46)
+	local darkWood = Color3.fromRGB(95, 60, 40)
+	furniture(
+		part(suite, "CeoDesk", Vector3.new(16, 0.8, 5), deskAt + Vector3.new(0, 3.4, 0), darkWood)
+	)
+	furniture(
+		part(
+			suite,
+			"CeoDeskFront",
+			Vector3.new(16, 3, 0.5),
+			deskAt + Vector3.new(0, 1.5, 2.2),
+			darkWood
+		)
+	)
+	local monitor = furniture(
+		part(suite, "CeoMonitor", Vector3.new(5, 3, 0.3), deskAt + Vector3.new(0, 5.4, -1.5), DARK)
+	)
+	sign(monitor, Enum.NormalId.Back, "Q4: PANIC", Color3.fromRGB(255, 110, 110))
+	furniture(
+		part(
+			suite,
+			"CeoChairSeat",
+			Vector3.new(4, 0.6, 4),
+			deskAt + Vector3.new(0, 2, -4),
+			Color3.fromRGB(70, 30, 30)
+		)
+	)
+	furniture(
+		part(
+			suite,
+			"CeoChairBack",
+			Vector3.new(4, 6, 0.6),
+			deskAt + Vector3.new(0, 5, -5.6),
+			Color3.fromRGB(70, 30, 30)
+		)
+	)
+
+	for _, x in { -30, 30 } do
+		furniture(
+			part(
+				suite,
+				"Bookshelf",
+				Vector3.new(14, 9, 2),
+				Vector3.new(x, floor + 4.5, northZ + 1.6),
+				darkWood
+			)
+		)
+	end
+	local painting = furniture(
+		part(
+			suite,
+			"Painting",
+			Vector3.new(12, 6, 0.2),
+			Vector3.new(40, floor + 7, southZ - 0.7),
+			Color3.fromRGB(200, 170, 110)
+		)
+	)
+	sign(painting, Enum.NormalId.Front, "EMPLOYEE OF THE MONTH: ME", Color3.fromRGB(70, 40, 20))
+	local couch = Color3.fromRGB(90, 45, 55)
+	furniture(
+		part(suite, "CouchSeat", Vector3.new(3, 1.6, 10), Vector3.new(70, floor + 0.8, -26), couch)
+	)
+	furniture(
+		part(suite, "CouchBack", Vector3.new(1, 2.4, 10), Vector3.new(72, floor + 2.4, -26), couch)
+	)
+	for _, at in
+		{ Vector3.new(-80, floor, -48), Vector3.new(80, floor, -48), Vector3.new(80, floor, -4) }
+	do
+		plant(suite, at)
+	end
+
+	-- Elevator doors on the west end wall: up from the 2nd floor, down from the 3rd.
+	elevatorDoor(parent, "ElevatorUpDoor", executive.ElevatorUpDoor, "EXECUTIVE ELEVATOR")
+	elevatorDoor(suite, "ElevatorDownDoor", executive.ElevatorDownDoor, "ELEVATOR DOWN")
+end
+
 -- Builds the whole building under `parent` and returns its folder.
 function OfficeBuilder.build(parent: Instance): Folder
 	local folder = Instance.new("Folder")
@@ -571,6 +738,7 @@ function OfficeBuilder.build(parent: Instance): Folder
 		buildOffice(folder, entry)
 	end
 	buildCommonAreas(folder)
+	buildExecutiveFloor(folder)
 	folder.Parent = parent
 	return folder
 end

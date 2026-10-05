@@ -24,8 +24,9 @@ local STRESS_COLOR = Color3.fromRGB(235, 80, 80)
 local HEALTH_COLOR = Color3.fromRGB(90, 210, 110)
 local TEXT_COLOR = Color3.fromRGB(255, 255, 255)
 local TOAST_COLOR = Color3.fromRGB(255, 230, 80)
-local TOAST_SECONDS = 1.2
+local TOAST_SECONDS = 2.5
 local SAVED_SECONDS = 2
+local SHOUT_SECONDS = 4.5
 
 local localPlayer = Players.LocalPlayer
 local victoryCardShownAt = 0
@@ -209,20 +210,56 @@ function attachBossBar(model: Model, billboardParent: Instance): ()
 	billboard.ResetOnSpawn = false
 	billboard.Adornee = body
 	billboard.AlwaysOnTop = true
-	billboard.Size = UDim2.fromOffset(200, 50)
+	billboard.Size = UDim2.fromOffset(240, 110)
 	billboard.StudsOffset = Vector3.new(0, body.Size.Y / 2 + 2, 0)
 	billboard.MaxDistance = 120
 
+	-- Speech bubble on top (boss shouts), then the name and HP bar below it.
+	local bubble = Instance.new("TextLabel")
+	bubble.Name = "Shout"
+	bubble.Size = UDim2.fromScale(1, 0.5)
+	bubble.BackgroundColor3 = Color3.fromRGB(245, 240, 230)
+	bubble.TextColor3 = Color3.fromRGB(35, 30, 40)
+	bubble.Font = Enum.Font.FredokaOne
+	bubble.TextScaled = true
+	bubble.TextWrapped = true
+	bubble.Visible = false
+	bubble.Parent = billboard
+	Instance.new("UICorner").Parent = bubble
+	local bubblePadding = Instance.new("UIPadding")
+	bubblePadding.PaddingLeft = UDim.new(0, 8)
+	bubblePadding.PaddingRight = UDim.new(0, 8)
+	bubblePadding.Parent = bubble
+
+	local shownSeq = 0
+	local function showShout(): ()
+		local text = model:GetAttribute(Attributes.ShoutText)
+		local seq = model:GetAttribute(Attributes.ShoutSeq)
+		if typeof(text) ~= "string" or typeof(seq) ~= "number" then
+			return
+		end
+		bubble.Text = text
+		bubble.Visible = true
+		shownSeq = seq
+		task.delay(SHOUT_SECONDS, function()
+			if shownSeq == seq then
+				bubble.Visible = false
+			end
+		end)
+	end
+	model:GetAttributeChangedSignal(Attributes.ShoutSeq):Connect(showShout)
+
 	local nameLabel = makeLabel("Name", billboard)
-	nameLabel.Size = UDim2.fromScale(1, 0.5)
+	nameLabel.Position = UDim2.fromScale(0, 0.52)
+	nameLabel.Size = UDim2.fromScale(1, 0.24)
 	local bossId = model:GetAttribute(Attributes.BossId)
 	local definition = if typeof(bossId) == "string" then BossConfig.ById[bossId] else nil
 	nameLabel.Text = if definition then definition.DisplayName else model.Name
 
 	local fill, healthLabel = makeBar("HealthBar", HEALTH_COLOR, billboard)
 	local healthBar = fill.Parent :: Frame
-	healthBar.Position = UDim2.fromScale(0, 0.55)
-	healthBar.Size = UDim2.fromScale(1, 0.45)
+	healthBar.Position = UDim2.fromScale(0, 0.77)
+	healthBar.Size = UDim2.fromScale(1, 0.23)
 
 	local function refresh(): ()
 		local health = model:GetAttribute(Attributes.Health)
@@ -242,6 +279,9 @@ function attachBossBar(model: Model, billboardParent: Instance): ()
 		elseif status and not status.Unlocked and previous then
 			healthLabel.Text =
 				string.format("LOCKED: beat %s x%d", previous.DisplayName, status.DefeatsNeeded)
+		elseif status and not status.Unlocked then
+			healthLabel.Text =
+				string.format("LOCKED: beat every boss (%d left)", status.DefeatsNeeded)
 		elseif model:GetAttribute(Attributes.Defeated) == true then
 			healthLabel.Text = "DEFEATED!"
 		else
@@ -407,6 +447,16 @@ function UIController.start(): ()
 	assert(zenAchieved:IsA("RemoteEvent"), "ZenAchieved must be a RemoteEvent")
 	zenAchieved.OnClientEvent:Connect(function(payload: unknown)
 		onZenAchieved(card, payload)
+	end)
+
+	-- Short messages from the server (e.g. the Executive Elevator).
+	local toastRemote =
+		ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Notify"):WaitForChild("Toast")
+	assert(toastRemote:IsA("RemoteEvent"), "Notify.Toast must be a RemoteEvent")
+	toastRemote.OnClientEvent:Connect(function(message: unknown)
+		if typeof(message) == "string" and #message <= 120 then
+			UIController.showToast(message)
+		end
 	end)
 
 	local savedRemote =
