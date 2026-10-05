@@ -73,5 +73,7 @@ Clicking, tapping or pressing R2 starts a full swing (`Shared/SwingPose`, played
 downward strike, follow-through and recovery, with Roblox's built-in swing sound on the downswing.
 The hit request is sent at the impact moment (`SwingPose.IMPACT`, 55 % through the swing), so the
 boss reacts as the hammer lands. Joint animation is local, so other clients replay the strike on
-the hitter's character when the hit is confirmed. Presses during a swing are ignored. The floor and
-player spawn are in `default.project.json` (`Workspace.Arena`). Phase 2 spawns one Deadline Boss.
+the hitter's character when the hit is confirmed. Presses during a swing are ignored.
+
+The floor and player spawn are in `default.project.json` (`Workspace.Arena`). Phase 2 spawns one
+Deadline Boss.
