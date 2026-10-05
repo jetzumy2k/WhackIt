@@ -13,10 +13,10 @@ validation live in `src/server/lib/PlayerDataSchema.luau`; storage settings in
 | Session locking | ProfileStore | One server owns a profile at a time, so progress can't be duplicated by joining two servers |
 | Auto-save | ProfileStore | Periodic, plus on leave (`EndSession`) and server shutdown |
 
-## Schema v3 (current)
+## Schema v4 (current)
 ```lua
 type PlayerData = {
-    SchemaVersion: number,        -- 3
+    SchemaVersion: number,        -- 4
     Score: number,                -- lifetime score (integer, 0..2^50); shown in leaderstats
     Stress: number,               -- Stress Meter, 0..GameConfig.MaxStress, carries over between sessions
     TotalHits: number,            -- accepted hammer hits (integer, 0..2^50)
@@ -29,6 +29,12 @@ type PlayerData = {
     -- v3
     ZenLevel: number,             -- times the player reached Zen (integer, 0..2^50); boosts boss coins
     ZenArmed: boolean,            -- next Zen pays out; re-armed once stress climbs back to ZenRearmStress
+    -- v4 (docs/STORE.md)
+    Xp: number,                   -- drives Player Level; boosted by XP buffs (Score never is)
+    Buffs: {[kind]: {Percent: number, SecondsLeft: number}}, -- "Xp" | "Damage" | "CritDamage"; play time left
+    ProcessedPurchases: {string}, -- last 200 Robux PurchaseIds, so a receipt is granted only once
+    MysteryHammers: {[id]: {Damage: number, CritDamagePercent: number}}, -- "mystery_<n>", rolled at purchase
+    NextMysteryNumber: number,    -- next Mystery Hammer id number
 }
 ```
 New players start from `PlayerDataSchema.template()`: `StartingScore`, `StartingStress`, `StartingCoins`,
@@ -40,11 +46,17 @@ zero counters, `DefaultHammerId`, nothing bought, no defeats.
 | v1 | First versioned schema (data without `SchemaVersion` counts as v0) |
 | v2 | `Coins = 0`, `OwnedHammers = {}`, `BossDefeats = { deadline_boss = TotalBossesDefeated }` (only the Deadline Boss existed in v1, so unlock progress carries over) |
 | v3 | `ZenLevel = 0`, `ZenArmed = true` |
+| v4 | `Xp = Score` (Player Level is unchanged), `Buffs = {}`, `ProcessedPurchases = {}`, `MysteryHammers = {}`, `NextMysteryNumber = 1` |
+
+Sanitizing v4: unknown buff kinds are dropped and buff values clamped. Purchase ids must be strings.
+Mystery Hammers are paid for, so out-of-range stats are **clamped, never deleted**. An equipped
+Mystery Hammer must be one the player owns.
 
 Who writes what (server only): `SessionService.addScore` → `Score`; `SessionService.addCoins` /
 `trySpendCoins` → `Coins`; `SessionService.setEquippedHammer` → `EquippedHammerId`; `StressService.relieve`
 → `Stress`, `ZenLevel`, `ZenArmed` (Zen and idle regen); `CombatService` → `TotalHits`; `RewardService` → `TotalBossesDefeated`, `BossDefeats`;
-`ShopService` → `OwnedHammers`.
+`ShopService` → `OwnedHammers`; `SessionService.addXp` → `Xp`; `BuffService` → `Buffs`;
+`PurchaseService` → `ProcessedPurchases`, `MysteryHammers`, `NextMysteryNumber`.
 
 ## Load rules (`PlayerDataService`)
 1. `StartSessionAsync` retries until it succeeds or the player leaves.

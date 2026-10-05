@@ -209,8 +209,25 @@ Flow: input → client cooldown sanity → `RequestHammerHit` → server validat
 `RewardService` (coins/score only on server-confirmed defeat; idempotent per encounter id), boss unlocks, hammer ownership/selection (server-validated), all 5 bosses with cartoon reactions, `AudioController`, particles, mobile-friendly UI, leaderboard (OrderedDataStore, throttled).
 **Specs:** reward granted exactly once per defeat; locked boss / unowned hammer requests rejected.
 
-### Phase 5 — Monetization — ⏭ Skipped for v1 (decision #5)
-`PurchaseService`: idempotent `ProcessReceipt` backed by PlayerDataService receipt history, server-side game-pass checks, `PolicyService` gating. **Security tests:** replayed receipts, purchase during data-load failure, rejoin mid-purchase.
+### Phase 5 — Monetization — ➡ Superseded by Phase 8
+Originally skipped for v1 (decision #5). Built later as Phase 8 at the user's request.
+
+### Phase 8 — Crits, Zen buff, XP and the Robux store — 🟡 Code done, awaiting Studio tests
+**Done (code, static checks, specs written):**
+- Server-rolled crits.
+- Zen buff (+10 damage, +5 % crit for 3 min).
+- XP separate from Score (Level follows XP).
+- Timed XP / Damage / Crit Damage boosts that count down only while playing; the strongest percent wins and time adds up.
+- Mystery Hammer (20–35 damage, +5–10 % crit damage, odds shown, PolicyService-gated).
+- Idempotent `ProcessReceipt` that grants only after a confirmed save.
+- Admin Open / Close / Schedule, synced across servers.
+- Schema v4.
+- Docs: `docs/STORE.md`.
+
+**Open:**
+- **You:** run the specs and `PLAYTEST.md` 59–70.
+- **You:** create the 34 Developer Products and paste their ids into `StoreConfig.PRODUCT_IDS`.
+- **You:** update the questionnaire (paid random items).
 
 ### Phase 6 — Hardening & release — 🟡 In progress
 
@@ -222,7 +239,7 @@ Security/abuse pass, performance (MicroProfiler, remote traffic, memory per play
 
 ## 7. Immediate next steps
 
-1. **You:** run `build/tests.rbxl` (expect 232 passed) and `PLAYTEST.md` 42–58.
+1. **You:** run `build/tests.rbxl` (all specs should pass) and `PLAYTEST.md` 42–70.
 2. ✅ Music: 5 licensed APM tracks added (two user-suggested IDs were free *models*, not audio, and were rejected).
-3. **You:** decide whether to build the monetization kill switch / schedule now (and what to sell).
-4. PR + CI + merge (Phase 6 + 7), then the RC gate in `docs/RELEASE.md` and a private beta.
+3. ✅ Monetization built (Phase 8). **You:** create the Developer Products (`docs/STORE.md` setup checklist) and run `PLAYTEST.md` 59–70.
+4. PR + CI + merge (Phases 6–8), then the RC gate in `docs/RELEASE.md` and a private beta.

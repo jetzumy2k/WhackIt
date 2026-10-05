@@ -48,6 +48,13 @@ Answer honestly; these are the facts about the current build:
 - Device support: PC, mobile and console input are implemented (click, tap, gamepad R2);
   verify on a phone (Studio device emulator plus a real device) before going public.
 
+### Monetization (Phase 8, see docs/STORE.md)
+- [ ] All Developer Products created; ids in `StoreConfig.PRODUCT_IDS`; Creator Hub prices match the store table
+- [ ] Questionnaire updated: **paid random items** (Mystery Hammer) declared
+- [ ] Mystery Hammer odds visible before purchase; hidden for PolicyService-restricted players (test with a restricted test account, or temporarily force `checkMysteryAllowed` to false)
+- [ ] Test purchase of one boost and the Mystery Hammer in a published test place; rejoin shows them kept
+- [ ] `StoreAdminConfig.AdminUserIds` holds only intended admins; `StudioTesterIsAdmin` only affects Studio
+
 ## 4. Asset licensing audit (current build)
 | Asset | Source | Licence status |
 |---|---|---|

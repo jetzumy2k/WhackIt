@@ -110,3 +110,19 @@ works but nothing is kept between Play sessions.
 | 56 | The CEO | A big crowned monster with "Q4 RESULTS?!" sign, HP bar `90000 / 90000`; angry but clean shouts; hits land and the bar drops |
 | 57 | "Ride down" on the 3rd floor | Back on the 2nd floor next to the elevator |
 | 58 | (Server command bar) teleport a player without access onto the 3rd floor: `game.Players:GetPlayers()[1].Character:PivotTo(CFrame.new(0, 33, -10))` | Within ~1 s they are sent back down with the "defeat every boss" toast |
+
+## Phase 8: crits, Zen buff, XP and the Robux store
+| # | Check | Expected |
+|---|---|---|
+| 59 | Hit bosses for a while | About 1 in 20 hits shows a bigger orange "CRIT! -N" (about 1.5x damage) |
+| 60 | Reach 0 stress | Under the score line: "ZEN +10 dmg +5% crit 2:59" counting down; hits do about 10 more damage; crits more frequent; line disappears after 3 minutes |
+| 61 | Existing save from before Phase 8 | Same Level as before (XP starts at old Score); Score unchanged |
+| 62 | "Store" button (above "Hammers") with no product ids configured | Tabs XP Boost / Damage / Crit Dmg / (Mystery) / (Admin in Studio); each shows "Coming soon." |
+| 63 | Add one test product id to `StoreConfig.PRODUCT_IDS` (e.g. `xp_10_30m`), buy it in Studio (test purchase) | Toast "+10% XP boost added (30 min of play time)."; HUD shows "XP +10% 29:59"; Output has no `[Purchase]` warnings |
+| 64 | Buy the same boost again | Time adds up (about 59:xx); percent stays the strongest |
+| 65 | Leave and rejoin | Boost still there with the same time left (it doesn't count down while offline) |
+| 66 | Mystery tab | Odds text: damage 20 to 35, each 1 in 16 (6.25%); crit +5% to +10%, each 1 in 6 (16.7%) |
+| 67 | Buy the Mystery Hammer (test product id) | Toast with the rolled stats; gold and purple hammer in hand; listed under "Hammers" with "Equipped"; switching hammers and back works |
+| 68 | Admin tab: "Close now" | Store shows "The store is closed right now" for other players (a second client loses the Store button); "Open now" brings it back |
+| 69 | Admin tab: schedule from 1 minute from now for 2 minutes | Store opens at the start time and closes at the end time (within ~5 s), without anyone pressing anything |
+| 70 | Non-admin (published game, another account) | No Admin tab; firing `AdminSetMode` from the console is rejected (`[Remote] rejected AdminSetMode … not an admin`) |

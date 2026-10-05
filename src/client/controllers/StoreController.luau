@@ -1,0 +1,479 @@
+--!strict
+--[[
+	Robux store UI (docs/STORE.md). Display only: buttons send a product key on
+	Store.RequestPurchase; the server decides whether to open Roblox's purchase
+	prompt, and PurchaseService delivers what was paid for.
+
+	Store.State (from the server) says whether the store is open, whether this
+	player may be offered the Mystery Hammer (PolicyService), and whether they
+	are an admin, who also gets an "Admin" tab to open, close or schedule the
+	store for every server.
+]]
+
+local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local StoreConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("StoreConfig"))
+
+local StoreController = {}
+
+local PANEL_COLOR = Color3.fromRGB(30, 30, 40)
+local ROW_COLOR = Color3.fromRGB(48, 48, 62)
+local TEXT_COLOR = Color3.fromRGB(255, 255, 255)
+local ROBUX_COLOR = Color3.fromRGB(80, 190, 90)
+local TAB_COLOR = Color3.fromRGB(70, 70, 90)
+local TAB_ACTIVE_COLOR = Color3.fromRGB(70, 140, 230)
+local STORE_COLOR = Color3.fromRGB(230, 170, 40)
+local MUTED_COLOR = Color3.fromRGB(90, 90, 100)
+local ROW_HEIGHT = 56
+local MIN_TOUCH_SIZE = 44
+
+local TABS = {
+	{ Id = "Xp", Label = "XP Boost" },
+	{ Id = "Damage", Label = "Damage" },
+	{ Id = "CritDamage", Label = "Crit Dmg" },
+	{ Id = "MysteryHammer", Label = "Mystery" },
+	{ Id = "Admin", Label = "Admin" },
+}
+
+local KIND_TEXT: { [string]: string } = { Xp = "XP", Damage = "Damage", CritDamage = "Crit Damage" }
+
+type State = {
+	Open: boolean,
+	MysteryAllowed: boolean,
+	IsAdmin: boolean,
+	Mode: string,
+	StartsAt: number,
+	EndsAt: number,
+}
+
+local localPlayer = Players.LocalPlayer
+
+local function corner(parent: Instance): ()
+	Instance.new("UICorner").Parent = parent
+end
+
+local function label(name: string, parent: Instance): TextLabel
+	local text = Instance.new("TextLabel")
+	text.Name = name
+	text.BackgroundTransparency = 1
+	text.TextColor3 = TEXT_COLOR
+	text.Font = Enum.Font.FredokaOne
+	text.TextScaled = true
+	text.TextXAlignment = Enum.TextXAlignment.Left
+	text.Parent = parent
+	return text
+end
+
+local function button(name: string, parent: Instance): TextButton
+	local clickable = Instance.new("TextButton")
+	clickable.Name = name
+	clickable.TextColor3 = TEXT_COLOR
+	clickable.Font = Enum.Font.FredokaOne
+	clickable.TextScaled = true
+	clickable.AutoButtonColor = true
+	clickable.Parent = parent
+	corner(clickable)
+	return clickable
+end
+
+local function parseState(payload: unknown): State?
+	if typeof(payload) ~= "table" then
+		return nil
+	end
+	local data = payload :: { [string]: unknown }
+	return {
+		Open = data.Open == true,
+		MysteryAllowed = data.MysteryAllowed == true,
+		IsAdmin = data.IsAdmin == true,
+		Mode = if typeof(data.Mode) == "string" then data.Mode else "Off",
+		StartsAt = if typeof(data.StartsAt) == "number" then data.StartsAt else 0,
+		EndsAt = if typeof(data.EndsAt) == "number" then data.EndsAt else 0,
+	}
+end
+
+-- The live Creator Hub price, falling back to the suggested price.
+local priceCache: { [number]: number } = {}
+local function priceOf(product: StoreConfig.Product): number
+	local cached = priceCache[product.ProductId]
+	if cached then
+		return cached
+	end
+	local ok, info = pcall(function()
+		return MarketplaceService:GetProductInfoAsync(product.ProductId, Enum.InfoType.Product)
+	end)
+	local price = if ok
+			and typeof(info) == "table"
+			and typeof(info.PriceInRobux) == "number"
+		then info.PriceInRobux
+		else product.SuggestedPrice
+	priceCache[product.ProductId] = price
+	return price
+end
+
+local function durationText(seconds: number): string
+	if seconds >= 3600 then
+		return string.format("%d hour%s", seconds // 3600, if seconds >= 7200 then "s" else "")
+	end
+	return string.format("%d min", seconds // 60)
+end
+
+-- "2026-10-05 18:30" (local time) <-> unix seconds.
+local function formatLocal(unix: number): string
+	if unix <= 0 then
+		return ""
+	end
+	return DateTime.fromUnixTimestamp(unix):FormatLocalTime("YYYY-MM-DD HH:mm", "en-us")
+end
+
+local function parseLocal(text: string): number?
+	local year, month, day, hour, minute =
+		string.match(text, "^%s*(%d%d%d%d)%-(%d%d?)%-(%d%d?)%s+(%d%d?):(%d%d)%s*$")
+	if year == nil then
+		return nil
+	end
+	local ok, dateTime = pcall(
+		DateTime.fromLocalTime,
+		tonumber(year) :: number,
+		tonumber(month) :: number,
+		tonumber(day) :: number,
+		tonumber(hour) :: number,
+		tonumber(minute) :: number
+	)
+	return if ok then dateTime.UnixTimestamp else nil
+end
+
+local function oddsText(): string
+	local mystery = StoreConfig.Mystery
+	local damageCount = mystery.DamageMax - mystery.DamageMin + 1
+	local critCount = mystery.CritDamageMaxPercent - mystery.CritDamageMinPercent + 1
+	return string.format(
+		"Odds: Damage %d to %d, each value 1 in %d (%.2f%%).  Crit damage +%d%% to +%d%%, each 1 in %d (%.1f%%). Rolled once when bought; yours to keep.",
+		mystery.DamageMin,
+		mystery.DamageMax,
+		damageCount,
+		100 / damageCount,
+		mystery.CritDamageMinPercent,
+		mystery.CritDamageMaxPercent,
+		critCount,
+		100 / critCount
+	)
+end
+
+function StoreController.start(): ()
+	local remotes = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Store")
+	local requestRemote = remotes:WaitForChild("RequestPurchase")
+	local adminRemote = remotes:WaitForChild("AdminSetMode")
+	local stateRemote = remotes:WaitForChild("State")
+	assert(
+		requestRemote:IsA("RemoteEvent")
+			and adminRemote:IsA("RemoteEvent")
+			and stateRemote:IsA("RemoteEvent"),
+		"Store remotes must be RemoteEvents"
+	)
+
+	local state: State = {
+		Open = false,
+		MysteryAllowed = false,
+		IsAdmin = false,
+		Mode = "Off",
+		StartsAt = 0,
+		EndsAt = 0,
+	}
+	local activeTab = "Xp"
+
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "Store"
+	gui.ResetOnSpawn = false
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+	local open = button("OpenStore", gui)
+	open.Text = "Store"
+	open.BackgroundColor3 = STORE_COLOR
+	open.AnchorPoint = Vector2.new(1, 1)
+	open.Position = UDim2.new(1, -16, 1, -128)
+	open.Size = UDim2.fromOffset(140, MIN_TOUCH_SIZE + 4)
+	open.Visible = false
+
+	local panel = Instance.new("Frame")
+	panel.Name = "Panel"
+	panel.AnchorPoint = Vector2.new(0.5, 0.5)
+	panel.Position = UDim2.fromScale(0.5, 0.5)
+	panel.Size = UDim2.fromScale(0.65, 0.7)
+	panel.BackgroundColor3 = PANEL_COLOR
+	panel.Visible = false
+	panel.Parent = gui
+	corner(panel)
+	local sizeLimit = Instance.new("UISizeConstraint")
+	sizeLimit.MinSize = Vector2.new(320, 300)
+	sizeLimit.MaxSize = Vector2.new(620, 520)
+	sizeLimit.Parent = panel
+
+	local title = label("Title", panel)
+	title.Position = UDim2.fromOffset(16, 10)
+	title.Size = UDim2.new(1, -90, 0, 34)
+	title.Text = "Store"
+
+	local close = button("Close", panel)
+	close.Text = "X"
+	close.BackgroundColor3 = MUTED_COLOR
+	close.AnchorPoint = Vector2.new(1, 0)
+	close.Position = UDim2.new(1, -10, 0, 8)
+	close.Size = UDim2.fromOffset(MIN_TOUCH_SIZE, MIN_TOUCH_SIZE)
+
+	local tabBar = Instance.new("Frame")
+	tabBar.Name = "Tabs"
+	tabBar.BackgroundTransparency = 1
+	tabBar.Position = UDim2.fromOffset(10, 56)
+	tabBar.Size = UDim2.new(1, -20, 0, MIN_TOUCH_SIZE)
+	tabBar.Parent = panel
+	local tabLayout = Instance.new("UIListLayout")
+	tabLayout.FillDirection = Enum.FillDirection.Horizontal
+	tabLayout.Padding = UDim.new(0, 6)
+	tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	tabLayout.Parent = tabBar
+
+	local list = Instance.new("ScrollingFrame")
+	list.Name = "List"
+	list.BackgroundTransparency = 1
+	list.BorderSizePixel = 0
+	list.Position = UDim2.fromOffset(10, 108)
+	list.Size = UDim2.new(1, -20, 1, -118)
+	list.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	list.CanvasSize = UDim2.new()
+	list.ScrollBarThickness = 6
+	list.Parent = panel
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0, 8)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = list
+
+	local function note(text: string, order: number, height: number): TextLabel
+		local line = label("Note", list)
+		line.LayoutOrder = order
+		line.Size = UDim2.new(1, 0, 0, height)
+		line.TextScaled = false
+		line.TextSize = 16
+		line.TextWrapped = true
+		line.TextYAlignment = Enum.TextYAlignment.Top
+		line.TextTransparency = 0.15
+		line.Text = text
+		return line
+	end
+
+	local function productRow(product: StoreConfig.Product, text: string, order: number): ()
+		local row = Instance.new("Frame")
+		row.Name = product.Key
+		row.LayoutOrder = order
+		row.Size = UDim2.new(1, 0, 0, ROW_HEIGHT)
+		row.BackgroundColor3 = ROW_COLOR
+		row.Parent = list
+		corner(row)
+
+		local name = label("Name", row)
+		name.Position = UDim2.fromOffset(12, 10)
+		name.Size = UDim2.new(0.62, -12, 0, ROW_HEIGHT - 20)
+		name.Text = text
+
+		local buy = button("Buy", row)
+		buy.AnchorPoint = Vector2.new(1, 0.5)
+		buy.Position = UDim2.new(1, -10, 0.5, 0)
+		buy.Size = UDim2.new(0.33, 0, 0, MIN_TOUCH_SIZE)
+		buy.BackgroundColor3 = ROBUX_COLOR
+		buy.Text = "R$ " .. product.SuggestedPrice
+		buy.Activated:Connect(function()
+			requestRemote:FireServer(product.Key)
+		end)
+		task.spawn(function()
+			local price = priceOf(product)
+			if buy.Parent ~= nil then
+				buy.Text = "R$ " .. price
+			end
+		end)
+	end
+
+	local function adminPage(): ()
+		local scheduleText = if state.Mode == "Schedule"
+			then string.format(
+				"Schedule: %s to %s (your local time)",
+				formatLocal(state.StartsAt),
+				formatLocal(state.EndsAt)
+			)
+			else "Mode: " .. state.Mode
+		note(
+			string.format(
+				"Store is %s for players right now. %s\nChanges apply to every server. Purchases already paid for are always delivered.",
+				if state.Open then "OPEN" else "CLOSED",
+				scheduleText
+			),
+			1,
+			66
+		)
+
+		local modeRow = Instance.new("Frame")
+		modeRow.Name = "Modes"
+		modeRow.LayoutOrder = 2
+		modeRow.BackgroundTransparency = 1
+		modeRow.Size = UDim2.new(1, 0, 0, MIN_TOUCH_SIZE)
+		modeRow.Parent = list
+		local onButton = button("TurnOn", modeRow)
+		onButton.Text = "Open now"
+		onButton.BackgroundColor3 = ROBUX_COLOR
+		onButton.Size = UDim2.fromScale(0.48, 1)
+		onButton.Activated:Connect(function()
+			adminRemote:FireServer({ Mode = "On" })
+		end)
+		local offButton = button("TurnOff", modeRow)
+		offButton.Text = "Close now"
+		offButton.BackgroundColor3 = Color3.fromRGB(200, 80, 80)
+		offButton.AnchorPoint = Vector2.new(1, 0)
+		offButton.Position = UDim2.fromScale(1, 0)
+		offButton.Size = UDim2.fromScale(0.48, 1)
+		offButton.Activated:Connect(function()
+			adminRemote:FireServer({ Mode = "Off" })
+		end)
+
+		note("Or open it only between two times (YYYY-MM-DD HH:MM, your local time):", 3, 22)
+
+		local function timeBox(name: string, order: number, value: number): TextBox
+			local box = Instance.new("TextBox")
+			box.Name = name
+			box.LayoutOrder = order
+			box.Size = UDim2.new(1, 0, 0, MIN_TOUCH_SIZE)
+			box.BackgroundColor3 = ROW_COLOR
+			box.TextColor3 = TEXT_COLOR
+			box.PlaceholderText = name .. "  e.g. 2026-12-24 18:00"
+			box.Font = Enum.Font.FredokaOne
+			box.TextSize = 18
+			box.ClearTextOnFocus = false
+			box.Text = formatLocal(value)
+			box.Parent = list
+			corner(box)
+			return box
+		end
+		local startBox = timeBox("Start", 4, state.StartsAt)
+		local endBox = timeBox("End", 5, state.EndsAt)
+		local errorLine = note("", 7, 22)
+		errorLine.TextColor3 = Color3.fromRGB(255, 140, 120)
+
+		local scheduleButton = button("SetSchedule", list)
+		scheduleButton.LayoutOrder = 6
+		scheduleButton.Size = UDim2.new(1, 0, 0, MIN_TOUCH_SIZE)
+		scheduleButton.BackgroundColor3 = TAB_ACTIVE_COLOR
+		scheduleButton.Text = "Set schedule"
+		scheduleButton.Activated:Connect(function()
+			local startsAt, endsAt = parseLocal(startBox.Text), parseLocal(endBox.Text)
+			if startsAt == nil or endsAt == nil then
+				errorLine.Text = "Use the format YYYY-MM-DD HH:MM for both times."
+				return
+			end
+			errorLine.Text = ""
+			adminRemote:FireServer({ Mode = "Schedule", StartsAt = startsAt, EndsAt = endsAt })
+		end)
+	end
+
+	local tabButtons: { [string]: TextButton } = {}
+
+	local function render(): ()
+		for _, child in list:GetChildren() do
+			if not child:IsA("UIListLayout") then
+				child:Destroy()
+			end
+		end
+		open.Visible = state.Open or state.IsAdmin
+		tabButtons.MysteryHammer.Visible = state.MysteryAllowed
+		tabButtons.Admin.Visible = state.IsAdmin
+		if
+			(activeTab == "MysteryHammer" and not state.MysteryAllowed)
+			or (activeTab == "Admin" and not state.IsAdmin)
+		then
+			activeTab = "Xp"
+		end
+		for id, tab in tabButtons do
+			tab.BackgroundColor3 = if id == activeTab then TAB_ACTIVE_COLOR else TAB_COLOR
+		end
+
+		if activeTab == "Admin" then
+			adminPage()
+			return
+		end
+		if not state.Open then
+			note("The store is closed right now. Check back later!", 1, 40)
+			return
+		end
+
+		local order = 10
+		if activeTab == "MysteryHammer" then
+			local mystery = StoreConfig.ByKey.mystery_hammer
+			note(oddsText(), 1, 80)
+			if mystery and mystery.ProductId ~= 0 then
+				productRow(mystery, StoreConfig.Mystery.DisplayName, order)
+			else
+				note("Coming soon.", order, 30)
+			end
+			return
+		end
+
+		note(
+			"Boosts count down only while you play. Buying the same kind again adds the time; the strongest boost applies.",
+			1,
+			44
+		)
+		local any = false
+		for _, product in StoreConfig.Products do
+			if product.Kind == activeTab and product.ProductId ~= 0 then
+				any = true
+				order += 1
+				productRow(
+					product,
+					string.format(
+						"+%d%% %s  -  %s",
+						product.Percent,
+						KIND_TEXT[product.Kind],
+						durationText(product.Seconds)
+					),
+					order
+				)
+			end
+		end
+		if not any then
+			note("Coming soon.", order, 30)
+		end
+	end
+
+	for order, tab in TABS do
+		local tabButton = button(tab.Id, tabBar)
+		tabButton.LayoutOrder = order
+		tabButton.Text = tab.Label
+		tabButton.Size = UDim2.fromScale(0.19, 1)
+		tabButton.Activated:Connect(function()
+			activeTab = tab.Id
+			render()
+		end)
+		tabButtons[tab.Id] = tabButton
+	end
+
+	stateRemote.OnClientEvent:Connect(function(payload: unknown)
+		local parsed = parseState(payload)
+		if parsed then
+			state = parsed
+			if not state.Open and not state.IsAdmin then
+				panel.Visible = false
+			end
+			render()
+		end
+	end)
+	render()
+
+	open.Activated:Connect(function()
+		panel.Visible = not panel.Visible
+	end)
+	close.Activated:Connect(function()
+		panel.Visible = false
+	end)
+
+	gui.Parent = localPlayer:WaitForChild("PlayerGui")
+end
+
+return StoreController

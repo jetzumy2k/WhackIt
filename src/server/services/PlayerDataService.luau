@@ -26,8 +26,16 @@ type Profile = {
 	Data: PlayerDataSchema.RawData,
 	AddUserId: (self: Profile, userId: number) -> (),
 	EndSession: (self: Profile) -> (),
+	Save: (self: Profile) -> (),
+	IsActive: (self: Profile) -> boolean,
+	LastSavedData: any,
 	OnSessionEnd: { Connect: (self: any, listener: () -> ()) -> any },
-	OnAfterSave: { Connect: (self: any, listener: (lastSavedData: any) -> ()) -> any },
+	OnAfterSave: {
+		Connect: (
+			self: any,
+			listener: (lastSavedData: any) -> ()
+		) -> { Disconnect: (self: any) -> () },
+	},
 }
 type Store = {
 	StartSessionAsync: (self: Store, key: string, params: { Cancel: () -> boolean }) -> Profile?,
@@ -124,6 +132,39 @@ end
 function PlayerDataService.get(player: Player): PlayerDataSchema.PlayerData?
 	local profile = profiles[player]
 	return if profile then asPlayerData(profile.Data) else nil
+end
+
+-- Saves now and waits until a save that passes `isSaved` has reached the
+-- DataStore (used for Robux receipts: Roblox may only be told a purchase was
+-- granted once it is safely stored). Returns false on timeout or if the
+-- player's data isn't loaded. The final save when a player leaves counts too.
+function PlayerDataService.saveAndConfirmAsync(
+	player: Player,
+	isSaved: (savedData: any) -> boolean,
+	timeoutSeconds: number
+): boolean
+	local profile = profiles[player]
+	if profile == nil then
+		return false
+	end
+	if profile.LastSavedData ~= nil and isSaved(profile.LastSavedData) then
+		return true
+	end
+	local confirmed = false
+	local connection = profile.OnAfterSave:Connect(function(savedData: any)
+		if isSaved(savedData) then
+			confirmed = true
+		end
+	end)
+	if profile:IsActive() then
+		profile:Save()
+	end
+	local deadline = os.clock() + timeoutSeconds
+	while not confirmed and os.clock() < deadline do
+		task.wait(0.25)
+	end
+	connection:Disconnect()
+	return confirmed
 end
 
 -- Runs `callback` for every player whose data loads, including players who

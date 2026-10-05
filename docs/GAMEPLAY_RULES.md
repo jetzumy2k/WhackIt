@@ -13,8 +13,15 @@ values live in `src/config/` and formulas in `src/shared/CombatRules.luau` and `
 
 ## Hit damage
 ```
-damage = max(MinHitDamage, round(hammer.Damage × boss.DamageTakenMultiplier))
+raw    = (hammer.Damage + flatBonus) × (1 + damageBoost) × boss.DamageTakenMultiplier
+crit?  = serverRoll < critChance            -- rolled by the server only
+damage = max(MinHitDamage, round(raw × (1 + critDamage if crit)))
 ```
+- `flatBonus`: +`ZenBuffFlatDamage` (10) during the Zen buff, otherwise 0
+- `damageBoost`: Damage store boost (0.03 / 0.05 / 0.10)
+- `critChance`: `BaseCritChance` (5 %) + `ZenBuffCritChance` (5 %) during the Zen buff
+- `critDamage`: `BaseCritDamage` (+50 %) + Mystery Hammer crit damage + Crit Damage store boost
+- Crits show a bigger orange "CRIT! -N" number.
 - `hammer.Damage`: `HammerConfig`
 - `boss.DamageTakenMultiplier`: `BossConfig` (higher = boss is easier to hurt)
 - `MinHitDamage`: `GameConfig` (currently 1)
@@ -69,6 +76,9 @@ heads have their face decal hidden; newer animated (mesh) heads get the drawn fa
 original face may show through a little.
 
 ### Zen (reaching 0)
+- **Zen buff:** +`ZenBuffFlatDamage` (10) damage per hit and +`ZenBuffCritChance` (5 %) crit chance
+  for `ZenBuffSeconds` (3 minutes), shown with a countdown under the score line. It is granted on
+  every Zen, even when the coin reward isn't armed. It isn't saved.
 - **Reward:** +`ZenBonusCoins` (100) and +1 **Zen Level**. Each Zen Level permanently adds
   `ZenCoinBonusPerLevel` (+5 %) to boss coins, counting up to `ZenCoinBonusMaxLevel` (10) levels.
 - Your screen shows "ZEN ACHIEVED!"; everyone else gets a toast. Your hammer glows while you stay at 0.
@@ -142,10 +152,12 @@ hit harder (spec-enforced).
 
 ## Player Level, leaderboard and the Senior floor (2026-10-05)
 ### Player Level
-`level = floor(sqrt(lifetimeScore / LevelScoreFactor)) + 1` (`Shared/LevelRules`, factor 600). It is
-derived from score, never stored, and shown in the HUD and as "Lv N" above every head.
+`level = floor(sqrt(Xp / LevelScoreFactor)) + 1` (`Shared/LevelRules`, factor 600). **XP** grows with
+score (each defeat's score), multiplied by any XP store boost. Score itself is never boosted, so the
+leaderboard stays fair. Level is derived from XP, never stored, and shown in the HUD and as "Lv N"
+above every head. Existing players start with XP equal to their score (schema v4).
 
-| Level | Lifetime score |
+| Level | XP |
 |---|---|
 | 1 | 0 |
 | 2 | 600 |

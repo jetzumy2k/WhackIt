@@ -68,6 +68,22 @@
           }
         },
 
+        "Store": {
+          "$className": "Folder",
+
+          "RequestPurchase": {
+            "$className": "RemoteEvent"
+          },
+
+          "AdminSetMode": {
+            "$className": "RemoteEvent"
+          },
+
+          "State": {
+            "$className": "RemoteEvent"
+          }
+        },
+
         "Notify": {
           "$className": "Folder",
 

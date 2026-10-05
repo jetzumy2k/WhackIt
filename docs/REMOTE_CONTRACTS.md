@@ -43,7 +43,7 @@ so clients can't read them.
 | | |
 |---|---|
 | Purpose | Presentation only: HP bar update, hit effects, defeat effects. Clients must not derive rewards from it. |
-| Payload | `Types.CombatFeedback`: `{ BossInstanceId, Health, MaxHealth, Damage, HitterUserId, Defeated }` |
+| Payload | `Types.CombatFeedback`: `{ BossInstanceId, Health, MaxHealth, Damage, HitterUserId, Defeated, Crit }` (crits are rolled by the server) |
 | Recipients | all clients (`FireAllClients`). With few bosses this is cheapest; revisit per-proximity sending if boss count grows. |
 | Client handling | treat as untrusted for logic, display only; ignore unknown `BossInstanceId` |
 
@@ -103,6 +103,29 @@ on the Executive Floor without access.
 | Effect | `EquippedHammerId` saved; the held Tool is swapped (`HammerService.reequip`). Damage follows the saved id |
 | Response | `Profile.Sync` |
 
+## `Store.RequestPurchase`: client -> server
+| | |
+|---|---|
+| Purpose | Ask for Roblox's purchase prompt for one store product |
+| Payload | `productKey: string` (a `StoreConfig` key, max `RemoteLimits.MaxIdLength`) |
+| Server checks | known key; product has a Developer Product id; store open (`StoreService.isOpen`); Mystery Hammer only if PolicyService allows paid random items for this player. Rate limit `RemoteLimits.Shop` |
+| Result | `MarketplaceService:PromptProductPurchase`. **Delivery is only by `ProcessReceipt`** (`PurchaseService`, see `docs/STORE.md`), never by this remote. A refusal re-sends `Store.State` |
+
+## `Store.AdminSetMode`: client -> server
+| | |
+|---|---|
+| Purpose | Admin opens, closes or schedules the store for every server |
+| Payload | `{ Mode: "On" \| "Off" }` or `{ Mode: "Schedule", StartsAt: number, EndsAt: number }` (unix seconds) |
+| Server checks | sender is an admin (decided by the server: owner, `StoreAdminConfig.AdminUserIds`, Studio tester); payload parsed by `Shared/StoreSchedule.parse` (finite numbers, ends after it starts, in the future, within a year). Non-admins are rejected and logged |
+| Result | applied locally, saved to DataStore `StoreSettings`, published on MessagingService `StoreSettings`; admin gets a toast |
+
+## `Store.State`: server -> one client
+| | |
+|---|---|
+| Payload | `{ Open, MysteryAllowed, IsAdmin, Mode, StartsAt, EndsAt }` |
+| When | on join, whenever settings change or a schedule boundary passes, after a refused purchase request |
+| Client handling | display only (show or hide the Store button, tabs and Admin tab); the server re-checks everything on each request |
+
 ## `Profile.Sync`: server -> one client
 | | |
 |---|---|
@@ -121,7 +144,8 @@ Names live in `Shared/Attributes`. Only the server writes them; clients read the
 | Boss `Model` under `Workspace.Bosses` | `BossInstanceId`, `BossId`, `Health`, `MaxHealth`, `Defeated`, `ShoutText`, `ShoutSeq` | live boss state for HP bars, target selection and the client-drawn monster's hit/defeat animations |
 | Hammer `Tool` (server-created, in the character) | `HammerId` | marks the Tool as a hammer for the server's hand check |
 | `Player` | `Stress` | the player's Stress Meter (also drives the server-drawn mood face and hammer glow) |
-| `Player` | `Level` | Player Level from lifetime score (HUD, "Lv N" head tag, Senior unlocks) |
+| `Player` | `Level` | Player Level from XP (HUD, "Lv N" head tag, Senior unlocks) |
+| `Player` | `ZenBuffEnds` | `Workspace:GetServerTimeNow()` time the Zen buff ends (0 = none); HUD countdown only |
 | `Player.leaderstats.Score`, `.Coins` (IntValue) | | lifetime score and coins (saved values, mirrored for display) |
 
 ## Movement sanity (`MovementGuardService`)
