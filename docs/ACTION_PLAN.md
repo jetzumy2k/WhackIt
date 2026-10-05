@@ -20,8 +20,8 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 | Git: single default branch | ✅ | `master` is default; `main` deleted; its `LICENSE` kept (`53d8a56`) |
 | Phase 0 — Foundation | ✅ Complete | CI green on PR #1 and on `master` (`f2faca7`) |
 | Phase 1 — Core architecture | ✅ Complete (PR #2) | Lifecycle, config, Types, Validate, RateLimiter, RemoteController, REMOTE_CONTRACTS; 46/46 specs pass in Studio |
-| Phase 2 — Shared-boss vertical slice | ✅ Accepted for now (2026-10-05, solo playtest after 6 rounds); multiplayer/abuse playtest checks 9–17 still to run | 5 services, 6 client controllers, arena, 94 specs |
-| Phase 3 — Persistence | 🟡 Implemented; specs + save/rejoin playtest pending | ProfileStore via `PlayerDataService`, schema v1 with migrations and validation |
+| Phase 2 — Shared-boss vertical slice | ✅ Accepted for now (2026-10-05, solo playtest after 6 rounds); multiplayer/abuse playtest checks 9–17 still to run | 5 services, 6 client controllers, arena, 93 specs |
+| Phase 3 — Persistence | 🟡 Implemented, 108/108 specs pass; save/rejoin playtest pending | ProfileStore via `PlayerDataService`, schema v1 with migrations and validation |
 | Phases 4–6 | ⬜ | |
 | §5 Design decisions | 🟡 3 of 5 decided | Shared bosses (+ reward/respawn rules) · end on defeat · hammer-driven damage. Open: persistence library, monetization |
 
@@ -45,7 +45,7 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 | Client controllers (Input, Gameplay, UI, Feedback, Audio) | 🟡 4 of 5 (+ `BossVisualController`) | Input (hammer Tool swing), Gameplay, UI, Feedback, BossVisual (cartoon monster + animations). Audio in Phase 4 (swing uses a built-in Roblox sound) |
 | UI screens | 🟡 Code-built placeholder | HUD (Stress Meter, score, hint), boss HP billboards, Victory Card. Art pass in Phase 4 |
 | Arena | 🟡 Placeholder | Floor + spawn in `default.project.json`; bosses are code-built cartoon monsters (`BossVisualConfig`) until real art |
-| Tests (TestEZ) | 🟡 | 109 specs (unit + first integration spec against ProfileStore's mock). 92 passed in Studio (2026-10-05); the rest pass static checks but have **not yet been run in Studio** |
+| Tests (TestEZ) | ✅ | 108 specs (unit + an integration spec against ProfileStore's mock): 108 passed, 0 failed in Studio (2026-10-05) |
 | Checks script | ✅ | `scripts/check.ps1` (format, lint, type-check, build; `-Tests` for TestEZ) |
 | Docs | 🟡 | `DEVELOPMENT_WORKFLOW`, `GAMEPLAY_RULES`, `REMOTE_CONTRACTS`, `PLAYTEST` current; `DATA_SCHEMA` still a template (Phase 3) |
 | CI | ✅ | `.github/workflows/ci.yml` green on GitHub; `actions/checkout` moved to v7 (Node 24) |
@@ -194,7 +194,7 @@ Flow: input → client cooldown sanity → `RequestHammerHit` → server validat
 
 ### Phase 3 — Persistence — 🟡 Implemented, verification pending
 
-**Status:** ✅ code · ✅ static checks · ⬜ 109 specs in Studio · ⬜ save/rejoin playtest (`docs/PLAYTEST.md` Phase 3 checks)
+**Status:** ✅ code · ✅ static checks · ✅ 108/108 specs in Studio · ⬜ save/rejoin playtest (`docs/PLAYTEST.md` Phase 3 checks)
 
 `PlayerDataService`: schema v1 (`docs/DATA_SCHEMA.md` made real), defaults, validation, migration pipeline (`v0→v1` test), session locking, autosave, `BindToClose`, retry/backoff within budget, **load failure = kick with friendly message, never overwrite**. Erasure script.
 **Specs:** migration, corrupt-data rejection, failed-load path never saves. **Manual:** Studio with API access on, rejoin, two-server simulation.
@@ -213,6 +213,6 @@ Security/abuse pass, performance (MicroProfiler, remote traffic, memory per play
 
 ## 7. Immediate next steps
 
-1. **You:** run `build/tests.rbxl` (expect 109 passed), then the Phase 3 save/rejoin checks in `docs/PLAYTEST.md`.
+1. **You:** the Phase 3 save/rejoin checks 18–22 in `docs/PLAYTEST.md` (needs Studio API access on).
 2. PR + CI + merge `feat/phase3-persistence`.
 3. Before release: `docs/PLAYTEST.md` checks 9–17 (multiplayer, abuse).
