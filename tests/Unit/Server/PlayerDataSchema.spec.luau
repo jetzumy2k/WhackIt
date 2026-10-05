@@ -161,7 +161,7 @@ return function()
 			expect(#order).to.equal(2)
 			expect(order[1]).to.equal(2)
 			expect(order[2]).to.equal(3)
-			expect(data.SchemaVersion).to.equal(PlayerDataSchema.CURRENT_VERSION)
+			expect(data.SchemaVersion).to.equal(3) -- the target passed in, not CURRENT_VERSION
 		end)
 
 		it("is a no-op for data already at the target version", function()
