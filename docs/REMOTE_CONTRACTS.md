@@ -34,7 +34,7 @@ so clients can't read them.
 | `maxArgs` | 1 |
 | Validation | `Validate.id(bossInstanceId, RemoteLimits.MaxIdLength)`: 1–64 chars of `[A-Za-z0-9_-]` |
 | Rate limit | `RemoteLimits.RequestHammerHit`: burst 10, refill 8/s (flood guard only) |
-| Server checks (`CombatService`) | player has a session and loaded data; the boss is **unlocked for this player** (`ProgressionRules.isBossUnlocked`); at least `HitCooldown − HitCooldownGrace` since the player's last **accepted** hit (`CombatRules.isOffCooldown`); boss instance exists and is not defeated; live character **holding a hammer Tool** (tagged `HammerId`) whose root is within `GameConfig.HitReach + HitReachGrace` of the boss (`CombatRules.isInReach`; the client checks the exact `HitReach`, the grace absorbs movement during network lag). The Tool only gates the swing: damage comes from the session's `EquippedHammerId`, so editing the Tool changes nothing. The handler never yields, so checks and the state change are atomic. |
+| Server checks (`CombatService`) | player has a session and loaded data; not flagged by `MovementGuardService`; the boss is **unlocked for this player** (`ProgressionRules.isBossUnlocked`); at least `HitCooldown − HitCooldownGrace` since the player's last **accepted** hit (`CombatRules.isOffCooldown`); boss instance exists and is not defeated; live character **holding a hammer Tool** (tagged `HammerId`) whose root is within `GameConfig.HitReach + HitReachGrace` of the boss (`CombatRules.isInReach`; the client checks the exact `HitReach`, the grace absorbs movement during network lag). The Tool only gates the swing: damage comes from the session's `EquippedHammerId`, so editing the Tool changes nothing. The handler never yields, so checks and the state change are atomic. |
 | Effect | damage = `CombatRules.computeHitDamage(equipped hammer, boss)`; HP reduced (overkill not credited); damage credited to the player's contribution; stress relieved by `StressRules.reliefForHit(applied)`. On the defeating hit: rewards (see `BossDefeated`) and respawn after `BossRespawnDelay` with a **new** instance id. |
 | Response | `Combat.CombatFeedback` on success. Nothing on rejection (no oracle for probing). |
 | Failure | invalid payload / rate limited → `reject` + drop. Cooldown or reach failures are normal play → drop without logging. |
@@ -104,10 +104,12 @@ Names live in `Shared/Attributes`. Only the server writes them; clients read the
 | `Player` | `Stress` | the player's Stress Meter (also drives the server-drawn mood face and hammer glow) |
 | `Player.leaderstats.Score`, `.Coins` (IntValue) | | lifetime score and coins (saved values, mirrored for display) |
 
-## Known limitation
-Reach is checked against the character's position, which Roblox lets each client simulate.
-A movement exploiter could teleport next to a boss. Server-side movement/teleport sanity
-checks are scheduled for the Phase 6 security pass.
+## Movement sanity (`MovementGuardService`)
+Reach is checked against the character's position, which Roblox lets each client simulate. The
+server samples every character's root position every `MovementLimits.SampleInterval` (0.5 s); a
+horizontal move faster than `MaxHorizontalSpeed` (50 studs/s; walking is 16) flags the player and
+`RequestHammerHit` is ignored for `SuspectSeconds` (5 s). Respawns start fresh. This blocks teleporting
+to a boss and large speed hacks; small boosts under the limit are an accepted v1 limitation.
 
 ## Removed
 - `Round.RoundState`: removed 2026-10-05; encounters end on defeat, there is no round timer.

@@ -23,7 +23,8 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · `master` after PR 
 | Phase 2 — Shared-boss vertical slice | ✅ Accepted for now (2026-10-05, solo playtest after 6 rounds); multiplayer/abuse playtest checks 9–17 still to run | 5 services, 6 client controllers, arena, 93 specs |
 | Phase 3 — Persistence | ✅ Complete (PR #4): 108/108 specs; save playtest reported no errors or warnings (2026-10-05) | ProfileStore via `PlayerDataService`, schema v1 with migrations and validation |
 | Phase 4 — Rewards, progression, content | ✅ Accepted (2026-10-05, PR #5) | Coins, boss unlocks, hammer shop, offices, schema v3: Zen (mood faces, glowing hammer, idle stress regen), damage-share rewards + last-hit bonus; 176/176 specs |
-| Phases 5–6 | ⬜ | |
+| Phase 5 — Monetization | ⏭ Skipped for v1 | Nothing for sale at launch |
+| Phase 6 — Hardening & release | 🟡 In progress | branch `feat/phase6-hardening` |
 | §5 Design decisions | 🟡 3 of 5 decided | Shared bosses (+ reward/respawn rules) · end on defeat · hammer-driven damage. Open: persistence library, monetization |
 
 ---
@@ -46,7 +47,7 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · `master` after PR 
 | Client controllers (Input, Gameplay, UI, Feedback, Audio) | 🟡 4 of 5 (+ BossVisual, HammerPose, Progress, Shop) | Audio deferred: needs uploaded/licensed sound assets |
 | UI screens | 🟡 Code-built placeholder | HUD (Stress Meter, score, hint), boss HP billboards, Victory Card. Art pass in Phase 4 |
 | Arena | 🟡 Placeholder art | Office floor (user request 2026-10-05): one furnished office per boss, corridor and lobby, built from parts by `Lib/OfficeBuilder`; replace with modelled assets later |
-| Tests (TestEZ) | ✅ | 176 specs: 176 passed, 0 failed in Studio (2026-10-05) |
+| Tests (TestEZ) | 🟡 | 183 specs. 176 passed in Studio (2026-10-05); 7 new movement specs pass static checks, not yet run in Studio |
 | Checks script | ✅ | `scripts/check.ps1` (format, lint, type-check, build; `-Tests` for TestEZ) |
 | Docs | 🟡 | `DEVELOPMENT_WORKFLOW`, `GAMEPLAY_RULES`, `REMOTE_CONTRACTS`, `PLAYTEST` current; `DATA_SCHEMA` still a template (Phase 3) |
 | CI | ✅ | `.github/workflows/ci.yml` green on GitHub; `actions/checkout` moved to v7 (Node 24) |
@@ -147,13 +148,13 @@ None of these are due yet; each is mapped to the phase where it lands.
 
 ---
 
-## 5. Design decisions — 🟡 4 of 5 decided
+## 5. Design decisions — ✅ 5 of 5 decided
 
 1. ✅ **Session model:** **shared bosses** (decided 2026-10-05). Follow-up rules ✅ confirmed (2026-10-05): contribution-based full rewards, timed respawn (`docs/GAMEPLAY_RULES.md`).
 2. ✅ **Encounter end:** **on defeat**; no round timer in v1 (decided 2026-10-05).
 3. ✅ **Damage:** **hammer-driven** (decided 2026-10-05), implemented in `CombatRules`.
 4. ✅ **Persistence library:** **ProfileStore** (official `lm-loleris/profilestore@1.0.3`, Apache-2.0) behind our `PlayerDataService` (decided 2026-10-05). Saved: score, stats (hits, bosses defeated), Stress Meter, equipped hammer.
-5. ⬜ **Monetization scope for v1** (needed before Phase 5): none / cosmetic hammers via Developer Products / game passes?
+5. ✅ **Monetization scope for v1:** **nothing for sale** (decided 2026-10-05). Phase 5 skipped; revisit after launch with real player data.
 
 ---
 
@@ -207,15 +208,19 @@ Flow: input → client cooldown sanity → `RequestHammerHit` → server validat
 `RewardService` (coins/score only on server-confirmed defeat; idempotent per encounter id), boss unlocks, hammer ownership/selection (server-validated), all 5 bosses with cartoon reactions, `AudioController`, particles, mobile-friendly UI, leaderboard (OrderedDataStore, throttled).
 **Specs:** reward granted exactly once per defeat; locked boss / unowned hammer requests rejected.
 
-### Phase 5 — Monetization (optional, per decision #5) — ⬜
+### Phase 5 — Monetization — ⏭ Skipped for v1 (decision #5)
 `PurchaseService`: idempotent `ProcessReceipt` backed by PlayerDataService receipt history, server-side game-pass checks, `PolicyService` gating. **Security tests:** replayed receipts, purchase during data-load failure, rejoin mid-purchase.
 
-### Phase 6 — Hardening & release — ⬜
+### Phase 6 — Hardening & release — 🟡 In progress
+
+**Done (code/docs):** `MovementGuardService` (teleport/speed sanity on hits, server-only `MovementLimits`, 7 specs); `docs/RELEASE.md` (RC gate, performance checks, Roblox security settings, Maturity & Compliance facts, asset licensing audit, publishing, rollback, monitoring). **Open (you, in Studio / Creator Hub):** multiplayer + abuse playtests (`PLAYTEST.md` 9–17, 22, 39–43), performance pass, questionnaire and security settings, private beta → public.
+
 Security/abuse pass, performance (MicroProfiler, remote traffic, memory per player), mobile device test, Maturity & Compliance questionnaire, asset licensing audit, `docs/RELEASE.md` with rollback plan, private beta → public.
 
 ---
 
 ## 7. Immediate next steps
 
-1. Decide the monetization scope for v1 (§5 #5), then Phase 5.
-2. Before release: `docs/PLAYTEST.md` checks 9–17 (multiplayer, abuse).
+1. **You:** run `build/tests.rbxl` (expect 183 passed) and `PLAYTEST.md` 42–43 (movement guard).
+2. **You:** the release-candidate gate in `docs/RELEASE.md` §1–3 (multiplayer + abuse playtests, performance, Roblox settings).
+3. PR + CI + merge `feat/phase6-hardening`, then publish a private beta (`RELEASE.md` §5).

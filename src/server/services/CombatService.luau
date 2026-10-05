@@ -19,6 +19,7 @@ local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
 local HammerTool = require(ServerScriptService.Lib.HammerTool)
 local RateLimiter = require(ReplicatedStorage.Shared.RateLimiter)
+local MovementGuardService = require(script.Parent.MovementGuardService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
 local RemoteController = require(ServerScriptService.Controllers.RemoteController)
@@ -123,6 +124,11 @@ local function onHammerHit(player: Player, rawBossInstanceId: unknown): ()
 	end
 	if not ProgressionRules.isBossUnlocked(live.State.Definition.Id, data.BossDefeats) then
 		return explainDrop(player, live.State.Definition.Id .. " is locked for this player")
+	end
+
+	-- A teleport or speed hack could otherwise pass the reach check below.
+	if MovementGuardService.isSuspect(player) then
+		return explainDrop(player, "moved implausibly fast recently")
 	end
 
 	local rootPosition, notReadyReason = getSwingPosition(player)

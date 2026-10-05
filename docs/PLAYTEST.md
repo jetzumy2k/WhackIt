@@ -82,3 +82,9 @@ works but nothing is kept between Play sessions.
 | 40 | A player deals under 10 % | Gets a small score/coin share but "Deal at least 10% of its HP to count the defeat."; no unlock progress |
 | 41 | Second client watching | Sees the other player's face and hammer glow change, and a toast when they reach Zen |
 
+## Phase 6: hardening
+| # | Check | Expected |
+|---|---|---|
+| 42 | From the **server** command bar (Test → Clients and Servers), teleport a player next to a boss: `game.Players:GetPlayers()[1].Character:PivotTo(CFrame.new(-68, 4, -32))`, then swing within 5 s | Server Output prints `[MovementGuard] … hits ignored for 5 s`; swings in those 5 s do no damage; after that hits land |
+| 43 | Walk, jump and run around normally for a minute | No `[MovementGuard]` lines |
+
