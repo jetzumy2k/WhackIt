@@ -57,7 +57,7 @@ Answer honestly; these are the facts about the current build:
 | Fonts | Roblox `FredokaOne` | Roblox built-in |
 | Offices, outdoors (terrain, trees, skyline) | Roblox Terrain + parts built in code | Original to this project |
 | Spark burst, swing trail | Roblox `ParticleEmitter` (default texture) and `Trail` | Built-in engine effects |
-| Background music | `MusicConfig.Tracks`: **empty**; add only Creator Store music licensed for Roblox use or audio you own, and list each track here with its source | n/a until added |
+| Background music | `MusicConfig.Tracks`: APM Music tracks from the Creator Store, publisher **APMOfficial** (Roblox's licensed music partner), each checked as asset type Audio on 2026-10-05: Lo-fi Chill A `9043887091`, Chill Jazz `1845341094`, Sunday In Bed `9047104336`, Poolside `9046863253`, Sunset Chill (Bed Version) `9046862941` | Licensed for use in Roblox experiences via Roblox's music partnership. Only add further tracks the same way (Audio, licensed publisher) |
 | ProfileStore | `lm-loleris/profilestore@1.0.3` | Apache-2.0 (code dependency) |
 | TestEZ | `roblox/testez@0.4.1` | Apache-2.0, dev-only, not shipped |
 

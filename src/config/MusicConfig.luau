@@ -17,8 +17,14 @@ export type Track = {
 }
 
 local MusicConfig = table.freeze({
+	-- Licensed APM Music tracks from Roblox's Creator Store (publisher APMOfficial,
+	-- asset type Audio; checked 2026-10-05). Listed in docs/RELEASE.md section 4.
 	Tracks = table.freeze({
-		-- { Id = "rbxassetid://0000000000", Name = "Example track" },
+		{ Id = "rbxassetid://9043887091", Name = "Lo-fi Chill A" },
+		{ Id = "rbxassetid://1845341094", Name = "Chill Jazz" },
+		{ Id = "rbxassetid://9047104336", Name = "Sunday In Bed" },
+		{ Id = "rbxassetid://9046863253", Name = "Poolside" },
+		{ Id = "rbxassetid://9046862941", Name = "Sunset Chill (Bed Version)" },
 	}) :: { Track },
 
 	Volume = 0.3,
