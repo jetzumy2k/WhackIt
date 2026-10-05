@@ -162,7 +162,8 @@ return function()
 			local data: PlayerDataSchema.RawData = { SchemaVersion = 2 }
 			local ok = PlayerDataSchema.migrate(data, {}, 2)
 			expect(ok).to.equal(true)
-			expect(data.SchemaVersion).to.equal(PlayerDataSchema.CURRENT_VERSION)
+			-- Explicit target 2, independent of the current schema version.
+			expect(data.SchemaVersion).to.equal(2)
 		end)
 
 		it("fails when a migration step is missing", function()
