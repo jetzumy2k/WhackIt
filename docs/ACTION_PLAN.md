@@ -1,6 +1,6 @@
 # WHACK IT OUT! — Progress Review & Action Plan
 
-_Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase2-vertical-slice`_
+_Review date: 2026-10-05 · Last status update: 2026-10-05 · `master` after PR #3_
 
 **Status legend:** ✅ Done · 🟡 Partly done / awaiting verification · ⬜ Not started
 
@@ -20,7 +20,7 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 | Git: single default branch | ✅ | `master` is default; `main` deleted; its `LICENSE` kept (`53d8a56`) |
 | Phase 0 — Foundation | ✅ Complete | CI green on PR #1 and on `master` (`f2faca7`) |
 | Phase 1 — Core architecture | ✅ Complete (PR #2) | Lifecycle, config, Types, Validate, RateLimiter, RemoteController, REMOTE_CONTRACTS; 46/46 specs pass in Studio |
-| Phase 2 — Shared-boss vertical slice | 🟡 Implemented; cartoon boss + hammer swing added after first playtest; specs + playtest pending | 5 services, 5 client controllers, arena, 85 specs |
+| Phase 2 — Shared-boss vertical slice | ✅ Accepted for now (2026-10-05, solo playtest after 6 rounds); multiplayer/abuse playtest checks 9–17 still to run | 5 services, 6 client controllers, arena, 94 specs |
 | Phases 3–6 | ⬜ | |
 | §5 Design decisions | 🟡 3 of 5 decided | Shared bosses (+ reward/respawn rules) · end on defeat · hammer-driven damage. Open: persistence library, monetization |
 
@@ -44,7 +44,7 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 | Client controllers (Input, Gameplay, UI, Feedback, Audio) | 🟡 4 of 5 (+ `BossVisualController`) | Input (hammer Tool swing), Gameplay, UI, Feedback, BossVisual (cartoon monster + animations). Audio in Phase 4 (swing uses a built-in Roblox sound) |
 | UI screens | 🟡 Code-built placeholder | HUD (Stress Meter, score, hint), boss HP billboards, Victory Card. Art pass in Phase 4 |
 | Arena | 🟡 Placeholder | Floor + spawn in `default.project.json`; bosses are code-built cartoon monsters (`BossVisualConfig`) until real art |
-| Tests (TestEZ) | 🟡 | 85 specs. 73 passed in Studio; 12 new (BossVisualConfig 4, BossVisual 4, HammerTool 4) pass static checks, **not yet run in Studio** |
+| Tests (TestEZ) | 🟡 | 94 specs. 92 passed in Studio (2026-10-05); the reworked SwingPose specs and the grip-direction spec pass static checks but have **not yet been run in Studio** |
 | Checks script | ✅ | `scripts/check.ps1` (format, lint, type-check, build; `-Tests` for TestEZ) |
 | Docs | 🟡 | `DEVELOPMENT_WORKFLOW`, `GAMEPLAY_RULES`, `REMOTE_CONTRACTS`, `PLAYTEST` current; `DATA_SCHEMA` still a template (Phase 3) |
 | CI | ✅ | `.github/workflows/ci.yml` green on GitHub; `actions/checkout` moved to v7 (Node 24) |
@@ -180,9 +180,9 @@ Goal: a clean clone builds, formats, lints, type-checks, and runs the test suite
 5. ✅ `docs/REMOTE_CONTRACTS.md` rewritten; `RequestHammerHit(bossInstanceId)` takes a server-issued boss instance id. → P2-1
 6. ✅ Specs: Validate (15), RateLimiter (7), RemoteController (5). 46/46 pass in Studio.
 
-### Phase 2 — Vertical slice: one shared boss, full loop, no persistence — 🟡 Implemented, verification pending
+### Phase 2 — Vertical slice: one shared boss, full loop, no persistence — ✅ Accepted for now
 
-**Status:** ✅ code · ✅ static checks · 🟡 specs (73/73 passed before the visual pass; 85 now) · 🟡 playtest round 1: boss was a plain block and the character didn't swing → fixed with a client-drawn cartoon boss + hammer Tool with swing; playtest round 2: no swing and no hit while holding the hammer → input now read directly (Tool.Activated kept as backup), Roblox slash animation played explicitly, "Get closer" hint, Studio-only drop diagnostics; playtest round 3: swing worked but looked like a one-way jab → procedural wind-up/strike/follow-through swing on arm, elbow and waist joints, hit sent at impact, other clients replay the strike, `HitCooldown` 0.25 → 0.45 s to match the swing; playtest round 4: hits landed but the arm didn't move (Transform override lost to the Animator, or non-Motor6D joints) → swing now rotates joint base offsets (Motor6D.C0 / AnimationConstraint attachment) that the Animator never writes, with a Studio warning if no shoulder joint is found; playtest round 5: arm swung but the hammer pointed back along the forearm at the shoulder (grip at the wrong handle end) → grip flipped so the hammer extends past the fist, bigger head, `HitReach` 12 → 9 so hits only count where the hammer visibly reaches, grip-direction spec; playtest round 6 (design feedback): the hammer should rest on the shoulder, be out in front only when hitting, then return → `SwingPose.REST` carry pose applied to every holder (`HammerPoseController`), wrist joint (`RightGrip`) added to the swing, impact at 50 %, specs encode rest/impact hammer directions; round 7 pending (`docs/PLAYTEST.md` checks 1–17)
+**Status:** ✅ code · ✅ static checks · 🟡 specs (73/73 passed before the visual pass; 85 now) · 🟡 playtest round 1: boss was a plain block and the character didn't swing → fixed with a client-drawn cartoon boss + hammer Tool with swing; playtest round 2: no swing and no hit while holding the hammer → input now read directly (Tool.Activated kept as backup), Roblox slash animation played explicitly, "Get closer" hint, Studio-only drop diagnostics; playtest round 3: swing worked but looked like a one-way jab → procedural wind-up/strike/follow-through swing on arm, elbow and waist joints, hit sent at impact, other clients replay the strike, `HitCooldown` 0.25 → 0.45 s to match the swing; playtest round 4: hits landed but the arm didn't move (Transform override lost to the Animator, or non-Motor6D joints) → swing now rotates joint base offsets (Motor6D.C0 / AnimationConstraint attachment) that the Animator never writes, with a Studio warning if no shoulder joint is found; playtest round 5: arm swung but the hammer pointed back along the forearm at the shoulder (grip at the wrong handle end) → grip flipped so the hammer extends past the fist, bigger head, `HitReach` 12 → 9 so hits only count where the hammer visibly reaches, grip-direction spec; playtest round 6 (design feedback): the hammer should rest on the shoulder, be out in front only when hitting, then return → `SwingPose.REST` carry pose applied to every holder (`HammerPoseController`), wrist joint (`RightGrip`) added to the swing, impact at 50 %, specs encode rest/impact hammer directions; accepted by the user ("okay for now"). Open: `docs/PLAYTEST.md` checks 9–17 (2–3 players, abuse) not yet run; run before release (`docs/PLAYTEST.md` checks 1–17)
 
 Server: `SessionService` (join/leave, per-player state), `BossService` (spawns shared boss instances with server-issued ids, authoritative HP, per-player damage contribution, respawn after defeat), `CombatService` (validates hit: boss instance alive, live character, reach, cooldown; damage via `CombatRules`), `StressService` (stress from config formula, P2-4).
 Client: `InputController` (UserInputService: click/tap/gamepad R2·X, ignoring GUI-processed input), `GameplayController`, `UIController` (boss name, HP bar, Stress Meter, score, Victory Card), `FeedbackController` (hit flash, damage numbers, camera shake, defeat fade; presentation only).
@@ -209,6 +209,5 @@ Security/abuse pass, performance (MicroProfiler, remote traffic, memory per play
 
 ## 7. Immediate next steps
 
-1. **You:** run `build/tests.rbxl` (expect 85 passed), then playtest round 2 with `docs/PLAYTEST.md`, especially checks 1, 3 and 3b (boss look, swing, hammer orientation).
-2. PR + CI + merge `feat/phase2-vertical-slice`.
-3. Decide the persistence library (§5 #4) before Phase 3.
+1. Decide the persistence library (§5 #4), then start Phase 3.
+2. Before release: run `build/tests.rbxl` (expect 94 passed) and `docs/PLAYTEST.md` checks 9–17 (multiplayer, abuse).
