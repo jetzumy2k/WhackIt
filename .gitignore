@@ -19,6 +19,7 @@ sourcemap.test.json
 
 # Wally packages
 Packages/
+ServerPackages/
 DevPackages/
 
 # Build/output directories

@@ -58,8 +58,8 @@ applyRelief:            clamp to [0, MaxStress], round to hundredths
 
 Starting balance: soloing a 100-HP boss relieves 10 + 5 = 15 stress, so about 7 defeats take a
 player from 100 to 0. Better hammers relieve stress faster because relief follows damage.
-Open (Phase 2+): what happens at 0 stress (e.g. a "Zen" celebration), and whether stress
-persists between sessions (Phase 3).
+Stress is saved with the player's data and carries over between sessions (decided 2026-10-05).
+Open: what happens at 0 stress (e.g. a "Zen" celebration).
 
 ## Arena
 Boss spawn points and hitbox size are in `src/config/ArenaConfig.luau`. The server's boss is an

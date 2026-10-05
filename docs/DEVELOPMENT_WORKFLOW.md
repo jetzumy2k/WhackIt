@@ -15,7 +15,7 @@
 ## First-time setup
 ```powershell
 rokit install      # rojo, wally, stylua, selene, luau-lsp, run-in-roblox (pinned in rokit.toml)
-wally install      # TestEZ into DevPackages/ (dev-only; never shipped)
+wally install      # ProfileStore into ServerPackages/ (server-only), TestEZ into DevPackages/ (dev-only; never shipped)
 ```
 
 ## Checks (`scripts/check.ps1`)
