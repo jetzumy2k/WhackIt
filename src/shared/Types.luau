@@ -16,4 +16,13 @@ export type CombatFeedback = {
 	Defeated: boolean,
 }
 
+-- Combat.BossDefeated (server -> each contributing player).
+export type BossDefeated = {
+	BossInstanceId: BossInstanceId,
+	BossId: string,
+	Rewarded: boolean, -- false when the player's share was below MinRewardDamageShare
+	ScoreAwarded: number,
+	StressRelieved: number,
+}
+
 return {}
