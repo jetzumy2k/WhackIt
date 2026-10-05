@@ -14,6 +14,8 @@ local function definition(maxHealth: number): BossConfig.BossDefinition
 		MaxHealth = maxHealth,
 		DamageTakenMultiplier = 1,
 		ScoreReward = 50,
+		CoinReward = 5,
+		UnlockDefeats = 0,
 	}
 end
 
@@ -105,6 +107,37 @@ return function()
 		it("returns nobody when nobody contributed", function()
 			local state = BossState.new(definition(100), "boss-1")
 			expect(#BossState.qualifyingUserIds(state, 0.1)).to.equal(0)
+		end)
+	end)
+	describe("BossState.markRewarded", function()
+		it("refuses to reward before the boss is defeated", function()
+			local state = BossState.new(definition(100), "boss-1")
+			BossState.applyDamage(state, 1, 50)
+			expect(BossState.markRewarded(state, 1)).to.equal(false)
+		end)
+
+		it("rewards each player at most once per boss life", function()
+			local state = BossState.new(definition(10), "boss-1")
+			BossState.applyDamage(state, 1, 10)
+			expect(BossState.markRewarded(state, 1)).to.equal(true)
+			expect(BossState.markRewarded(state, 1)).to.equal(false)
+			expect(BossState.markRewarded(state, 2)).to.equal(true)
+		end)
+
+		it("starts every new boss life with nobody rewarded", function()
+			local state = BossState.new(definition(10), "boss-2")
+			expect((next(state.Rewarded))).to.equal(nil)
+		end)
+	end)
+	describe("BossState last hitter", function()
+		it("records who landed the defeating hit, and only that hit", function()
+			local state = BossState.new(definition(20), "boss-3")
+			BossState.applyDamage(state, 1, 10)
+			expect(state.LastHitterUserId).to.equal(nil)
+			BossState.applyDamage(state, 2, 10)
+			expect(state.LastHitterUserId).to.equal(2)
+			BossState.applyDamage(state, 3, 10) -- after defeat: ignored
+			expect(state.LastHitterUserId).to.equal(2)
 		end)
 	end)
 end

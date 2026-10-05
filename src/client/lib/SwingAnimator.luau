@@ -38,6 +38,7 @@ type Holder = {
 	Grip: Joint?,
 	SwingStartedAt: number?,
 	SwingStartProgress: number,
+	MissingSince: number?, -- when the shoulder joint was first found missing
 }
 
 local IS_STUDIO = RunService:IsStudio()
@@ -46,6 +47,10 @@ local holders: { [Model]: Holder } = {}
 local jointCache: { [Instance]: Joint } = {}
 local warnedCharacters: { [Model]: boolean } = {}
 local connection: RBXScriptConnection? = nil
+
+-- Joints can replicate a moment after the character (and AnimationConstraint
+-- attachments later still), so only warn if one stays missing this long.
+local MISSING_JOINT_WARN_SECONDS = 3
 
 -- Base offsets are captured the first time a joint is seen, so restarted or
 -- overlapping poses can never "bake in" a modified offset.
@@ -193,7 +198,13 @@ local function step(): ()
 		end
 		refreshJoints(character, holder)
 		if holder.Shoulder == nil then
-			if IS_STUDIO and not warnedCharacters[character] then
+			holder.MissingSince = holder.MissingSince or now
+			local missingFor = now - (holder.MissingSince :: number)
+			if
+				IS_STUDIO
+				and missingFor >= MISSING_JOINT_WARN_SECONDS
+				and not warnedCharacters[character]
+			then
 				warnedCharacters[character] = true
 				warn(
 					string.format(
@@ -205,6 +216,7 @@ local function step(): ()
 			end
 			continue
 		end
+		holder.MissingSince = nil
 
 		local progress = 1
 		if holder.SwingStartedAt then
@@ -237,6 +249,7 @@ function SwingAnimator.setHolding(character: Model, holding: boolean): ()
 				Grip = nil,
 				SwingStartedAt = nil,
 				SwingStartProgress = 0,
+				MissingSince = nil,
 			}
 		end
 		if connection == nil then

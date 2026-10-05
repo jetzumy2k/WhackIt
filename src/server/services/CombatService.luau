@@ -14,15 +14,16 @@ local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local BossService = require(script.Parent.BossService)
-local BossState = require(ServerScriptService.Lib.BossState)
 local CombatRules = require(ReplicatedStorage.Shared.CombatRules)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
 local HammerTool = require(ServerScriptService.Lib.HammerTool)
 local RateLimiter = require(ReplicatedStorage.Shared.RateLimiter)
 local PlayerDataService = require(script.Parent.PlayerDataService)
+local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
 local RemoteController = require(ServerScriptService.Controllers.RemoteController)
 local RemoteLimits = require(ServerScriptService.Config.RemoteLimits)
+local RewardService = require(script.Parent.RewardService)
 local SessionService = require(script.Parent.SessionService)
 local StressRules = require(ReplicatedStorage.Shared.StressRules)
 local StressService = require(script.Parent.StressService)
@@ -67,39 +68,27 @@ local function explainDrop(player: Player, reason: string): ()
 	end
 end
 
+-- Every contributor gets a share of the reward (RewardService decides how much
+-- and whether the defeat counts for them) and hears about the defeat.
 local function rewardContributors(live: BossService.LiveBoss): ()
 	local state = live.State
-	local qualifying: { [number]: boolean } = {}
-	for _, userId in BossState.qualifyingUserIds(state, GameConfig.MinRewardDamageShare) do
-		qualifying[userId] = true
-	end
-
-	-- Everyone who contributed hears about the defeat; only qualifiers are rewarded.
 	for userId in state.Contributions do
 		local player = Players:GetPlayerByUserId(userId)
 		if player == nil then
 			continue -- left before the defeat; nothing to grant
 		end
 
-		local rewarded = qualifying[userId] == true
-		local scoreAwarded = 0
-		local stressRelieved = 0
-		if rewarded then
-			scoreAwarded = state.Definition.ScoreReward
-			SessionService.addScore(player, scoreAwarded)
-			stressRelieved = StressService.relieve(player, GameConfig.DefeatStressRelief)
-			local data = PlayerDataService.get(player)
-			if data then
-				data.TotalBossesDefeated += 1
-			end
-		end
-
+		local grant = RewardService.grantDefeat(player, state)
 		local payload: Types.BossDefeated = {
 			BossInstanceId = state.InstanceId,
 			BossId = state.Definition.Id,
-			Rewarded = rewarded,
-			ScoreAwarded = scoreAwarded,
-			StressRelieved = stressRelieved,
+			Rewarded = grant ~= nil and grant.Qualified,
+			ScoreAwarded = if grant then grant.Score else 0,
+			CoinsAwarded = if grant then grant.Coins else 0,
+			StressRelieved = if grant then grant.StressRelieved else 0,
+			UnlockedBossIds = if grant then grant.UnlockedBossIds else {},
+			SharePercent = if grant then math.floor(grant.Share * 100 + 0.5) else 0,
+			LastHit = grant ~= nil and grant.LastHit,
 		}
 		CombatRemotes.BossDefeated:FireClient(player, payload)
 	end
@@ -128,19 +117,31 @@ local function onHammerHit(player: Player, rawBossInstanceId: unknown): ()
 		return explainDrop(player, "boss " .. bossInstanceId .. " is gone or defeated")
 	end
 
+	local data = PlayerDataService.get(player)
+	if data == nil then
+		return explainDrop(player, "data not loaded")
+	end
+	if not ProgressionRules.isBossUnlocked(live.State.Definition.Id, data.BossDefeats) then
+		return explainDrop(player, live.State.Definition.Id .. " is locked for this player")
+	end
+
 	local rootPosition, notReadyReason = getSwingPosition(player)
 	if rootPosition == nil then
 		return explainDrop(player, notReadyReason or "not ready")
 	end
-	if not CombatRules.isInReach(rootPosition, live.Body.Position) then
+	if not CombatRules.isInReach(rootPosition, live.Body.Position, GameConfig.HitReachGrace) then
 		local distance = (rootPosition - live.Body.Position).Magnitude
 		return explainDrop(
 			player,
-			string.format("out of reach (%.1f > %d studs)", distance, GameConfig.HitReach)
+			string.format(
+				"out of reach (%.1f > %.1f studs)",
+				distance,
+				GameConfig.HitReach + GameConfig.HitReachGrace
+			)
 		)
 	end
 
-	local hammer = HammerConfig.ById[session.EquippedHammerId]
+	local hammer = HammerConfig.ById[data.EquippedHammerId]
 	if hammer == nil then
 		return RemoteController.reject(player, REMOTE_NAME, "no equipped hammer")
 	end
@@ -155,10 +156,8 @@ local function onHammerHit(player: Player, rawBossInstanceId: unknown): ()
 	end
 	lastHitAt[player] = now
 
-	local data = PlayerDataService.get(player)
-	if data then
-		data.TotalHits += 1
-	end
+	data.TotalHits += 1
+	StressService.noteActivity(player)
 
 	StressService.relieve(player, StressRules.reliefForHit(result.Applied))
 

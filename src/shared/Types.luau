@@ -22,7 +22,29 @@ export type BossDefeated = {
 	BossId: string,
 	Rewarded: boolean, -- false when the player's share was below MinRewardDamageShare
 	ScoreAwarded: number,
+	CoinsAwarded: number,
 	StressRelieved: number,
+	UnlockedBossIds: { string }, -- bosses this defeat newly unlocked for the player
+	SharePercent: number, -- the player's share of the boss's HP, 0..100
+	LastHit: boolean, -- the player landed the defeating hit (bonus included)
+}
+
+-- Mood.ZenAchieved (server -> all clients): a player reached 0 stress.
+export type ZenAchieved = {
+	UserId: number,
+	DisplayName: string,
+	ZenLevel: number,
+	BonusCoins: number,
+}
+
+-- Profile.Sync (server -> one player): their own progression, for the UI only.
+export type ProfileSnapshot = {
+	Coins: number,
+	OwnedHammerIds: { string },
+	EquippedHammerId: string,
+	BossDefeats: { [string]: number },
+	UnlockedBossIds: { string },
+	ZenLevel: number,
 }
 
 return {}

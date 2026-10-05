@@ -34,7 +34,7 @@ so clients can't read them.
 | `maxArgs` | 1 |
 | Validation | `Validate.id(bossInstanceId, RemoteLimits.MaxIdLength)`: 1–64 chars of `[A-Za-z0-9_-]` |
 | Rate limit | `RemoteLimits.RequestHammerHit`: burst 10, refill 8/s (flood guard only) |
-| Server checks (`CombatService`) | player has a session; at least `HitCooldown − HitCooldownGrace` since the player's last **accepted** hit (`CombatRules.isOffCooldown`); boss instance exists and is not defeated; live character **holding a hammer Tool** (tagged `HammerId`) whose root is within `GameConfig.HitReach` of the boss (`CombatRules.isInReach`). The Tool only gates the swing: damage comes from the session's `EquippedHammerId`, so editing the Tool changes nothing. The handler never yields, so checks and the state change are atomic. |
+| Server checks (`CombatService`) | player has a session and loaded data; the boss is **unlocked for this player** (`ProgressionRules.isBossUnlocked`); at least `HitCooldown − HitCooldownGrace` since the player's last **accepted** hit (`CombatRules.isOffCooldown`); boss instance exists and is not defeated; live character **holding a hammer Tool** (tagged `HammerId`) whose root is within `GameConfig.HitReach + HitReachGrace` of the boss (`CombatRules.isInReach`; the client checks the exact `HitReach`, the grace absorbs movement during network lag). The Tool only gates the swing: damage comes from the session's `EquippedHammerId`, so editing the Tool changes nothing. The handler never yields, so checks and the state change are atomic. |
 | Effect | damage = `CombatRules.computeHitDamage(equipped hammer, boss)`; HP reduced (overkill not credited); damage credited to the player's contribution; stress relieved by `StressRules.reliefForHit(applied)`. On the defeating hit: rewards (see `BossDefeated`) and respawn after `BossRespawnDelay` with a **new** instance id. |
 | Response | `Combat.CombatFeedback` on success. Nothing on rejection (no oracle for probing). |
 | Failure | invalid payload / rate limited → `reject` + drop. Cooldown or reach failures are normal play → drop without logging. |
@@ -51,10 +51,46 @@ so clients can't read them.
 | | |
 |---|---|
 | Purpose | Victory Card for each player who damaged the defeated boss. |
-| Payload | `Types.BossDefeated`: `{ BossInstanceId, BossId, Rewarded, ScoreAwarded, StressRelieved }` |
+| Payload | `Types.BossDefeated`: `{ BossInstanceId, BossId, Rewarded, ScoreAwarded, CoinsAwarded, StressRelieved, UnlockedBossIds, SharePercent, LastHit }`. `Rewarded` means the player qualified (≥ 10 %); every contributor gets score/coins |
 | Recipients | every contributor still in the server, once per defeat |
-| Rewards | granted on the server **before** sending, only to players whose contribution ≥ `MinRewardDamageShare × MaxHealth`: `ScoreReward` to leaderstats Score and `DefeatStressRelief` stress. Non-qualifiers get `Rewarded = false`. |
+| Rewards | granted by `RewardService` **before** sending, only to players whose contribution ≥ `MinRewardDamageShare × MaxHealth`: `ScoreReward`, `CoinReward`, `DefeatStressRelief`, and +1 to that boss's defeat count (which can unlock the next boss, listed in `UnlockedBossIds`). Granted at most once per player per boss life (`BossState.markRewarded`). Non-qualifiers get `Rewarded = false`. |
 | Client handling | display only |
+
+## `Mood.ZenAchieved`: server -> all clients
+| | |
+|---|---|
+| Purpose | Announce a Zen moment (a player's stress reached 0 while armed) |
+| Payload | `Types.ZenAchieved`: `{ UserId, DisplayName, ZenLevel, BonusCoins }` |
+| When | inside `StressService.relieve`, after the bonus coins and Zen Level are granted on the server |
+| Client handling | display only: your own Zen → big card; anyone else's → toast |
+
+## `Shop.BuyHammer`: client -> server
+| | |
+|---|---|
+| Purpose | Buy a hammer with coins |
+| Arguments | `hammerId: string`; `maxArgs` 1 |
+| Validation | `Validate.id` + must exist in `HammerConfig` → otherwise `reject` |
+| Rate limit | `RemoteLimits.Shop`: burst 5, refill 2/s |
+| Server checks | data loaded; `ProgressionRules.checkPurchase` = `Ok` (exists, not already owned, enough coins); `SessionService.trySpendCoins` never lets coins go negative. The handler never yields, so double-clicks can't buy twice |
+| Effect | coins − price, hammer added to `OwnedHammers`, and it's equipped |
+| Response | `Profile.Sync` after every request, success or not |
+
+## `Shop.EquipHammer`: client -> server
+| | |
+|---|---|
+| Purpose | Hold a different owned hammer |
+| Arguments | `hammerId: string`; `maxArgs` 1; same validation and rate limit as `BuyHammer` |
+| Server checks | data loaded; `ProgressionRules.ownsHammer` |
+| Effect | `EquippedHammerId` saved; the held Tool is swapped (`HammerService.reequip`). Damage follows the saved id |
+| Response | `Profile.Sync` |
+
+## `Profile.Sync`: server -> one client
+| | |
+|---|---|
+| Purpose | The player's own progression for the UI (HUD, shop, locked bosses) |
+| Payload | `Types.ProfileSnapshot`: `{ Coins, OwnedHammerIds, EquippedHammerId, BossDefeats, UnlockedBossIds, ZenLevel }` |
+| When | on data load, after every reward, purchase and equip request |
+| Client handling | display only; parsed defensively (`ProgressController`) |
 
 ---
 
@@ -65,8 +101,8 @@ Names live in `Shared/Attributes`. Only the server writes them; clients read the
 |---|---|---|
 | Boss `Model` under `Workspace.Bosses` | `BossInstanceId`, `BossId`, `Health`, `MaxHealth`, `Defeated` | live boss state for HP bars, target selection and the client-drawn monster's hit/defeat animations |
 | Hammer `Tool` (server-created, in the character) | `HammerId` | marks the Tool as a hammer for the server's hand check |
-| `Player` | `Stress` | the player's Stress Meter |
-| `Player.leaderstats.Score` (IntValue) | | session score |
+| `Player` | `Stress` | the player's Stress Meter (also drives the server-drawn mood face and hammer glow) |
+| `Player.leaderstats.Score`, `.Coins` (IntValue) | | lifetime score and coins (saved values, mirrored for display) |
 
 ## Known limitation
 Reach is checked against the character's position, which Roblox lets each client simulate.

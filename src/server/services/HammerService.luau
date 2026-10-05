@@ -9,17 +9,30 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
 local HammerTool = require(ServerScriptService.Lib.HammerTool)
-local SessionService = require(script.Parent.SessionService)
+local PlayerDataService = require(script.Parent.PlayerDataService)
 
 local HammerService = {}
 
 local CHARACTER_LOAD_TIMEOUT = 10 -- seconds to wait for a Humanoid before giving up
 
 local function equippedHammer(player: Player): HammerConfig.HammerDefinition?
-	local session = SessionService.get(player)
-	-- The character can spawn a moment before the session exists; fall back to the default.
-	local hammerId = if session then session.EquippedHammerId else GameConfig.DefaultHammerId
+	-- Read from the saved data, not the session: on load, this service may run
+	-- before SessionService has created the session. Before the data loads the
+	-- character gets the default hammer, swapped once the data arrives.
+	local data = PlayerDataService.get(player)
+	local hammerId = if data then data.EquippedHammerId else GameConfig.DefaultHammerId
 	return HammerConfig.ById[hammerId]
+end
+
+local function removeHammers(container: Instance?): ()
+	if container == nil then
+		return
+	end
+	for _, child in container:GetChildren() do
+		if child:IsA("Tool") and child:GetAttribute(HammerTool.HAMMER_ID_ATTRIBUTE) ~= nil then
+			child:Destroy()
+		end
+	end
 end
 
 local function giveHammer(player: Player, character: Model): ()
@@ -36,9 +49,23 @@ local function giveHammer(player: Player, character: Model): ()
 		return
 	end
 
+	-- Exactly one hammer: drop any earlier one (e.g. the default given before
+	-- the saved data loaded).
+	removeHammers(character)
+	removeHammers(backpack)
+
 	local tool = HammerTool.build(hammer)
 	tool.Parent = backpack
 	humanoid:EquipTool(tool)
+end
+
+-- Swaps the held hammer for the saved EquippedHammerId (after data loads or
+-- the player equips a different hammer).
+function HammerService.reequip(player: Player): ()
+	local character = player.Character
+	if character then
+		task.spawn(giveHammer, player, character)
+	end
 end
 
 local watched: { [Player]: boolean } = {}
@@ -60,6 +87,9 @@ end
 
 function HammerService.init(): ()
 	Players.PlayerAdded:Connect(watch)
+	PlayerDataService.onLoaded(function(player: Player)
+		HammerService.reequip(player)
+	end)
 	Players.PlayerRemoving:Connect(function(player: Player)
 		watched[player] = nil
 	end)

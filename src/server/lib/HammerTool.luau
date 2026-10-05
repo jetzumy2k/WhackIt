@@ -1,7 +1,7 @@
 --!strict
 --[[
 	Builds the Tool a player holds. Purely a prop plus the client's swing trigger:
-	damage always comes from the server's session (EquippedHammerId), never from
+	damage always comes from the player's saved EquippedHammerId, never from
 	this Tool, so tampering with it changes nothing.
 
 	Orientation: the hand's grip attachment has its +Z axis pointing up the arm

@@ -17,6 +17,7 @@ local BossVisual = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild
 local BossVisualConfig =
 	require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("BossVisualConfig"))
 local GameplayController = require(script.Parent.GameplayController)
+local ProgressController = require(script.Parent.ProgressController)
 
 local BossVisualController = {}
 
@@ -32,6 +33,9 @@ local HIT_POP = 0.08
 local DEFEAT_SECONDS = 0.8
 local DEFEAT_SPINS = 2
 local MIN_SCALE = 0.05
+-- Locked bosses are drawn washed-out grey until the player unlocks them.
+local LOCKED_GREY = Color3.fromRGB(150, 150, 155)
+local LOCKED_TINT = 0.8
 
 type Entry = {
 	Body: BasePart,
@@ -42,6 +46,9 @@ type Entry = {
 	LastHealth: number?,
 	HitAt: number?,
 	DefeatedAt: number?,
+	BossId: string,
+	Locked: boolean,
+	OriginalColors: { [BasePart]: Color3 },
 }
 
 local localPlayer = Players.LocalPlayer
@@ -59,6 +66,18 @@ local function yawToward(origin: Vector3, target: Vector3, current: number): num
 		return current
 	end
 	return math.atan2(-flat.X, -flat.Z)
+end
+
+-- Greys out (or restores) the monster when its lock state changes.
+local function refreshLock(entry: Entry): ()
+	local locked = not ProgressController.isBossUnlocked(entry.BossId)
+	if locked == entry.Locked then
+		return
+	end
+	entry.Locked = locked
+	for part, original in entry.OriginalColors do
+		part.Color = if locked then original:Lerp(LOCKED_GREY, LOCKED_TINT) else original
+	end
 end
 
 local function numberAttribute(model: Model, name: string): number?
@@ -85,13 +104,22 @@ function attach(boss: Model): ()
 	end
 
 	local bossId = boss:GetAttribute(Attributes.BossId)
-	local look = if typeof(bossId) == "string" then BossVisualConfig[bossId] else nil
+	if typeof(bossId) ~= "string" then
+		return
+	end
+	local look = BossVisualConfig[bossId]
 	if look == nil then
 		return
 	end
 
 	local visual = BossVisual.build(look)
 	visual:PivotTo(body.CFrame)
+	local originalColors: { [BasePart]: Color3 } = {}
+	for _, descendant in visual:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			originalColors[descendant] = descendant.Color
+		end
+	end
 	visual.Parent = boss
 
 	local entry: Entry = {
@@ -103,8 +131,12 @@ function attach(boss: Model): ()
 		LastHealth = numberAttribute(boss, Attributes.Health),
 		HitAt = nil,
 		DefeatedAt = if boss:GetAttribute(Attributes.Defeated) == true then os.clock() else nil,
+		BossId = bossId,
+		Locked = false,
+		OriginalColors = originalColors,
 	}
 	entries[boss] = entry
+	refreshLock(entry)
 
 	boss:GetAttributeChangedSignal(Attributes.Health):Connect(function()
 		local health = numberAttribute(boss, Attributes.Health)
@@ -177,6 +209,12 @@ function BossVisualController.start(): ()
 			attach(child)
 		end
 	end
+
+	ProgressController.Changed:Connect(function()
+		for _, entry in entries do
+			refreshLock(entry)
+		end
+	end)
 
 	RunService.RenderStepped:Connect(function(dt: number)
 		local now = os.clock()

@@ -30,8 +30,14 @@ function CombatRules.isOffCooldown(now: number, lastHitAt: number?, graceSeconds
 	return now - lastHitAt >= GameConfig.HitCooldown - graceSeconds
 end
 
-function CombatRules.isInReach(playerPosition: Vector3, bossPosition: Vector3): boolean
-	return (playerPosition - bossPosition).Magnitude <= GameConfig.HitReach
+-- The server passes GameConfig.HitReachGrace to forgive the player having moved
+-- slightly by the time the request arrives; the client passes 0 (as with the cooldown).
+function CombatRules.isInReach(
+	playerPosition: Vector3,
+	bossPosition: Vector3,
+	graceStuds: number
+): boolean
+	return (playerPosition - bossPosition).Magnitude <= GameConfig.HitReach + graceStuds
 end
 
 return CombatRules

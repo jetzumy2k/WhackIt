@@ -14,6 +14,7 @@ local Attributes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild
 local BossConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("BossConfig"))
 local GameConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("GameConfig"))
 local GameplayController = require(script.Parent.GameplayController)
+local ProgressController = require(script.Parent.ProgressController)
 
 local UIController = {}
 
@@ -95,23 +96,33 @@ local function buildHud(): (ScreenGui, Frame)
 	localPlayer:GetAttributeChangedSignal(Attributes.Stress):Connect(refreshStress)
 	refreshStress()
 
-	-- Score, under the Stress Meter.
+	-- Score and coins, under the Stress Meter (from the server's leaderstats).
 	local scoreLabel = makeLabel("Score", gui)
 	scoreLabel.AnchorPoint = Vector2.new(0.5, 0)
 	scoreLabel.Position = UDim2.new(0.5, 0, 0, 48)
-	scoreLabel.Size = UDim2.new(0.3, 0, 0, 26)
-	scoreLabel.Text = "Score: 0"
+	scoreLabel.Size = UDim2.new(0.5, 0, 0, 26)
+	scoreLabel.Text = "Score: 0   Coins: 0   Zen Lv 0"
 	task.spawn(function()
 		local leaderstats = localPlayer:WaitForChild("leaderstats")
 		local score = leaderstats:WaitForChild("Score")
-		if not score:IsA("IntValue") then
+		local coins = leaderstats:WaitForChild("Coins")
+		if not score:IsA("IntValue") or not coins:IsA("IntValue") then
 			return
 		end
-		local function refreshScore(): ()
-			scoreLabel.Text = "Score: " .. score.Value
+		local function refreshStats(): ()
+			local snapshot = ProgressController.get()
+			local zenLevel = if snapshot then snapshot.ZenLevel else 0
+			scoreLabel.Text = string.format(
+				"Score: %d   Coins: %d   Zen Lv %d",
+				score.Value,
+				coins.Value,
+				zenLevel
+			)
 		end
-		score.Changed:Connect(refreshScore)
-		refreshScore()
+		score.Changed:Connect(refreshStats)
+		coins.Changed:Connect(refreshStats)
+		ProgressController.Changed:Connect(refreshStats)
+		refreshStats()
 	end)
 
 	-- How to play, bottom centre.
@@ -203,12 +214,27 @@ function attachBossBar(model: Model, billboardParent: Instance): ()
 			return
 		end
 		setFill(fill, health, maxHealth)
-		healthLabel.Text = if model:GetAttribute(Attributes.Defeated) == true
-			then "DEFEATED!"
-			else string.format("%d / %d", health, maxHealth)
+		local status = if typeof(bossId) == "string"
+			then ProgressController.unlockStatus(bossId)
+			else nil
+		local previous = if status and status.PreviousBossId
+			then BossConfig.ById[status.PreviousBossId]
+			else nil
+		if status and not status.Unlocked and previous then
+			healthLabel.Text =
+				string.format("LOCKED: beat %s x%d", previous.DisplayName, status.DefeatsNeeded)
+		elseif model:GetAttribute(Attributes.Defeated) == true then
+			healthLabel.Text = "DEFEATED!"
+		else
+			healthLabel.Text = string.format("%d / %d", health, maxHealth)
+		end
 	end
 	model:GetAttributeChangedSignal(Attributes.Health):Connect(refresh)
 	model:GetAttributeChangedSignal(Attributes.Defeated):Connect(refresh)
+	local progressConnection = ProgressController.Changed:Connect(refresh)
+	model.Destroying:Connect(function()
+		progressConnection:Disconnect()
+	end)
 	refresh()
 
 	billboard.Parent = billboardParent
@@ -223,32 +249,11 @@ function attachBossBar(model: Model, billboardParent: Instance): ()
 	end)
 end
 
-local function showVictoryCard(card: Frame, payload: unknown): ()
-	if typeof(payload) ~= "table" then
-		return
-	end
-	local data = payload :: { [string]: unknown }
-	local bossId, rewarded, score, stress =
-		data.BossId, data.Rewarded, data.ScoreAwarded, data.StressRelieved
-	if typeof(bossId) ~= "string" or typeof(rewarded) ~= "boolean" then
-		return
-	end
-
-	local definition = BossConfig.ById[bossId]
-	local bossName = if definition then definition.DisplayName else "Boss"
-	local text = card:FindFirstChild("Text") :: TextLabel
-	if rewarded and typeof(score) == "number" and typeof(stress) == "number" then
-		text.Text = string.format(
-			"%s defeated!\n+%d score   -%d stress",
-			bossName,
-			score,
-			math.floor(stress + 0.5)
-		)
-	else
-		text.Text = string.format("%s defeated!\nHit it more next time to earn a reward.", bossName)
-	end
-
-	-- A newer card resets the timer instead of being hidden by the older one.
+-- Shows the centre card; a newer card resets the timer instead of being hidden
+-- by the older one.
+local function showCard(card: Frame, text: string): ()
+	local label = card:FindFirstChild("Text") :: TextLabel
+	label.Text = text
 	victoryCardShownAt = os.clock()
 	local shownAt = victoryCardShownAt
 	card.Visible = true
@@ -257,6 +262,78 @@ local function showVictoryCard(card: Frame, payload: unknown): ()
 			card.Visible = false
 		end
 	end)
+end
+
+-- Your Zen gets the big card; someone else's gets a toast.
+local function onZenAchieved(card: Frame, payload: unknown): ()
+	if typeof(payload) ~= "table" then
+		return
+	end
+	local data = payload :: { [string]: unknown }
+	local userId, name, level, bonus = data.UserId, data.DisplayName, data.ZenLevel, data.BonusCoins
+	if typeof(userId) ~= "number" or typeof(name) ~= "string" or typeof(level) ~= "number" then
+		return
+	end
+	if userId == localPlayer.UserId then
+		showCard(
+			card,
+			string.format(
+				"ZEN ACHIEVED!\n+%d coins   Zen Level %d\nYour hammer glows while you stay Zen.",
+				if typeof(bonus) == "number" then bonus else 0,
+				level
+			)
+		)
+	else
+		UIController.showToast(string.format("%s reached Zen! (Level %d)", name, level))
+	end
+end
+
+local function showVictoryCard(card: Frame, payload: unknown): ()
+	if typeof(payload) ~= "table" then
+		return
+	end
+	local data = payload :: { [string]: unknown }
+	local bossId, rewarded, score, coins, stress =
+		data.BossId, data.Rewarded, data.ScoreAwarded, data.CoinsAwarded, data.StressRelieved
+	if typeof(bossId) ~= "string" or typeof(rewarded) ~= "boolean" then
+		return
+	end
+
+	local definition = BossConfig.ById[bossId]
+	local bossName = if definition then definition.DisplayName else "Boss"
+	local lines = { bossName .. " defeated!" }
+	if typeof(score) == "number" and typeof(coins) == "number" then
+		local share = data.SharePercent
+		table.insert(
+			lines,
+			string.format(
+				"+%d score   +%d coins   (your share %d%%)",
+				score,
+				coins,
+				if typeof(share) == "number" then share else 0
+			)
+		)
+	end
+	if data.LastHit == true then
+		table.insert(lines, "LAST HIT BONUS!")
+	end
+	if rewarded and typeof(stress) == "number" and stress > 0 then
+		table.insert(lines, string.format("-%d stress", math.floor(stress + 0.5)))
+	elseif not rewarded then
+		table.insert(lines, "Deal at least 10% of its HP to count the defeat.")
+	end
+	local unlocked = data.UnlockedBossIds
+	if typeof(unlocked) == "table" then
+		for _, unlockedId in unlocked :: { unknown } do
+			local unlockedBoss = if typeof(unlockedId) == "string"
+				then BossConfig.ById[unlockedId]
+				else nil
+			if unlockedBoss then
+				table.insert(lines, "NEW BOSS UNLOCKED: " .. unlockedBoss.DisplayName .. "!")
+			end
+		end
+	end
+	showCard(card, table.concat(lines, "\n"))
 end
 
 -- Shows a short tip; a newer tip replaces the current one. No-op before the HUD exists.
@@ -304,6 +381,13 @@ function UIController.start(): ()
 	assert(bossDefeated:IsA("RemoteEvent"), "BossDefeated must be a RemoteEvent")
 	bossDefeated.OnClientEvent:Connect(function(payload: unknown)
 		showVictoryCard(card, payload)
+	end)
+
+	local zenAchieved =
+		ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Mood"):WaitForChild("ZenAchieved")
+	assert(zenAchieved:IsA("RemoteEvent"), "ZenAchieved must be a RemoteEvent")
+	zenAchieved.OnClientEvent:Connect(function(payload: unknown)
+		onZenAchieved(card, payload)
 	end)
 end
 

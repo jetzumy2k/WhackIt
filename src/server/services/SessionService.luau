@@ -1,7 +1,9 @@
 --!strict
--- Per-player gameplay session: equipped hammer and score, shown through the
--- standard leaderstats folder. A session exists only once the player's saved
--- data has loaded (PlayerDataService), so nothing can be earned before then.
+-- Per-player gameplay session: score, coins and the equipped hammer. Score and
+-- coins are shown through the standard leaderstats folder. A session exists
+-- only once the player's saved data has loaded (PlayerDataService), so nothing
+-- can be earned, spent or equipped before then. Saved values live in the
+-- player's data; the IntValues only display them.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -11,13 +13,21 @@ local PlayerDataService = require(script.Parent.PlayerDataService)
 
 export type Session = {
 	Player: Player,
-	EquippedHammerId: string,
 	ScoreValue: IntValue,
+	CoinsValue: IntValue,
 }
 
 local SessionService = {}
 
 local sessions: { [Player]: Session } = {}
+
+local function statValue(name: string, value: number, parent: Instance): IntValue
+	local stat = Instance.new("IntValue")
+	stat.Name = name
+	stat.Value = value
+	stat.Parent = parent
+	return stat
+end
 
 local function createSession(player: Player, data: PlayerDataService.PlayerData): ()
 	if sessions[player] or player.Parent ~= Players then
@@ -26,18 +36,14 @@ local function createSession(player: Player, data: PlayerDataService.PlayerData)
 
 	local leaderstats = Instance.new("Folder")
 	leaderstats.Name = "leaderstats"
-
-	local scoreValue = Instance.new("IntValue")
-	scoreValue.Name = "Score"
-	scoreValue.Value = data.Score
-	scoreValue.Parent = leaderstats
-
+	local scoreValue = statValue("Score", data.Score, leaderstats)
+	local coinsValue = statValue("Coins", data.Coins, leaderstats)
 	leaderstats.Parent = player
 
 	sessions[player] = {
 		Player = player,
-		EquippedHammerId = data.EquippedHammerId,
 		ScoreValue = scoreValue,
+		CoinsValue = coinsValue,
 	}
 end
 
@@ -54,6 +60,38 @@ function SessionService.addScore(player: Player, amount: number): ()
 	end
 	data.Score += amount
 	session.ScoreValue.Value = data.Score
+end
+
+function SessionService.addCoins(player: Player, amount: number): ()
+	local session = sessions[player]
+	local data = PlayerDataService.get(player)
+	if session == nil or data == nil or amount <= 0 then
+		return
+	end
+	data.Coins += amount
+	session.CoinsValue.Value = data.Coins
+end
+
+-- Deducts coins only if the player has enough; never goes negative.
+function SessionService.trySpendCoins(player: Player, amount: number): boolean
+	local session = sessions[player]
+	local data = PlayerDataService.get(player)
+	if session == nil or data == nil or amount < 0 or data.Coins < amount then
+		return false
+	end
+	data.Coins -= amount
+	session.CoinsValue.Value = data.Coins
+	return true
+end
+
+-- Callers must check ownership first (ShopService).
+function SessionService.setEquippedHammer(player: Player, hammerId: string): ()
+	local session = sessions[player]
+	local data = PlayerDataService.get(player)
+	if session == nil or data == nil then
+		return
+	end
+	data.EquippedHammerId = hammerId
 end
 
 function SessionService.init(): ()
