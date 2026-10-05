@@ -14,9 +14,9 @@ local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local BossService = require(script.Parent.BossService)
+local BuffService = require(script.Parent.BuffService)
 local CombatRules = require(ReplicatedStorage.Shared.CombatRules)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
-local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
 local HammerTool = require(ServerScriptService.Lib.HammerTool)
 local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
 local RateLimiter = require(ReplicatedStorage.Shared.RateLimiter)
@@ -43,6 +43,8 @@ local REMOTE_NAME = "RequestHammerHit"
 local CombatService = {}
 
 local lastHitAt: { [Player]: number } = {}
+-- Server-side crit rolls; clients never decide crits.
+local critRandom = Random.new()
 
 -- Root position of a live character holding a hammer, or nil plus the reason.
 -- The equipped Tool only gates the swing; damage comes from EquippedHammerId.
@@ -128,7 +130,7 @@ local function onHammerHit(player: Player, rawBossInstanceId: unknown): ()
 		not ProgressionRules.isBossUnlocked(
 			live.State.Definition.Id,
 			data.BossDefeats,
-			LevelRules.levelFor(data.Score)
+			LevelRules.levelFor(data.Xp)
 		)
 	then
 		return explainDrop(player, live.State.Definition.Id .. " is locked for this player")
@@ -155,16 +157,14 @@ local function onHammerHit(player: Player, rawBossInstanceId: unknown): ()
 		)
 	end
 
-	local hammer = HammerConfig.ById[data.EquippedHammerId]
-	if hammer == nil then
+	local stats = BuffService.statsFor(player)
+	if stats == nil then
 		return RemoteController.reject(player, REMOTE_NAME, "no equipped hammer")
 	end
 
-	local result = BossService.applyHit(
-		live,
-		player.UserId,
-		CombatRules.computeHitDamage(hammer, live.State.Definition)
-	)
+	local damage, isCrit =
+		CombatRules.hitDamage(stats, live.State.Definition, critRandom:NextNumber())
+	local result = BossService.applyHit(live, player.UserId, damage)
 	if result == nil then
 		return
 	end
@@ -184,6 +184,7 @@ local function onHammerHit(player: Player, rawBossInstanceId: unknown): ()
 		MaxHealth = live.State.Definition.MaxHealth,
 		Damage = result.Applied,
 		HitterUserId = player.UserId,
+		Crit = isCrit,
 		Defeated = result.Defeated,
 	}
 	CombatRemotes.CombatFeedback:FireAllClients(feedback)

@@ -33,6 +33,38 @@ local function bossWith(multiplier: number): BossConfig.BossDefinition
 end
 
 return function()
+	describe("CombatRules.hitDamage", function()
+		it("does not crit when the roll is at or above the crit chance", function()
+			local stats = CombatRules.baseStats(10)
+			local damage, isCrit = CombatRules.hitDamage(stats, bossWith(1), stats.CritChance)
+			expect(damage).to.equal(10)
+			expect(isCrit).to.equal(false)
+		end)
+
+		it("crits below the crit chance and adds crit damage", function()
+			local stats = CombatRules.baseStats(10)
+			stats.CritDamage = 0.5
+			local damage, isCrit = CombatRules.hitDamage(stats, bossWith(1), 0)
+			expect(damage).to.equal(15)
+			expect(isCrit).to.equal(true)
+		end)
+
+		it("applies the flat bonus before the percent bonus and boss multiplier", function()
+			local stats = CombatRules.baseStats(10)
+			stats.FlatBonus = 10 -- Zen buff
+			stats.DamageBonus = 0.1 -- +10 % damage boost
+			local damage = CombatRules.hitDamage(stats, bossWith(2), 1)
+			expect(damage).to.equal(44) -- (10 + 10) x 1.1 x 2
+		end)
+
+		it("never crits with 0 crit chance", function()
+			local stats = CombatRules.baseStats(10)
+			stats.CritChance = 0
+			local _, isCrit = CombatRules.hitDamage(stats, bossWith(1), 0)
+			expect(isCrit).to.equal(false)
+		end)
+	end)
+
 	describe("CombatRules.computeHitDamage", function()
 		it("multiplies hammer damage by the boss multiplier", function()
 			expect(CombatRules.computeHitDamage(hammerWith(10), bossWith(2))).to.equal(20)

@@ -8,6 +8,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterGui = game:GetService("StarterGui")
+local Workspace = game:GetService("Workspace")
 local UserInputService = game:GetService("UserInputService")
 
 local Attributes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Attributes"))
@@ -29,6 +30,18 @@ local SAVED_SECONDS = 2
 local SHOUT_SECONDS = 4.5
 
 local localPlayer = Players.LocalPlayer
+local BUFF_ORDER = { "Xp", "Damage", "CritDamage" }
+local BUFF_LABELS: { [string]: string } = { Xp = "XP", Damage = "DMG", CritDamage = "CRIT DMG" }
+
+-- 3725 -> "1:02:05", 125 -> "2:05"
+local function formatTime(seconds: number): string
+	local total = math.max(0, math.floor(seconds))
+	local hours, minutes, secs = total // 3600, (total % 3600) // 60, total % 60
+	if hours > 0 then
+		return string.format("%d:%02d:%02d", hours, minutes, secs)
+	end
+	return string.format("%d:%02d", minutes, secs)
+end
 local victoryCardShownAt = 0
 local toastLabel: TextLabel? = nil
 local savedLabel: TextLabel? = nil
@@ -130,6 +143,60 @@ local function buildHud(): (ScreenGui, Frame)
 		ProgressController.Changed:Connect(refreshStats)
 		localPlayer:GetAttributeChangedSignal(Attributes.Level):Connect(refreshStats)
 		refreshStats()
+	end)
+
+	-- Active buffs with time left, under the score line.
+	local buffsLabel = makeLabel("Buffs", gui)
+	buffsLabel.AnchorPoint = Vector2.new(0.5, 0)
+	buffsLabel.Position = UDim2.new(0.5, 0, 0, 76)
+	buffsLabel.Size = UDim2.new(0.7, 0, 0, 22)
+	buffsLabel.TextColor3 = Color3.fromRGB(150, 230, 255)
+	buffsLabel.Text = ""
+	task.spawn(function()
+		local receivedAt = os.clock()
+		local lastSnapshot = ProgressController.get()
+		ProgressController.Changed:Connect(function()
+			lastSnapshot = ProgressController.get()
+			receivedAt = os.clock()
+		end)
+		while gui.Parent ~= nil do
+			local parts: { string } = {}
+			local zenEnds = localPlayer:GetAttribute(Attributes.ZenBuffEnds)
+			if typeof(zenEnds) == "number" then
+				local left = zenEnds - Workspace:GetServerTimeNow()
+				if left > 0 then
+					table.insert(
+						parts,
+						string.format(
+							"ZEN +%d dmg +%d%% crit %s",
+							GameConfig.ZenBuffFlatDamage,
+							GameConfig.ZenBuffCritChance * 100,
+							formatTime(left)
+						)
+					)
+				end
+			end
+			if lastSnapshot then
+				-- Buffs only count down while playing, so local elapsed time matches the server.
+				local elapsed = os.clock() - receivedAt
+				for _, kind in BUFF_ORDER do
+					local buff = lastSnapshot.Buffs[kind]
+					if buff and buff.SecondsLeft - elapsed > 0 then
+						table.insert(
+							parts,
+							string.format(
+								"%s +%d%% %s",
+								BUFF_LABELS[kind],
+								buff.Percent,
+								formatTime(buff.SecondsLeft - elapsed)
+							)
+						)
+					end
+				end
+			end
+			buffsLabel.Text = table.concat(parts, "   |   ")
+			task.wait(1)
+		end
 	end)
 
 	-- How to play, bottom centre.

@@ -15,7 +15,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BossConfig = require(ReplicatedStorage.Config.BossConfig)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
+local HammerRules = require(ReplicatedStorage.Shared.HammerRules)
 local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
+local StoreConfig = require(ReplicatedStorage.Config.StoreConfig)
 
 export type PlayerData = {
 	SchemaVersion: number,
@@ -31,6 +33,12 @@ export type PlayerData = {
 	-- v3
 	ZenLevel: number, -- times the player reached Zen (0 stress); boosts boss coins
 	ZenArmed: boolean, -- next Zen pays out; re-armed when stress climbs back up
+	-- v4
+	Xp: number, -- drives Player Level; boosted by XP buffs (Score stays unboosted)
+	Buffs: { [string]: { Percent: number, SecondsLeft: number } }, -- "Xp" | "Damage" | "CritDamage"
+	ProcessedPurchases: { string }, -- recent Robux PurchaseIds, so a receipt is granted once
+	MysteryHammers: { [string]: { Damage: number, CritDamagePercent: number } }, -- "mystery_<n>"
+	NextMysteryNumber: number,
 }
 
 -- Raw saved table before validation.
@@ -41,7 +49,7 @@ export type Migration = (data: RawData) -> ()
 
 local PlayerDataSchema = {}
 
-PlayerDataSchema.CURRENT_VERSION = 3
+PlayerDataSchema.CURRENT_VERSION = 4
 
 -- Upper bound for counters; far beyond legitimate play, small enough to stay
 -- an exact integer and to keep leaderboard values sane.
@@ -69,7 +77,22 @@ PlayerDataSchema.MIGRATIONS = table.freeze({
 		data.ZenLevel = 0
 		data.ZenArmed = true
 	end,
+	[4] = function(data: RawData)
+		-- v3 -> v4: store. Level now comes from XP; everyone keeps their level
+		-- because XP starts equal to their lifetime Score.
+		local score = data.Score
+		data.Xp = if typeof(score) == "number" then score else 0
+		data.Buffs = {}
+		data.ProcessedPurchases = {}
+		data.MysteryHammers = {}
+		data.NextMysteryNumber = 1
+	end,
 }) :: { [number]: Migration }
+
+-- Most recent purchase ids remembered for duplicate-receipt protection. Roblox
+-- retries an unacknowledged receipt soon after, so a bounded history is enough.
+PlayerDataSchema.MAX_PROCESSED_PURCHASES = 200
+local BUFF_KINDS = { "Xp", "Damage", "CritDamage" }
 
 function PlayerDataSchema.template(): PlayerData
 	return {
@@ -84,6 +107,11 @@ function PlayerDataSchema.template(): PlayerData
 		BossDefeats = {},
 		ZenLevel = 0,
 		ZenArmed = true,
+		Xp = 0,
+		Buffs = {},
+		ProcessedPurchases = {},
+		MysteryHammers = {},
+		NextMysteryNumber = 1,
 	}
 end
 
@@ -172,9 +200,78 @@ function PlayerDataSchema.sanitize(data: RawData): ()
 		data.ZenArmed = defaults.ZenArmed
 	end
 
+	data.Xp = counter(data.Xp, defaults.Xp)
+	data.NextMysteryNumber =
+		math.max(1, counter(data.NextMysteryNumber, defaults.NextMysteryNumber))
+
+	-- Buffs: known kinds only; percent and time clamped to sane ranges.
+	local buffs: { [string]: { Percent: number, SecondsLeft: number } } = {}
+	local rawBuffs = data.Buffs
+	if typeof(rawBuffs) == "table" then
+		for _, kind in BUFF_KINDS do
+			local entry = (rawBuffs :: { [string]: unknown })[kind]
+			if typeof(entry) == "table" then
+				local raw = entry :: { [string]: unknown }
+				local percent, seconds = raw.Percent, raw.SecondsLeft
+				if
+					isFiniteNumber(percent)
+					and isFiniteNumber(seconds)
+					and (seconds :: number) > 0
+				then
+					buffs[kind] = {
+						Percent = math.clamp(percent :: number, 0, 100),
+						SecondsLeft = math.min(seconds :: number, StoreConfig.MaxBuffSeconds),
+					}
+				end
+			end
+		end
+	end
+	data.Buffs = buffs
+
+	-- Purchase history: strings only, newest last, bounded.
+	local purchases: { string } = {}
+	local rawPurchases = data.ProcessedPurchases
+	if typeof(rawPurchases) == "table" then
+		for _, id in rawPurchases :: { unknown } do
+			if typeof(id) == "string" and #id > 0 and #id <= 128 then
+				table.insert(purchases, id)
+			end
+		end
+	end
+	while #purchases > PlayerDataSchema.MAX_PROCESSED_PURCHASES do
+		table.remove(purchases, 1)
+	end
+	data.ProcessedPurchases = purchases
+
+	-- Mystery Hammers were paid for: keep every valid id, clamping odd stats
+	-- back into range rather than deleting a purchase.
+	local mystery: { [string]: { Damage: number, CritDamagePercent: number } } = {}
+	local rawMystery = data.MysteryHammers
+	if typeof(rawMystery) == "table" then
+		for hammerId, entry in rawMystery :: { [unknown]: unknown } do
+			if
+				typeof(hammerId) == "string"
+				and HammerRules.isMysteryId(hammerId)
+				and typeof(entry) == "table"
+			then
+				local raw = entry :: { [string]: unknown }
+				local damage, crit = raw.Damage, raw.CritDamagePercent
+				if isFiniteNumber(damage) and isFiniteNumber(crit) then
+					mystery[hammerId] = HammerRules.clampRoll({
+						Damage = damage :: number,
+						CritDamagePercent = crit :: number,
+					})
+				end
+			end
+		end
+	end
+	data.MysteryHammers = mystery
+
 	-- Must be a hammer the player actually owns.
 	local hammerId = data.EquippedHammerId
-	if typeof(hammerId) ~= "string" or not ProgressionRules.ownsHammer(hammerId, owned) then
+	local ownsIt = typeof(hammerId) == "string"
+		and (ProgressionRules.ownsHammer(hammerId, owned) or mystery[hammerId] ~= nil)
+	if not ownsIt then
 		data.EquippedHammerId = defaults.EquippedHammerId
 	end
 end

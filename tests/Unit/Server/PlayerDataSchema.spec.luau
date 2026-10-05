@@ -7,6 +7,7 @@ local BossConfig = require(ReplicatedStorage.Config.BossConfig)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
 local PlayerDataSchema = require(ServerScriptService.Lib.PlayerDataSchema)
+local StoreConfig = require(ReplicatedStorage.Config.StoreConfig)
 
 local NAN = 0 / 0
 
@@ -23,6 +24,11 @@ local function validData(): PlayerDataSchema.RawData
 		BossDefeats = { [BossConfig.List[1].Id] = 7 },
 		ZenLevel = 2,
 		ZenArmed = false,
+		Xp = 1500,
+		Buffs = { Xp = { Percent = 10, SecondsLeft = 600 } },
+		ProcessedPurchases = { "receipt-1" },
+		MysteryHammers = { mystery_1 = { Damage = 30, CritDamagePercent = 7 } },
+		NextMysteryNumber = 2,
 	}
 end
 
@@ -155,7 +161,7 @@ return function()
 			expect(#order).to.equal(2)
 			expect(order[1]).to.equal(2)
 			expect(order[2]).to.equal(3)
-			expect(data.SchemaVersion).to.equal(3)
+			expect(data.SchemaVersion).to.equal(PlayerDataSchema.CURRENT_VERSION)
 		end)
 
 		it("is a no-op for data already at the target version", function()
@@ -268,7 +274,7 @@ return function()
 				BossDefeats = {},
 			}
 			expect((PlayerDataSchema.prepare(data))).to.equal(true)
-			expect(data.SchemaVersion).to.equal(3)
+			expect(data.SchemaVersion).to.equal(PlayerDataSchema.CURRENT_VERSION)
 			expect(data.ZenLevel).to.equal(0)
 			expect(data.ZenArmed).to.equal(true)
 		end)
@@ -287,6 +293,99 @@ return function()
 			PlayerDataSchema.prepare(data)
 			expect(data.ZenLevel).to.equal(0)
 			expect(data.ZenArmed).to.equal(true)
+		end)
+	end)
+	describe("PlayerDataSchema v4 (XP, buffs, purchases, Mystery Hammers)", function()
+		it("migrates v3 data: XP starts at the old Score, nothing bought", function()
+			local data: PlayerDataSchema.RawData = {
+				SchemaVersion = 3,
+				Score = 4200,
+				Stress = 40,
+				TotalHits = 1,
+				TotalBossesDefeated = 0,
+				EquippedHammerId = GameConfig.DefaultHammerId,
+				Coins = 5,
+				OwnedHammers = {},
+				BossDefeats = {},
+				ZenLevel = 1,
+				ZenArmed = true,
+			}
+			expect((PlayerDataSchema.prepare(data))).to.equal(true)
+			expect(data.Xp).to.equal(4200)
+			expect((next(data.Buffs :: {}))).to.equal(nil)
+			expect(#(data.ProcessedPurchases :: {})).to.equal(0)
+			expect((next(data.MysteryHammers :: {}))).to.equal(nil)
+			expect(data.NextMysteryNumber).to.equal(1)
+		end)
+
+		it("keeps valid buffs, purchases and Mystery Hammers", function()
+			local data = validData()
+			PlayerDataSchema.prepare(data)
+			local buffs = data.Buffs :: { [string]: { Percent: number, SecondsLeft: number } }
+			expect(buffs.Xp.Percent).to.equal(10)
+			expect(buffs.Xp.SecondsLeft).to.equal(600)
+			expect((data.ProcessedPurchases :: { string })[1]).to.equal("receipt-1")
+			local mystery = data.MysteryHammers :: { [string]: { Damage: number } }
+			expect(mystery.mystery_1.Damage).to.equal(30)
+		end)
+
+		it("drops unknown buff kinds and clamps buff values", function()
+			local data = validData()
+			data.Buffs = {
+				Xp = { Percent = 500, SecondsLeft = 1e12 },
+				Damage = { Percent = 5, SecondsLeft = -1 },
+				Godmode = { Percent = 100, SecondsLeft = 60 },
+			}
+			PlayerDataSchema.prepare(data)
+			local buffs = data.Buffs :: { [string]: { Percent: number, SecondsLeft: number } }
+			expect(buffs.Xp.Percent).to.equal(100)
+			expect(buffs.Xp.SecondsLeft).to.equal(StoreConfig.MaxBuffSeconds)
+			expect(buffs.Damage).to.equal(nil)
+			expect(buffs.Godmode).to.equal(nil)
+		end)
+
+		it(
+			"keeps only string purchase ids, at most MAX_PROCESSED_PURCHASES, newest kept",
+			function()
+				local data = validData()
+				local ids: { unknown } = { 42, "" }
+				for index = 1, PlayerDataSchema.MAX_PROCESSED_PURCHASES + 5 do
+					table.insert(ids, "r" .. index)
+				end
+				data.ProcessedPurchases = ids
+				PlayerDataSchema.prepare(data)
+				local kept = data.ProcessedPurchases :: { string }
+				expect(#kept).to.equal(PlayerDataSchema.MAX_PROCESSED_PURCHASES)
+				expect(kept[#kept]).to.equal("r" .. (PlayerDataSchema.MAX_PROCESSED_PURCHASES + 5))
+			end
+		)
+
+		it("clamps a paid Mystery Hammer's stats instead of deleting it", function()
+			local data = validData()
+			data.MysteryHammers = {
+				mystery_1 = { Damage = 9999, CritDamagePercent = 1 },
+				not_mystery = { Damage = 30, CritDamagePercent = 7 },
+			}
+			PlayerDataSchema.prepare(data)
+			local mystery =
+				data.MysteryHammers :: { [string]: { Damage: number, CritDamagePercent: number } }
+			expect(mystery.mystery_1.Damage).to.equal(StoreConfig.Mystery.DamageMax)
+			expect(mystery.mystery_1.CritDamagePercent).to.equal(
+				StoreConfig.Mystery.CritDamageMinPercent
+			)
+			expect(mystery.not_mystery).to.equal(nil)
+		end)
+
+		it("lets a player keep an owned Mystery Hammer equipped, but not an unowned one", function()
+			local owned = validData()
+			owned.EquippedHammerId = "mystery_1"
+			PlayerDataSchema.prepare(owned)
+			expect(owned.EquippedHammerId).to.equal("mystery_1")
+
+			local unowned = validData()
+			unowned.EquippedHammerId = "mystery_99"
+			PlayerDataSchema.prepare(unowned)
+			expect(unowned.EquippedHammerId).to.equal(GameConfig.DefaultHammerId)
 		end)
 	end)
 end

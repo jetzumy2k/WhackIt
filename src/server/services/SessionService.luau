@@ -47,7 +47,7 @@ local function createSession(player: Player, data: PlayerDataService.PlayerData)
 		ScoreValue = scoreValue,
 		CoinsValue = coinsValue,
 	}
-	player:SetAttribute(Attributes.Level, LevelRules.levelFor(data.Score))
+	player:SetAttribute(Attributes.Level, LevelRules.levelFor(data.Xp))
 end
 
 function SessionService.get(player: Player): Session?
@@ -63,7 +63,16 @@ function SessionService.addScore(player: Player, amount: number): ()
 	end
 	data.Score += amount
 	session.ScoreValue.Value = data.Score
-	player:SetAttribute(Attributes.Level, LevelRules.levelFor(data.Score))
+end
+
+-- Adds XP (which drives Player Level) and refreshes the Level attribute.
+function SessionService.addXp(player: Player, amount: number): ()
+	local data = PlayerDataService.get(player)
+	if sessions[player] == nil or data == nil or amount <= 0 then
+		return
+	end
+	data.Xp += math.floor(amount + 0.5)
+	player:SetAttribute(Attributes.Level, LevelRules.levelFor(data.Xp))
 end
 
 function SessionService.addCoins(player: Player, amount: number): ()

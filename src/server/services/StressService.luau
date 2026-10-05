@@ -15,6 +15,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Attributes = require(ReplicatedStorage.Shared.Attributes)
+local BuffService = require(script.Parent.BuffService)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressService = require(script.Parent.ProgressService)
@@ -39,6 +40,7 @@ local function celebrateZen(player: Player, data: PlayerDataService.PlayerData):
 	data.ZenArmed = false
 	data.ZenLevel += 1
 	SessionService.addCoins(player, GameConfig.ZenBonusCoins)
+	BuffService.grantZenBuff(player)
 	ProgressService.sync(player)
 
 	local payload: Types.ZenAchieved = {

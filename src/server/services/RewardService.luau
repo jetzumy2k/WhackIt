@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local BossState = require(ServerScriptService.Lib.BossState)
+local BuffService = require(script.Parent.BuffService)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
 local PlayerDataService = require(script.Parent.PlayerDataService)
@@ -67,9 +68,11 @@ function RewardService.grantDefeat(player: Player, state: BossState.BossState): 
 	-- Captured before anything changes: both the defeat count and a level-up
 	-- from the added score can unlock bosses.
 	local unlockedBefore =
-		asSet(ProgressionRules.unlockedBossIds(data.BossDefeats, LevelRules.levelFor(data.Score)))
+		asSet(ProgressionRules.unlockedBossIds(data.BossDefeats, LevelRules.levelFor(data.Xp)))
 
 	SessionService.addScore(player, reward.Score)
+	-- XP follows score, boosted by any XP buff (Score itself stays unboosted).
+	SessionService.addXp(player, reward.Score * BuffService.xpMultiplier(player))
 	SessionService.addCoins(player, reward.Coins)
 
 	local stressRelieved = 0
@@ -82,7 +85,7 @@ function RewardService.grantDefeat(player: Player, state: BossState.BossState): 
 
 	local newlyUnlocked: { string } = {}
 	for _, bossId in
-		ProgressionRules.unlockedBossIds(data.BossDefeats, LevelRules.levelFor(data.Score))
+		ProgressionRules.unlockedBossIds(data.BossDefeats, LevelRules.levelFor(data.Xp))
 	do
 		if not unlockedBefore[bossId] then
 			table.insert(newlyUnlocked, bossId)

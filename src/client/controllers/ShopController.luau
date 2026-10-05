@@ -10,6 +10,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local HammerConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("HammerConfig"))
+local StoreConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("StoreConfig"))
 local ProgressController = require(script.Parent.ProgressController)
 
 local ShopController = {}
@@ -27,6 +28,8 @@ local localPlayer = Players.LocalPlayer
 
 type Row = {
 	Hammer: HammerConfig.HammerDefinition,
+	IsMystery: boolean, -- a Robux Mystery Hammer (always owned, rolled stats)
+	CritPercent: number,
 	Status: TextLabel,
 	Button: TextButton,
 }
@@ -91,17 +94,19 @@ local function buildRow(hammer: HammerConfig.HammerDefinition, order: number, li
 	action.Position = UDim2.new(1, -10, 0.5, 0)
 	action.Size = UDim2.new(0.35, 0, 0, MIN_TOUCH_SIZE)
 
-	return { Hammer = hammer, Status = status, Button = action }
+	return { Hammer = hammer, IsMystery = false, CritPercent = 0, Status = status, Button = action }
 end
 
 local function refreshRow(row: Row): ()
 	local snapshot = ProgressController.get()
 	local hammer = row.Hammer
-	local owned = ProgressController.ownsHammer(hammer.Id)
+	local owned = row.IsMystery or ProgressController.ownsHammer(hammer.Id)
 	local equipped = snapshot ~= nil and snapshot.EquippedHammerId == hammer.Id
 	local coins = if snapshot then snapshot.Coins else 0
 
-	row.Status.Text = string.format("Damage %d   %s", hammer.Damage, hammer.Description)
+	row.Status.Text = if row.IsMystery
+		then string.format("Damage %d   +%d%% crit damage", hammer.Damage, row.CritPercent)
+		else string.format("Damage %d   %s", hammer.Damage, hammer.Description)
 	if equipped then
 		row.Button.Text = "Equipped"
 		row.Button.BackgroundColor3 = DISABLED_COLOR
@@ -199,7 +204,41 @@ function ShopController.start(): ()
 		end)
 	end
 
+	-- Mystery Hammers appear as they are bought, each with its rolled stats.
+	local mysteryRows: { [string]: boolean } = {}
+	local function addMysteryRows(): ()
+		local snapshot = ProgressController.get()
+		if snapshot == nil then
+			return
+		end
+		for _, owned in snapshot.MysteryHammers do
+			if mysteryRows[owned.Id] then
+				continue
+			end
+			mysteryRows[owned.Id] = true
+			local look: HammerConfig.HammerDefinition = {
+				Id = owned.Id,
+				DisplayName = StoreConfig.Mystery.DisplayName,
+				Description = "",
+				Damage = owned.Damage,
+				Price = 0,
+				HeadColor = StoreConfig.Mystery.HeadColor,
+				HandleColor = StoreConfig.Mystery.HandleColor,
+			}
+			local row = buildRow(look, 100 + #rows, list)
+			row.IsMystery = true
+			row.CritPercent = owned.CritDamagePercent
+			table.insert(rows, row)
+			row.Button.Activated:Connect(function()
+				if row.Button.Active then
+					equipRemote:FireServer(owned.Id)
+				end
+			end)
+		end
+	end
+
 	local function refresh(): ()
+		addMysteryRows()
 		for _, row in rows do
 			refreshRow(row)
 		end

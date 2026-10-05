@@ -15,6 +15,22 @@ local SyncRemote = ReplicatedStorage.Remotes.Profile.Sync
 
 local ProgressService = {}
 
+local function mysteryList(
+	data: PlayerDataService.PlayerData
+): { { Id: string, Damage: number, CritDamagePercent: number } }
+	local list = {}
+	for hammerId, roll in data.MysteryHammers do
+		table.insert(
+			list,
+			{ Id = hammerId, Damage = roll.Damage, CritDamagePercent = roll.CritDamagePercent }
+		)
+	end
+	table.sort(list, function(a, b)
+		return a.Id < b.Id
+	end)
+	return list
+end
+
 function ProgressService.snapshot(data: PlayerDataService.PlayerData): Types.ProfileSnapshot
 	local ownedIds: { string } = {}
 	for _, hammer in HammerConfig.List do
@@ -29,10 +45,13 @@ function ProgressService.snapshot(data: PlayerDataService.PlayerData): Types.Pro
 		BossDefeats = table.clone(data.BossDefeats),
 		UnlockedBossIds = ProgressionRules.unlockedBossIds(
 			data.BossDefeats,
-			LevelRules.levelFor(data.Score)
+			LevelRules.levelFor(data.Xp)
 		),
 		ZenLevel = data.ZenLevel,
-		Level = LevelRules.levelFor(data.Score),
+		Level = LevelRules.levelFor(data.Xp),
+		Xp = data.Xp,
+		Buffs = table.clone(data.Buffs),
+		MysteryHammers = mysteryList(data),
 	}
 end
 

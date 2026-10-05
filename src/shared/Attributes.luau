@@ -14,7 +14,8 @@ return table.freeze({
 
 	-- On each Player
 	Stress = "Stress",
-	Level = "Level", -- Player Level, derived from lifetime score
+	Level = "Level", -- Player Level, derived from XP
+	ZenBuffEnds = "ZenBuffEnds", -- workspace:GetServerTimeNow() when the Zen buff ends (0 = none)
 
 	-- On each hammer Tool (server-created); marks it as a hammer
 	HammerId = "HammerId",

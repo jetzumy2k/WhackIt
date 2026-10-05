@@ -32,6 +32,7 @@ type Feedback = {
 	Damage: number,
 	HitterUserId: number,
 	Defeated: boolean,
+	Crit: boolean,
 }
 
 -- Server messages are still checked before use: a malformed payload must not
@@ -51,7 +52,13 @@ local function parse(payload: unknown): Feedback?
 	then
 		return nil
 	end
-	return { BossInstanceId = id, Damage = damage, HitterUserId = hitter, Defeated = defeated }
+	return {
+		BossInstanceId = id,
+		Damage = damage,
+		HitterUserId = hitter,
+		Defeated = defeated,
+		Crit = data.Crit == true,
+	}
 end
 
 local function flash(model: Model): ()
@@ -68,13 +75,14 @@ local function showDamageNumber(
 	body: BasePart,
 	damage: number,
 	isOwnHit: boolean,
+	isCrit: boolean,
 	parent: Instance
 ): ()
 	local billboard = Instance.new("BillboardGui")
 	billboard.ResetOnSpawn = false
 	billboard.Adornee = body
 	billboard.AlwaysOnTop = true
-	billboard.Size = UDim2.fromOffset(80, 40)
+	billboard.Size = if isCrit then UDim2.fromOffset(150, 60) else UDim2.fromOffset(80, 40)
 	local startOffset = Vector3.new(random:NextNumber(-1.5, 1.5), body.Size.Y / 2, 0)
 	billboard.StudsOffset = startOffset
 
@@ -83,10 +91,11 @@ local function showDamageNumber(
 	label.Size = UDim2.fromScale(1, 1)
 	label.Font = Enum.Font.FredokaOne
 	label.TextScaled = true
-	label.Text = "-" .. damage
-	-- Own hits stand out; teammates' hits are softer so the screen stays readable.
-	label.TextColor3 = if isOwnHit
-		then Color3.fromRGB(255, 230, 80)
+	label.Text = if isCrit then "CRIT! -" .. damage else "-" .. damage
+	-- Crits are big and orange; own hits stand out; teammates' hits are softer.
+	label.TextColor3 = if isCrit
+		then Color3.fromRGB(255, 140, 40)
+		elseif isOwnHit then Color3.fromRGB(255, 230, 80)
 		else Color3.fromRGB(230, 230, 230)
 	label.TextStrokeTransparency = 0.4
 	label.Parent = billboard
@@ -166,7 +175,7 @@ function FeedbackController.start(): ()
 		if visual and visual:IsA("Model") then
 			flash(visual)
 		end
-		showDamageNumber(body, feedback.Damage, isOwnHit, effects)
+		showDamageNumber(body, feedback.Damage, isOwnHit, feedback.Crit, effects)
 		impactBurst(body)
 		if isOwnHit then
 			shakeCamera()
