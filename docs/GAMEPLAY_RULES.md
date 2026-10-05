@@ -28,7 +28,7 @@ Production Bug 15, Monday 20).
 A hit request is applied only if all of these hold (`CombatService`; details in `docs/REMOTE_CONTRACTS.md`):
 - the player has a live character holding their hammer;
 - the target boss exists and is not defeated;
-- the player's root is within `GameConfig.HitReach` (12 studs) of the boss centre;
+- the player's root is within `GameConfig.HitReach` (9 studs, about as far as the swung hammer visibly reaches) of the boss centre;
 - at least `HitCooldown − HitCooldownGrace` (0.45 − 0.05 s) since the player's last accepted hit. One hammer swing lasts exactly `HitCooldown`, and the client sends one request per swing at the moment of impact; the grace only absorbs network jitter.
 
 ## Shared-boss rules (confirmed 2026-10-05)

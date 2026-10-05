@@ -39,6 +39,20 @@ return function()
 			tool:Destroy()
 		end)
 
+		it("puts the head at the opposite end of the handle from the hand", function()
+			local tool = buildDefault()
+			local handle = tool:FindFirstChild("Handle") :: BasePart
+			local head = tool:FindFirstChild("Head") :: BasePart
+			-- Tool.Grip's position is where the hand holds the handle, in handle space.
+			local gripZ = tool.Grip.Position.Z
+			local headZ = handle.CFrame:PointToObjectSpace(head.Position).Z
+			-- Opposite signs: the head is past the fist, not back along the forearm.
+			expect(gripZ * headZ < 0).to.equal(true)
+			-- The hand sits on the handle end facing up the arm (+Z, see HammerTool).
+			expect(gripZ > 0).to.equal(true)
+			tool:Destroy()
+		end)
+
 		it("can't push players or trigger touches with its parts", function()
 			local tool = buildDefault()
 			for _, descendant in tool:GetDescendants() do
