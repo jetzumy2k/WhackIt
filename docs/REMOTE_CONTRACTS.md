@@ -51,10 +51,18 @@ so clients can't read them.
 | | |
 |---|---|
 | Purpose | Victory Card for each player who damaged the defeated boss. |
-| Payload | `Types.BossDefeated`: `{ BossInstanceId, BossId, Rewarded, ScoreAwarded, CoinsAwarded, StressRelieved, UnlockedBossIds }` |
+| Payload | `Types.BossDefeated`: `{ BossInstanceId, BossId, Rewarded, ScoreAwarded, CoinsAwarded, StressRelieved, UnlockedBossIds, SharePercent, LastHit }`. `Rewarded` means the player qualified (≥ 10 %); every contributor gets score/coins |
 | Recipients | every contributor still in the server, once per defeat |
 | Rewards | granted by `RewardService` **before** sending, only to players whose contribution ≥ `MinRewardDamageShare × MaxHealth`: `ScoreReward`, `CoinReward`, `DefeatStressRelief`, and +1 to that boss's defeat count (which can unlock the next boss, listed in `UnlockedBossIds`). Granted at most once per player per boss life (`BossState.markRewarded`). Non-qualifiers get `Rewarded = false`. |
 | Client handling | display only |
+
+## `Mood.ZenAchieved`: server -> all clients
+| | |
+|---|---|
+| Purpose | Announce a Zen moment (a player's stress reached 0 while armed) |
+| Payload | `Types.ZenAchieved`: `{ UserId, DisplayName, ZenLevel, BonusCoins }` |
+| When | inside `StressService.relieve`, after the bonus coins and Zen Level are granted on the server |
+| Client handling | display only: your own Zen → big card; anyone else's → toast |
 
 ## `Shop.BuyHammer`: client -> server
 | | |
@@ -80,7 +88,7 @@ so clients can't read them.
 | | |
 |---|---|
 | Purpose | The player's own progression for the UI (HUD, shop, locked bosses) |
-| Payload | `Types.ProfileSnapshot`: `{ Coins, OwnedHammerIds, EquippedHammerId, BossDefeats, UnlockedBossIds }` |
+| Payload | `Types.ProfileSnapshot`: `{ Coins, OwnedHammerIds, EquippedHammerId, BossDefeats, UnlockedBossIds, ZenLevel }` |
 | When | on data load, after every reward, purchase and equip request |
 | Client handling | display only; parsed defensively (`ProgressController`) |
 
@@ -93,7 +101,7 @@ Names live in `Shared/Attributes`. Only the server writes them; clients read the
 |---|---|---|
 | Boss `Model` under `Workspace.Bosses` | `BossInstanceId`, `BossId`, `Health`, `MaxHealth`, `Defeated` | live boss state for HP bars, target selection and the client-drawn monster's hit/defeat animations |
 | Hammer `Tool` (server-created, in the character) | `HammerId` | marks the Tool as a hammer for the server's hand check |
-| `Player` | `Stress` | the player's Stress Meter |
+| `Player` | `Stress` | the player's Stress Meter (also drives the server-drawn mood face and hammer glow) |
 | `Player.leaderstats.Score`, `.Coins` (IntValue) | | lifetime score and coins (saved values, mirrored for display) |
 
 ## Known limitation

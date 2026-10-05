@@ -68,3 +68,17 @@ works but nothing is kept between Play sessions.
 | 30 | Stop and Play again (API access on) | Coins, bought hammers, equipped hammer and unlocked bosses are all kept |
 | 31 | Rapid double-click Buy | Bought once; coins deducted once |
 | 32 | Command bar: `game.ReplicatedStorage.Remotes.Shop.BuyHammer:FireServer("rainbow_mega_mallet")` without enough coins | Nothing bought; no error |
+
+## Phase 4b: mood, Zen and reward split
+| # | Check | Expected |
+|---|---|---|
+| 33 | Spawn at 100 stress | Your character has a frowning face with angry brows and a sweat drop |
+| 34 | Hit bosses until stress ≤ 75, ≤ 50, ≤ 25 | Face changes: frown without sweat → flat mouth → smile |
+| 35 | Bring stress to 0 | "ZEN ACHIEVED! +100 coins Zen Level 1" card; happy closed-eyes face with blush; hammer glows and sparkles; HUD shows `Zen Lv 1`, coins +100 |
+| 36 | Keep hitting at 0 | Stays Zen, hammer keeps glowing; no second Zen reward |
+| 37 | Stop hitting for 3 minutes | Stress rises by 5 every 10 s; the glow stops as soon as stress is above 0; the face changes with the bands |
+| 38 | Let stress rise to only ~20, then bring it back to 0 | No Zen reward this time (not re-armed); let it reach 50+ and back to 0 → Zen pays again |
+| 39 | Two players, A deals ~70 %, B ~30 % and lands the last hit | Each Victory Card shows "your share" %; A's score/coins ≈ 70 % of the boss reward, B's ≈ 30 % + "LAST HIT BONUS!" |
+| 40 | A player deals under 10 % | Gets a small score/coin share but "Deal at least 10% of its HP to count the defeat."; no unlock progress |
+| 41 | Second client watching | Sees the other player's face and hammer glow change, and a toast when they reach Zen |
+

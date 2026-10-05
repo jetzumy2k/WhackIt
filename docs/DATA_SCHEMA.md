@@ -13,10 +13,10 @@ validation live in `src/server/lib/PlayerDataSchema.luau`; storage settings in
 | Session locking | ProfileStore | One server owns a profile at a time, so progress can't be duplicated by joining two servers |
 | Auto-save | ProfileStore | Periodic, plus on leave (`EndSession`) and server shutdown |
 
-## Schema v2 (current)
+## Schema v3 (current)
 ```lua
 type PlayerData = {
-    SchemaVersion: number,        -- 2
+    SchemaVersion: number,        -- 3
     Score: number,                -- lifetime score (integer, 0..2^50); shown in leaderstats
     Stress: number,               -- Stress Meter, 0..GameConfig.MaxStress, carries over between sessions
     TotalHits: number,            -- accepted hammer hits (integer, 0..2^50)
@@ -26,6 +26,9 @@ type PlayerData = {
     Coins: number,                -- spendable currency (integer, 0..2^50); never lowers Score
     OwnedHammers: {[string]: true}, -- bought hammers by id; free (Price 0) hammers are always owned
     BossDefeats: {[string]: number}, -- rewarded defeats per boss id; drives boss unlocks
+    -- v3
+    ZenLevel: number,             -- times the player reached Zen (integer, 0..2^50); boosts boss coins
+    ZenArmed: boolean,            -- next Zen pays out; re-armed once stress climbs back to ZenRearmStress
 }
 ```
 New players start from `PlayerDataSchema.template()`: `StartingScore`, `StartingStress`, `StartingCoins`,
@@ -36,10 +39,11 @@ zero counters, `DefaultHammerId`, nothing bought, no defeats.
 |---|---|
 | v1 | First versioned schema (data without `SchemaVersion` counts as v0) |
 | v2 | `Coins = 0`, `OwnedHammers = {}`, `BossDefeats = { deadline_boss = TotalBossesDefeated }` (only the Deadline Boss existed in v1, so unlock progress carries over) |
+| v3 | `ZenLevel = 0`, `ZenArmed = true` |
 
 Who writes what (server only): `SessionService.addScore` → `Score`; `SessionService.addCoins` /
 `trySpendCoins` → `Coins`; `SessionService.setEquippedHammer` → `EquippedHammerId`; `StressService.relieve`
-→ `Stress`; `CombatService` → `TotalHits`; `RewardService` → `TotalBossesDefeated`, `BossDefeats`;
+→ `Stress`, `ZenLevel`, `ZenArmed` (Zen and idle regen); `CombatService` → `TotalHits`; `RewardService` → `TotalBossesDefeated`, `BossDefeats`;
 `ShopService` → `OwnedHammers`.
 
 ## Load rules (`PlayerDataService`)

@@ -21,6 +21,7 @@ export type BossState = {
 	Contributions: { [number]: number },
 	-- UserIds already rewarded for this boss life (rewards are granted once).
 	Rewarded: { [number]: boolean },
+	LastHitterUserId: number?, -- who landed the defeating hit
 }
 
 export type HitResult = {
@@ -39,6 +40,7 @@ function BossState.new(definition: BossConfig.BossDefinition, instanceId: string
 		Defeated = false,
 		Contributions = {},
 		Rewarded = {},
+		LastHitterUserId = nil,
 	}
 end
 
@@ -55,6 +57,7 @@ function BossState.applyDamage(state: BossState, userId: number, damage: number)
 	local defeatedNow = state.Health <= 0
 	if defeatedNow then
 		state.Defeated = true
+		state.LastHitterUserId = userId
 	end
 
 	return {

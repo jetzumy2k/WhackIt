@@ -38,12 +38,14 @@ local function parse(payload: unknown): Types.ProfileSnapshot?
 	local data = payload :: { [string]: unknown }
 	local owned = stringList(data.OwnedHammerIds)
 	local unlocked = stringList(data.UnlockedBossIds)
-	local coins, equipped, rawDefeats = data.Coins, data.EquippedHammerId, data.BossDefeats
+	local coins, equipped, rawDefeats, zenLevel =
+		data.Coins, data.EquippedHammerId, data.BossDefeats, data.ZenLevel
 	if
 		owned == nil
 		or unlocked == nil
 		or typeof(coins) ~= "number"
 		or typeof(equipped) ~= "string"
+		or typeof(zenLevel) ~= "number"
 	then
 		return nil
 	end
@@ -63,6 +65,7 @@ local function parse(payload: unknown): Types.ProfileSnapshot?
 		EquippedHammerId = equipped,
 		BossDefeats = defeats,
 		UnlockedBossIds = unlocked,
+		ZenLevel = zenLevel,
 	}
 end
 

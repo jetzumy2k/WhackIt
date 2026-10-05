@@ -21,6 +21,8 @@ local function validData(): PlayerDataSchema.RawData
 		Coins = 250,
 		OwnedHammers = {},
 		BossDefeats = { [BossConfig.List[1].Id] = 7 },
+		ZenLevel = 2,
+		ZenArmed = false,
 	}
 end
 
@@ -160,7 +162,7 @@ return function()
 			local data: PlayerDataSchema.RawData = { SchemaVersion = 2 }
 			local ok = PlayerDataSchema.migrate(data, {}, 2)
 			expect(ok).to.equal(true)
-			expect(data.SchemaVersion).to.equal(2)
+			expect(data.SchemaVersion).to.equal(PlayerDataSchema.CURRENT_VERSION)
 		end)
 
 		it("fails when a migration step is missing", function()
@@ -187,7 +189,7 @@ return function()
 			}
 			local ok = PlayerDataSchema.prepare(data)
 			expect(ok).to.equal(true)
-			expect(data.SchemaVersion).to.equal(2)
+			expect(data.SchemaVersion).to.equal(PlayerDataSchema.CURRENT_VERSION)
 			expect(data.Score).to.equal(900)
 			expect(data.Coins).to.equal(0)
 			expect((next(data.OwnedHammers :: { [string]: boolean }))).to.equal(nil)
@@ -249,6 +251,41 @@ return function()
 			data.Coins = -500
 			PlayerDataSchema.prepare(data)
 			expect(data.Coins).to.equal(0)
+		end)
+	end)
+	describe("PlayerDataSchema v3 (Zen)", function()
+		it("migrates v2 data to Zen Level 0 with the first Zen armed", function()
+			local data: PlayerDataSchema.RawData = {
+				SchemaVersion = 2,
+				Score = 10,
+				Stress = 40,
+				TotalHits = 1,
+				TotalBossesDefeated = 0,
+				EquippedHammerId = GameConfig.DefaultHammerId,
+				Coins = 5,
+				OwnedHammers = {},
+				BossDefeats = {},
+			}
+			expect((PlayerDataSchema.prepare(data))).to.equal(true)
+			expect(data.SchemaVersion).to.equal(3)
+			expect(data.ZenLevel).to.equal(0)
+			expect(data.ZenArmed).to.equal(true)
+		end)
+
+		it("keeps a saved Zen Level and disarmed state", function()
+			local data = validData()
+			PlayerDataSchema.prepare(data)
+			expect(data.ZenLevel).to.equal(2)
+			expect(data.ZenArmed).to.equal(false)
+		end)
+
+		it("repairs invalid Zen fields", function()
+			local data = validData()
+			data.ZenLevel = -4
+			data.ZenArmed = "yes"
+			PlayerDataSchema.prepare(data)
+			expect(data.ZenLevel).to.equal(0)
+			expect(data.ZenArmed).to.equal(true)
 		end)
 	end)
 end

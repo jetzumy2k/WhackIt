@@ -14,7 +14,6 @@ local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local BossService = require(script.Parent.BossService)
-local BossState = require(ServerScriptService.Lib.BossState)
 local CombatRules = require(ReplicatedStorage.Shared.CombatRules)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
@@ -69,29 +68,27 @@ local function explainDrop(player: Player, reason: string): ()
 	end
 end
 
+-- Every contributor gets a share of the reward (RewardService decides how much
+-- and whether the defeat counts for them) and hears about the defeat.
 local function rewardContributors(live: BossService.LiveBoss): ()
 	local state = live.State
-	local qualifying: { [number]: boolean } = {}
-	for _, userId in BossState.qualifyingUserIds(state, GameConfig.MinRewardDamageShare) do
-		qualifying[userId] = true
-	end
-
-	-- Everyone who contributed hears about the defeat; only qualifiers are rewarded.
 	for userId in state.Contributions do
 		local player = Players:GetPlayerByUserId(userId)
 		if player == nil then
 			continue -- left before the defeat; nothing to grant
 		end
 
-		local grant = if qualifying[userId] then RewardService.grantDefeat(player, state) else nil
+		local grant = RewardService.grantDefeat(player, state)
 		local payload: Types.BossDefeated = {
 			BossInstanceId = state.InstanceId,
 			BossId = state.Definition.Id,
-			Rewarded = grant ~= nil,
+			Rewarded = grant ~= nil and grant.Qualified,
 			ScoreAwarded = if grant then grant.Score else 0,
 			CoinsAwarded = if grant then grant.Coins else 0,
 			StressRelieved = if grant then grant.StressRelieved else 0,
 			UnlockedBossIds = if grant then grant.UnlockedBossIds else {},
+			SharePercent = if grant then math.floor(grant.Share * 100 + 0.5) else 0,
+			LastHit = grant ~= nil and grant.LastHit,
 		}
 		CombatRemotes.BossDefeated:FireClient(player, payload)
 	end
@@ -160,6 +157,7 @@ local function onHammerHit(player: Player, rawBossInstanceId: unknown): ()
 	lastHitAt[player] = now
 
 	data.TotalHits += 1
+	StressService.noteActivity(player)
 
 	StressService.relieve(player, StressRules.reliefForHit(result.Applied))
 

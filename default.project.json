@@ -54,6 +54,14 @@
           "Sync": {
             "$className": "RemoteEvent"
           }
+        },
+
+        "Mood": {
+          "$className": "Folder",
+
+          "ZenAchieved": {
+            "$className": "RemoteEvent"
+          }
         }
       }
     },

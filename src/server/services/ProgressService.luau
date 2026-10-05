@@ -27,6 +27,7 @@ function ProgressService.snapshot(data: PlayerDataService.PlayerData): Types.Pro
 		EquippedHammerId = data.EquippedHammerId,
 		BossDefeats = table.clone(data.BossDefeats),
 		UnlockedBossIds = ProgressionRules.unlockedBossIds(data.BossDefeats),
+		ZenLevel = data.ZenLevel,
 	}
 end
 

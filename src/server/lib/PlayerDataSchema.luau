@@ -28,6 +28,9 @@ export type PlayerData = {
 	Coins: number,
 	OwnedHammers: { [string]: boolean }, -- bought hammers (free ones are always owned)
 	BossDefeats: { [string]: number }, -- rewarded defeats per boss id; drives unlocks
+	-- v3
+	ZenLevel: number, -- times the player reached Zen (0 stress); boosts boss coins
+	ZenArmed: boolean, -- next Zen pays out; re-armed when stress climbs back up
 }
 
 -- Raw saved table before validation.
@@ -38,7 +41,7 @@ export type Migration = (data: RawData) -> ()
 
 local PlayerDataSchema = {}
 
-PlayerDataSchema.CURRENT_VERSION = 2
+PlayerDataSchema.CURRENT_VERSION = 3
 
 -- Upper bound for counters; far beyond legitimate play, small enough to stay
 -- an exact integer and to keep leaderboard values sane.
@@ -61,6 +64,11 @@ PlayerDataSchema.MIGRATIONS = table.freeze({
 		data.BossDefeats =
 			{ [BossConfig.List[1].Id] = if typeof(defeated) == "number" then defeated else 0 }
 	end,
+	[3] = function(data: RawData)
+		-- v2 -> v3: Zen. Everyone starts at level 0 with their first Zen armed.
+		data.ZenLevel = 0
+		data.ZenArmed = true
+	end,
 }) :: { [number]: Migration }
 
 function PlayerDataSchema.template(): PlayerData
@@ -74,6 +82,8 @@ function PlayerDataSchema.template(): PlayerData
 		Coins = GameConfig.StartingCoins,
 		OwnedHammers = {},
 		BossDefeats = {},
+		ZenLevel = 0,
+		ZenArmed = true,
 	}
 end
 
@@ -156,6 +166,11 @@ function PlayerDataSchema.sanitize(data: RawData): ()
 		end
 	end
 	data.BossDefeats = defeats
+
+	data.ZenLevel = counter(data.ZenLevel, defaults.ZenLevel)
+	if typeof(data.ZenArmed) ~= "boolean" then
+		data.ZenArmed = defaults.ZenArmed
+	end
 
 	-- Must be a hammer the player actually owns.
 	local hammerId = data.EquippedHammerId
