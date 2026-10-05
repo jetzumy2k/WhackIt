@@ -25,10 +25,13 @@ local HEALTH_COLOR = Color3.fromRGB(90, 210, 110)
 local TEXT_COLOR = Color3.fromRGB(255, 255, 255)
 local TOAST_COLOR = Color3.fromRGB(255, 230, 80)
 local TOAST_SECONDS = 1.2
+local SAVED_SECONDS = 2
 
 local localPlayer = Players.LocalPlayer
 local victoryCardShownAt = 0
 local toastLabel: TextLabel? = nil
+local savedLabel: TextLabel? = nil
+local savedShownAt = 0
 local toastShownAt = 0
 
 local function makeLabel(name: string, parent: Instance): TextLabel
@@ -100,8 +103,8 @@ local function buildHud(): (ScreenGui, Frame)
 	local scoreLabel = makeLabel("Score", gui)
 	scoreLabel.AnchorPoint = Vector2.new(0.5, 0)
 	scoreLabel.Position = UDim2.new(0.5, 0, 0, 48)
-	scoreLabel.Size = UDim2.new(0.5, 0, 0, 26)
-	scoreLabel.Text = "Score: 0   Coins: 0   Zen Lv 0"
+	scoreLabel.Size = UDim2.new(0.6, 0, 0, 26)
+	scoreLabel.Text = "Lv 1   Score: 0   Coins: 0   Zen Lv 0"
 	task.spawn(function()
 		local leaderstats = localPlayer:WaitForChild("leaderstats")
 		local score = leaderstats:WaitForChild("Score")
@@ -112,8 +115,10 @@ local function buildHud(): (ScreenGui, Frame)
 		local function refreshStats(): ()
 			local snapshot = ProgressController.get()
 			local zenLevel = if snapshot then snapshot.ZenLevel else 0
+			local level = localPlayer:GetAttribute(Attributes.Level)
 			scoreLabel.Text = string.format(
-				"Score: %d   Coins: %d   Zen Lv %d",
+				"Lv %d   Score: %d   Coins: %d   Zen Lv %d",
+				if typeof(level) == "number" then level else 1,
 				score.Value,
 				coins.Value,
 				zenLevel
@@ -122,6 +127,7 @@ local function buildHud(): (ScreenGui, Frame)
 		score.Changed:Connect(refreshStats)
 		coins.Changed:Connect(refreshStats)
 		ProgressController.Changed:Connect(refreshStats)
+		localPlayer:GetAttributeChangedSignal(Attributes.Level):Connect(refreshStats)
 		refreshStats()
 	end)
 
@@ -134,6 +140,17 @@ local function buildHud(): (ScreenGui, Frame)
 	hint.Text = if UserInputService.TouchEnabled
 		then "Walk up to a boss and tap to swing your hammer!"
 		else "Walk up to a boss and click to swing your hammer!"
+
+	-- "Progress saved" note, bottom-left, shown briefly after each save.
+	local saved = makeLabel("Saved", gui)
+	saved.AnchorPoint = Vector2.new(0, 1)
+	saved.Position = UDim2.new(0, 16, 1, -16)
+	saved.Size = UDim2.fromOffset(170, 22)
+	saved.TextXAlignment = Enum.TextXAlignment.Left
+	saved.TextColor3 = Color3.fromRGB(150, 230, 150)
+	saved.Text = "Progress saved"
+	saved.Visible = false
+	savedLabel = saved
 
 	-- Short-lived tips (e.g. "Get closer to the boss!"), just above the hint.
 	local toast = makeLabel("Toast", gui)
@@ -388,6 +405,24 @@ function UIController.start(): ()
 	assert(zenAchieved:IsA("RemoteEvent"), "ZenAchieved must be a RemoteEvent")
 	zenAchieved.OnClientEvent:Connect(function(payload: unknown)
 		onZenAchieved(card, payload)
+	end)
+
+	local savedRemote =
+		ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Profile"):WaitForChild("Saved")
+	assert(savedRemote:IsA("RemoteEvent"), "Profile.Saved must be a RemoteEvent")
+	savedRemote.OnClientEvent:Connect(function()
+		local label = savedLabel
+		if label == nil then
+			return
+		end
+		label.Visible = true
+		savedShownAt = os.clock()
+		local shownAt = savedShownAt
+		task.delay(SAVED_SECONDS, function()
+			if savedShownAt == shownAt then
+				label.Visible = false
+			end
+		end)
 	end)
 end
 

@@ -27,6 +27,11 @@ local GameConfig = table.freeze({
 	StartingScore = 0,
 	StartingCoins = 0,
 
+	-- Player Level (Shared/LevelRules): level = floor(sqrt(score / factor)) + 1
+	LevelScoreFactor = 600,
+	-- Senior bosses upstairs need at least this Player Level.
+	UpstairsMinLevel = 10,
+
 	-- Combat
 	HitCooldown = 0.45, -- seconds per hammer swing = minimum time between accepted hits
 	DefaultHammerId = "squeaky_hammer", -- must exist in HammerConfig

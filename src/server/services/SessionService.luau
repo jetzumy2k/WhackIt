@@ -9,6 +9,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
+local Attributes = require(ReplicatedStorage.Shared.Attributes)
+local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 
 export type Session = {
@@ -45,6 +47,7 @@ local function createSession(player: Player, data: PlayerDataService.PlayerData)
 		ScoreValue = scoreValue,
 		CoinsValue = coinsValue,
 	}
+	player:SetAttribute(Attributes.Level, LevelRules.levelFor(data.Score))
 end
 
 function SessionService.get(player: Player): Session?
@@ -60,6 +63,7 @@ function SessionService.addScore(player: Player, amount: number): ()
 	end
 	data.Score += amount
 	session.ScoreValue.Value = data.Score
+	player:SetAttribute(Attributes.Level, LevelRules.levelFor(data.Score))
 end
 
 function SessionService.addCoins(player: Player, amount: number): ()

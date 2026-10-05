@@ -15,6 +15,7 @@
 ]]
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local DataConfig = require(ServerScriptService.Config.DataConfig)
@@ -26,6 +27,7 @@ type Profile = {
 	AddUserId: (self: Profile, userId: number) -> (),
 	EndSession: (self: Profile) -> (),
 	OnSessionEnd: { Connect: (self: any, listener: () -> ()) -> any },
+	OnAfterSave: { Connect: (self: any, listener: (lastSavedData: any) -> ()) -> any },
 }
 type Store = {
 	StartSessionAsync: (self: Store, key: string, params: { Cancel: () -> boolean }) -> Profile?,
@@ -102,6 +104,13 @@ local function load(player: Player): ()
 		profile:EndSession() -- left while loading
 		return
 	end
+
+	-- Lets the player see their progress is safe ("Progress saved" in the HUD).
+	profile.OnAfterSave:Connect(function()
+		if player.Parent == Players then
+			ReplicatedStorage.Remotes.Profile.Saved:FireClient(player)
+		end
+	end)
 
 	profiles[player] = profile
 	local data = asPlayerData(profile.Data)

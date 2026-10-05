@@ -12,6 +12,7 @@ return table.freeze({
 
 	-- On each Player
 	Stress = "Stress",
+	Level = "Level", -- Player Level, derived from lifetime score
 
 	-- On each hammer Tool (server-created); marks it as a hammer
 	HammerId = "HammerId",
