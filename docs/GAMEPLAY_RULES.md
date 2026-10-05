@@ -174,3 +174,23 @@ hit throws a spark burst on the boss (`SwingPose.headScale` / `trailActive`, loc
 ### Music
 `AudioController` loops `MusicConfig.Tracks` with fades and a "Music: On/Off" button. The list is
 empty until licensed tracks are added (see `docs/RELEASE.md` §4).
+
+## Boss shouts (2026-10-05)
+Every boss shouts lines about its fictional "job" (`BossShoutConfig`) in a speech bubble above its
+HP bar that everyone nearby sees: one every 8–15 s (`ShoutIdleMin`/`ShoutIdleMax`) and, with a 20 %
+chance, when hit (`ShoutHitChance`, at most one shout per `ShoutCooldown` 4 s). The server picks the
+line so all players see the same shout. Lines are written by us (not players), stay family-friendly,
+and a spec rejects a blocklist of bad words, including for the angry CEO.
+
+## Executive Floor and the CEO (2026-10-05)
+- **Unlock:** defeat **every** ground-floor and Senior boss at least once (Level 10 is implied by the
+  Senior bosses). Rule: `BossConfig.UnlockAfterAllBosses` on the CEO.
+- **Getting there:** the **Executive Elevator** at the west end of the 2nd-floor corridor ("Ride up"
+  prompt; "Ride down" on the 3rd floor). The server checks access; without it a message says what's
+  missing ("defeat every boss once first (N to go)"). Anyone found on the floor without access is
+  sent back down.
+- **Stress spike:** arriving on the Executive Floor sets the Stress Meter to **100 %** (and re-arms Zen).
+- **The CEO:** a 1.6× size, crowned raid boss. **MaxHealth = 150 × the toughest other boss**
+  (`GameConfig.CeoHealthMultiplier`, derived from config: 150 × 600 = **90,000** today). Rewards
+  5,000 score and 1,000 coins, split by damage share like every boss, plus the last-hit bonus.
+  Designed for a team: roughly 30 minutes solo with the best hammer, a few minutes for ten players.

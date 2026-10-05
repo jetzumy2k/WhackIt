@@ -71,6 +71,18 @@ so clients can't read them.
 | Payload | none |
 | When | ProfileStore `OnAfterSave` for that player |
 
+## `Notify.Toast`: server -> one client
+| | |
+|---|---|
+| Purpose | Short message for the player (e.g. why the Executive Elevator won't go up) |
+| Payload | `string` (≤ 120 characters; longer messages are ignored by the client) |
+
+## Executive Elevator (ProximityPrompt, not a RemoteEvent)
+`ProximityPrompt.Triggered` gives the server the real player, so there is no client payload to
+validate. "Ride up" checks `ProgressionRules.isBossUnlocked("the_ceo", …)` on the server before moving
+the player (and spiking stress); "Ride down" always works. `ExecutiveService` also returns anyone found
+on the Executive Floor without access.
+
 ## `Shop.BuyHammer`: client -> server
 | | |
 |---|---|
@@ -106,7 +118,7 @@ Names live in `Shared/Attributes`. Only the server writes them; clients read the
 
 | Where | Attribute | Meaning |
 |---|---|---|
-| Boss `Model` under `Workspace.Bosses` | `BossInstanceId`, `BossId`, `Health`, `MaxHealth`, `Defeated` | live boss state for HP bars, target selection and the client-drawn monster's hit/defeat animations |
+| Boss `Model` under `Workspace.Bosses` | `BossInstanceId`, `BossId`, `Health`, `MaxHealth`, `Defeated`, `ShoutText`, `ShoutSeq` | live boss state for HP bars, target selection and the client-drawn monster's hit/defeat animations |
 | Hammer `Tool` (server-created, in the character) | `HammerId` | marks the Tool as a hammer for the server's hand check |
 | `Player` | `Stress` | the player's Stress Meter (also drives the server-drawn mood face and hammer glow) |
 | `Player` | `Level` | Player Level from lifetime score (HUD, "Lv N" head tag, Senior unlocks) |

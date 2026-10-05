@@ -25,7 +25,7 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 | Phase 4 — Rewards, progression, content | ✅ Accepted (2026-10-05, PR #5) | Coins, boss unlocks, hammer shop, offices, schema v3: Zen (mood faces, glowing hammer, idle stress regen), damage-share rewards + last-hit bonus; 176/176 specs |
 | Phase 5 — Monetization | ⏭ Skipped for v1 | Nothing for sale at launch |
 | Phase 6 — Hardening & release | 🟡 Code done; your RC checks pending | Movement guard, `docs/RELEASE.md` |
-| Phase 7 — Content & polish (feedback 2026-10-05) | 🟡 Implemented; specs + playtest pending | Player Level, global leaderboard, save indicator, Senior floor (Lv 10), building interior/exterior, swing polish, music player (needs track IDs) |
+| Phase 7 — Content & polish (feedback 2026-10-05) | 🟡 Implemented; specs + playtest pending | Player Level, global leaderboard, save indicator, Senior floor (Lv 10), building interior/exterior + eye-friendly palette, swing polish, licensed music, boss shouts, Executive Floor + CEO raid boss (90,000 HP), unlocks after 1 defeat |
 | §5 Design decisions | 🟡 3 of 5 decided | Shared bosses (+ reward/respawn rules) · end on defeat · hammer-driven damage. Open: persistence library, monetization |
 
 ---
@@ -48,7 +48,7 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 | Client controllers (Input, Gameplay, UI, Feedback, Audio) | 🟡 4 of 5 (+ BossVisual, HammerPose, Progress, Shop) | Audio deferred: needs uploaded/licensed sound assets |
 | UI screens | 🟡 Code-built placeholder | HUD (Stress Meter, score, hint), boss HP billboards, Victory Card. Art pass in Phase 4 |
 | Arena | 🟡 Placeholder art | Office floor (user request 2026-10-05): one furnished office per boss, corridor and lobby, built from parts by `Lib/OfficeBuilder`; replace with modelled assets later |
-| Tests (TestEZ) | ✅ | 216 specs: 216 passed, 0 failed in Studio (2026-10-05) |
+| Tests (TestEZ) | 🟡 | 232 specs. 216 passed in Studio (2026-10-05); 16 new (shouts, CEO, Executive Floor) pass static checks, not yet run in Studio |
 | Checks script | ✅ | `scripts/check.ps1` (format, lint, type-check, build; `-Tests` for TestEZ) |
 | Docs | 🟡 | `DEVELOPMENT_WORKFLOW`, `GAMEPLAY_RULES`, `REMOTE_CONTRACTS`, `PLAYTEST` current; `DATA_SCHEMA` still a template (Phase 3) |
 | CI | ✅ | `.github/workflows/ci.yml` green on GitHub; `actions/checkout` moved to v7 (Node 24) |
@@ -222,7 +222,7 @@ Security/abuse pass, performance (MicroProfiler, remote traffic, memory per play
 
 ## 7. Immediate next steps
 
-1. **You:** run `build/tests.rbxl` (expect 216 passed) and `PLAYTEST.md` 42–51.
+1. **You:** run `build/tests.rbxl` (expect 232 passed) and `PLAYTEST.md` 42–58.
 2. ✅ Music: 5 licensed APM tracks added (two user-suggested IDs were free *models*, not audio, and were rejected).
 3. **You:** decide whether to build the monetization kill switch / schedule now (and what to sell).
 4. PR + CI + merge (Phase 6 + 7), then the RC gate in `docs/RELEASE.md` and a private beta.
