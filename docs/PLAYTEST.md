@@ -41,3 +41,16 @@ Record the date, build (commit) and result for each run in the PR.
 | 15 | From the client command bar: `game.ReplicatedStorage.Remotes.Combat.RequestHammerHit:FireServer("nope")` | No hit; no error |
 | 16 | Same with `FireServer(123)`, `FireServer({})`, `FireServer(string.rep("a", 1000))` | `[Remote] rejected RequestHammerHit … invalid bossInstanceId` (throttled), no hit |
 | 17 | `for i = 1, 200 do …:FireServer("boss-1") end` from far away | No damage; `rate limited` warning at most once per 5 s |
+
+## Phase 3: saving progress
+Real saving needs **Game Settings → Security → Enable Studio Access to API Services** turned on
+(use a test place or your own account: it writes to the live DataStore). With it off, everything
+works but nothing is kept between Play sessions.
+
+| # | Check | Expected |
+|---|---|---|
+| 18 | First join (API access on) | HUD `Score: 0`, `Stress 100 / 100`; you can hit as soon as the score appears |
+| 19 | Earn score, relieve some stress, Stop, Play again | Score and stress are exactly where you left them |
+| 20 | Output on join/leave | No `[PlayerData]` warnings or red errors |
+| 21 | API access off | A "mock" note from ProfileStore may appear; play works; progress resets next session |
+| 22 | Two Studio test servers can't share a session; on a live server, joining a second server with the same account | The first server kicks you with "Your progress was opened on another server…" and nothing is lost |

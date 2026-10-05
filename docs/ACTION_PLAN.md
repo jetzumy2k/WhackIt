@@ -1,6 +1,6 @@
 # WHACK IT OUT! — Progress Review & Action Plan
 
-_Review date: 2026-10-05 · Last status update: 2026-10-05 · `master` after PR #3_
+_Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase3-persistence`_
 
 **Status legend:** ✅ Done · 🟡 Partly done / awaiting verification · ⬜ Not started
 
@@ -21,7 +21,8 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · `master` after PR 
 | Phase 0 — Foundation | ✅ Complete | CI green on PR #1 and on `master` (`f2faca7`) |
 | Phase 1 — Core architecture | ✅ Complete (PR #2) | Lifecycle, config, Types, Validate, RateLimiter, RemoteController, REMOTE_CONTRACTS; 46/46 specs pass in Studio |
 | Phase 2 — Shared-boss vertical slice | ✅ Accepted for now (2026-10-05, solo playtest after 6 rounds); multiplayer/abuse playtest checks 9–17 still to run | 5 services, 6 client controllers, arena, 94 specs |
-| Phases 3–6 | ⬜ | |
+| Phase 3 — Persistence | 🟡 Implemented; specs + save/rejoin playtest pending | ProfileStore via `PlayerDataService`, schema v1 with migrations and validation |
+| Phases 4–6 | ⬜ | |
 | §5 Design decisions | 🟡 3 of 5 decided | Shared bosses (+ reward/respawn rules) · end on defeat · hammer-driven damage. Open: persistence library, monetization |
 
 ---
@@ -39,12 +40,12 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · `master` after PR 
 | Combat & stress rules | ✅ | `Shared/CombatRules` (damage, cooldown, reach), `Shared/StressRules`, documented in `docs/GAMEPLAY_RULES.md` |
 | Shared types | ✅ | `Types`: `BossInstanceId`, `CombatFeedback` payload (PascalCase). Unused camelCase `PlayerStats` removed. `PlayerData` arrives with Phase 3 |
 | Remotes | ✅ Handled | `RequestHammerHit` → `CombatService`; `CombatFeedback`, `BossDefeated` sent by server; replicated attributes documented in `REMOTE_CONTRACTS.md` |
-| Server services (Boss, Combat, Stress, PlayerData, Reward, Purchase, Session, RemoteController) | 🟡 5 of 8 (+ `HammerService`) | `RemoteController`, `SessionService`, `BossService` (+ `Lib/BossState`), `CombatService`, `StressService`; `HammerService` (+ `Lib/HammerTool`) hands out the hammer Tool. Phase 2 grants score inside `CombatService`; `RewardService` (Phase 4) takes that over |
+| Server services (Boss, Combat, Stress, PlayerData, Reward, Purchase, Session, RemoteController) | 🟡 6 of 8 (+ `HammerService`) | `RemoteController`, `SessionService`, `BossService` (+ `Lib/BossState`), `CombatService`, `StressService`, `PlayerDataService` (+ `Lib/PlayerDataSchema`); `HammerService` (+ `Lib/HammerTool`) hands out the hammer Tool. Score is granted inside `CombatService`; `RewardService` (Phase 4) takes that over |
 | Server-only config | ✅ | `ServerScriptService.Config` (`src/server/config`): `RemoteLimits` |
 | Client controllers (Input, Gameplay, UI, Feedback, Audio) | 🟡 4 of 5 (+ `BossVisualController`) | Input (hammer Tool swing), Gameplay, UI, Feedback, BossVisual (cartoon monster + animations). Audio in Phase 4 (swing uses a built-in Roblox sound) |
 | UI screens | 🟡 Code-built placeholder | HUD (Stress Meter, score, hint), boss HP billboards, Victory Card. Art pass in Phase 4 |
 | Arena | 🟡 Placeholder | Floor + spawn in `default.project.json`; bosses are code-built cartoon monsters (`BossVisualConfig`) until real art |
-| Tests (TestEZ) | 🟡 | 94 specs. 92 passed in Studio (2026-10-05); the reworked SwingPose specs and the grip-direction spec pass static checks but have **not yet been run in Studio** |
+| Tests (TestEZ) | 🟡 | 109 specs (unit + first integration spec against ProfileStore's mock). 92 passed in Studio (2026-10-05); the rest pass static checks but have **not yet been run in Studio** |
 | Checks script | ✅ | `scripts/check.ps1` (format, lint, type-check, build; `-Tests` for TestEZ) |
 | Docs | 🟡 | `DEVELOPMENT_WORKFLOW`, `GAMEPLAY_RULES`, `REMOTE_CONTRACTS`, `PLAYTEST` current; `DATA_SCHEMA` still a template (Phase 3) |
 | CI | ✅ | `.github/workflows/ci.yml` green on GitHub; `actions/checkout` moved to v7 (Node 24) |
@@ -135,8 +136,8 @@ None of these are due yet; each is mapped to the phase where it lands.
 | ⬜ | **Maturity & Compliance questionnaire** (Creator Hub): hammer-hitting cartoon targets is "violence" → answer honestly (expected: Mild — cartoon, no blood). No realistic injury, ragdoll gore, or damage decals. | 6 |
 | ✅ ongoing | **Community Standards / content:** fictional targets only (true today); no user-generated boss names/images without moderation; player-visible text from players goes through `TextService:FilterStringAsync`. | all |
 | ⬜ | **Server authority:** every RemoteEvent is untrusted input. Never use client `Touched` or client-reported positions as proof of a hit; server checks character alive, distance to boss ≤ configured reach, cooldown, active encounter. | 1–2 |
-| ⬜ | **DataStore rules:** `UpdateAsync` (not `SetAsync`); session locking; retries with backoff within `GetRequestBudgetForRequestType`; `game:BindToClose` flush; never save defaults over an unloaded/failed profile; key `Player_<UserId>`. | 3 |
-| ⬜ | **Right-to-erasure:** data keyed by UserId only; documented script to delete a user's keys on a Roblox deletion request. | 3 |
+| ✅ | **DataStore rules:** ProfileStore provides session locking, `UpdateAsync`-based saves with retries within budget, auto-save and shutdown flush; key `Player_<UserId>`; load failure kicks instead of playing on defaults; newer-schema data refused untouched (`docs/DATA_SCHEMA.md`). Live verification pending | 3 |
+| ✅ | **Right-to-erasure:** data keyed by UserId and linked with `AddUserId`; deletion procedure documented in `docs/DATA_SCHEMA.md` | 3 |
 | ⬜ | **Monetization:** idempotent `ProcessReceipt` (record `PurchaseId` before granting, `NotProcessedYet` on any failure); server-side `UserOwnsGamePassAsync`; paid random items gated by `PolicyService` (`ArePaidRandomItemsRestricted`) with disclosed odds; no pay-to-win pressure. | 5 |
 | ⬜ | **Policy-aware features:** `PolicyService` before anything restricted by region/age. | 5 |
 | ⬜ | **Cross-platform:** `ContextActionService` with touch, mouse/keyboard, gamepad; UI scales with `UIScale`/`UIAspectRatioConstraint`; phone-size emulator test. | 2, 4 |
@@ -145,12 +146,12 @@ None of these are due yet; each is mapped to the phase where it lands.
 
 ---
 
-## 5. Design decisions — 🟡 3 of 5 decided
+## 5. Design decisions — 🟡 4 of 5 decided
 
 1. ✅ **Session model:** **shared bosses** (decided 2026-10-05). Follow-up rules ✅ confirmed (2026-10-05): contribution-based full rewards, timed respawn (`docs/GAMEPLAY_RULES.md`).
 2. ✅ **Encounter end:** **on defeat**; no round timer in v1 (decided 2026-10-05).
 3. ✅ **Damage:** **hammer-driven** (decided 2026-10-05), implemented in `CombatRules`.
-4. ⬜ **Persistence library** (needed before Phase 3): hand-written `PlayerDataService` or ProfileStore (Wally) with a thin wrapper? _Recommendation: ProfileStore — battle-tested session locking; justified dependency under CLAUDE.md._
+4. ✅ **Persistence library:** **ProfileStore** (official `lm-loleris/profilestore@1.0.3`, Apache-2.0) behind our `PlayerDataService` (decided 2026-10-05). Saved: score, stats (hits, bosses defeated), Stress Meter, equipped hammer.
 5. ⬜ **Monetization scope for v1** (needed before Phase 5): none / cosmetic hammers via Developer Products / game passes?
 
 ---
@@ -191,7 +192,10 @@ Flow: input → client cooldown sanity → `RequestHammerHit` → server validat
 **Specs:** stress formula, defeat transition (exactly once even with simultaneous hits), contribution tracking, cooldown rejection, out-of-range rejection, hits after defeat rejected, cleanup when a player leaves mid-fight.
 **Playtest:** 1 player and 2–3 players hitting the same boss on a local server; autoclicker / remote-spam test.
 
-### Phase 3 — Persistence — ⬜
+### Phase 3 — Persistence — 🟡 Implemented, verification pending
+
+**Status:** ✅ code · ✅ static checks · ⬜ 109 specs in Studio · ⬜ save/rejoin playtest (`docs/PLAYTEST.md` Phase 3 checks)
+
 `PlayerDataService`: schema v1 (`docs/DATA_SCHEMA.md` made real), defaults, validation, migration pipeline (`v0→v1` test), session locking, autosave, `BindToClose`, retry/backoff within budget, **load failure = kick with friendly message, never overwrite**. Erasure script.
 **Specs:** migration, corrupt-data rejection, failed-load path never saves. **Manual:** Studio with API access on, rejoin, two-server simulation.
 
@@ -209,5 +213,6 @@ Security/abuse pass, performance (MicroProfiler, remote traffic, memory per play
 
 ## 7. Immediate next steps
 
-1. Decide the persistence library (§5 #4), then start Phase 3.
-2. Before release: run `build/tests.rbxl` (expect 94 passed) and `docs/PLAYTEST.md` checks 9–17 (multiplayer, abuse).
+1. **You:** run `build/tests.rbxl` (expect 109 passed), then the Phase 3 save/rejoin checks in `docs/PLAYTEST.md`.
+2. PR + CI + merge `feat/phase3-persistence`.
+3. Before release: `docs/PLAYTEST.md` checks 9–17 (multiplayer, abuse).

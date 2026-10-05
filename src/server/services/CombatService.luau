@@ -20,6 +20,7 @@ local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
 local HammerTool = require(ServerScriptService.Lib.HammerTool)
 local RateLimiter = require(ReplicatedStorage.Shared.RateLimiter)
+local PlayerDataService = require(script.Parent.PlayerDataService)
 local RemoteController = require(ServerScriptService.Controllers.RemoteController)
 local RemoteLimits = require(ServerScriptService.Config.RemoteLimits)
 local SessionService = require(script.Parent.SessionService)
@@ -87,6 +88,10 @@ local function rewardContributors(live: BossService.LiveBoss): ()
 			scoreAwarded = state.Definition.ScoreReward
 			SessionService.addScore(player, scoreAwarded)
 			stressRelieved = StressService.relieve(player, GameConfig.DefeatStressRelief)
+			local data = PlayerDataService.get(player)
+			if data then
+				data.TotalBossesDefeated += 1
+			end
 		end
 
 		local payload: Types.BossDefeated = {
@@ -149,6 +154,11 @@ local function onHammerHit(player: Player, rawBossInstanceId: unknown): ()
 		return
 	end
 	lastHitAt[player] = now
+
+	local data = PlayerDataService.get(player)
+	if data then
+		data.TotalHits += 1
+	end
 
 	StressService.relieve(player, StressRules.reliefForHit(result.Applied))
 

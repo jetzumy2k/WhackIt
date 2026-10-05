@@ -26,7 +26,7 @@ if (-not (Test-Path $definitions)) {
 		-Uri "https://raw.githubusercontent.com/JohnnyMorganz/luau-lsp/$tag/scripts/globalTypes.d.luau"
 }
 
-if (-not (Test-Path "DevPackages")) {
+if (-not (Test-Path "DevPackages") -or -not (Test-Path "ServerPackages")) {
 	Invoke-Step "Install Wally packages" { wally install }
 }
 
@@ -37,13 +37,13 @@ Invoke-Step "Lint tests (Selene)" { selene --config selene.tests.toml tests }
 Invoke-Step "Sourcemap (game)" { rojo sourcemap default.project.json --include-non-scripts -o sourcemap.json }
 Invoke-Step "Type-check src (luau-lsp)" {
 	luau-lsp analyze --platform=roblox --sourcemap=sourcemap.json "--defs=$definitions" `
-		--base-luaurc=.luaurc src
+		--base-luaurc=.luaurc "--ignore=ServerPackages/**" src
 }
 
 Invoke-Step "Sourcemap (tests)" { rojo sourcemap test.project.json --include-non-scripts -o sourcemap.test.json }
 Invoke-Step "Type-check tests (luau-lsp)" {
 	luau-lsp analyze --platform=roblox --sourcemap=sourcemap.test.json "--defs=$definitions" `
-		--defs=types/testez.d.luau --base-luaurc=.luaurc "--ignore=DevPackages/**" tests scripts
+		--defs=types/testez.d.luau --base-luaurc=.luaurc "--ignore=DevPackages/**" "--ignore=ServerPackages/**" tests scripts
 }
 
 New-Item -ItemType Directory -Force "build" | Out-Null
