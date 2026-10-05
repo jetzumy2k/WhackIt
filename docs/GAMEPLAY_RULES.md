@@ -50,8 +50,8 @@ The server owns it (`StressService`); clients only display it.
 ```
 each accepted hit:   stress -= damage x StressReliefPerDamage
 qualifying defeat:   stress -= DefeatStressRelief
-idle:                after StressIdleDelay (180 s) without an accepted hit,
-                     stress += StressRegenStep (5) every StressRegenInterval (10 s)
+idle:                after StressIdleDelay (120 s) without an accepted hit,
+                     stress += StressRegenStep (5) every StressRegenInterval (5 s)
 always:              clamped to 0..MaxStress, rounded to hundredths
 ```
 

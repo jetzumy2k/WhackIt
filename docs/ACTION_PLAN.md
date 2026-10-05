@@ -46,7 +46,7 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 | Client controllers (Input, Gameplay, UI, Feedback, Audio) | 🟡 4 of 5 (+ BossVisual, HammerPose, Progress, Shop) | Audio deferred: needs uploaded/licensed sound assets |
 | UI screens | 🟡 Code-built placeholder | HUD (Stress Meter, score, hint), boss HP billboards, Victory Card. Art pass in Phase 4 |
 | Arena | 🟡 Placeholder art | Office floor (user request 2026-10-05): one furnished office per boss, corridor and lobby, built from parts by `Lib/OfficeBuilder`; replace with modelled assets later |
-| Tests (TestEZ) | 🟡 | 176 specs. 146 passed in Studio (2026-10-05); 30 new (rewards split, mood, idle regen, Zen, faces, schema v3) pass static checks, not yet run in Studio |
+| Tests (TestEZ) | ✅ | 176 specs: 176 passed, 0 failed in Studio (2026-10-05) |
 | Checks script | ✅ | `scripts/check.ps1` (format, lint, type-check, build; `-Tests` for TestEZ) |
 | Docs | 🟡 | `DEVELOPMENT_WORKFLOW`, `GAMEPLAY_RULES`, `REMOTE_CONTRACTS`, `PLAYTEST` current; `DATA_SCHEMA` still a template (Phase 3) |
 | CI | ✅ | `.github/workflows/ci.yml` green on GitHub; `actions/checkout` moved to v7 (Node 24) |
@@ -202,7 +202,7 @@ Flow: input → client cooldown sanity → `RequestHammerHit` → server validat
 
 ### Phase 4 — Rewards, progression & content — 🟡 Implemented, verification pending
 
-**Status:** ✅ code · ✅ static checks · ⬜ 137 specs in Studio · ⬜ playtest (`docs/PLAYTEST.md` checks 23–32). Decisions (2026-10-05): score + coins, bosses unlock in order, hammers bought with coins, all five bosses at stations. Added after playtests (2026-10-05): furnished offices per boss; Zen (0 stress → +100 coins, Zen Level coin bonus, glowing hammer, re-armed at 50 stress), mood faces, stress rising after 3 min idle (+5 per 10 s), rewards split by damage share with a 5 % last-hit bonus. Deferred: global leaderboard (OrderedDataStore) and audio (needs licensed assets).
+**Status:** ✅ code · ✅ static checks · ⬜ 137 specs in Studio · ⬜ playtest (`docs/PLAYTEST.md` checks 23–32). Decisions (2026-10-05): score + coins, bosses unlock in order, hammers bought with coins, all five bosses at stations. Added after playtests (2026-10-05): furnished offices per boss; Zen (0 stress → +100 coins, Zen Level coin bonus, glowing hammer, re-armed at 50 stress), mood faces, stress rising after 2 min idle (+5 per 5 s; tuned from 3 min / 10 s after playtest), rewards split by damage share with a 5 % last-hit bonus. Deferred: global leaderboard (OrderedDataStore) and audio (needs licensed assets).
 
 `RewardService` (coins/score only on server-confirmed defeat; idempotent per encounter id), boss unlocks, hammer ownership/selection (server-validated), all 5 bosses with cartoon reactions, `AudioController`, particles, mobile-friendly UI, leaderboard (OrderedDataStore, throttled).
 **Specs:** reward granted exactly once per defeat; locked boss / unowned hammer requests rejected.

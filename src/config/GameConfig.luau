@@ -9,8 +9,8 @@ local GameConfig = table.freeze({
 	StressReliefPerDamage = 0.1, -- stress relieved per point of accepted damage
 	DefeatStressRelief = 5, -- bonus for each reward-qualifying player when a boss is defeated
 	-- Stress creeps back when a player stops landing hits (docs/GAMEPLAY_RULES.md).
-	StressIdleDelay = 180, -- seconds without an accepted hit before stress starts rising
-	StressRegenInterval = 10, -- seconds between rises once idle
+	StressIdleDelay = 120, -- seconds without an accepted hit before stress starts rising
+	StressRegenInterval = 5, -- seconds between rises once idle
 	StressRegenStep = 5, -- stress added per rise
 	-- Mood (face) bands: Zen at 0, then up to each threshold (inclusive).
 	MoodRelaxedMax = 25,
