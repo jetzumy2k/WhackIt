@@ -20,7 +20,7 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 | Git: single default branch | ✅ | `master` is default; `main` deleted; its `LICENSE` kept (`53d8a56`) |
 | Phase 0 — Foundation | ✅ Complete | CI green on PR #1 and on `master` (`f2faca7`) |
 | Phase 1 — Core architecture | ✅ Complete (PR #2) | Lifecycle, config, Types, Validate, RateLimiter, RemoteController, REMOTE_CONTRACTS; 46/46 specs pass in Studio |
-| Phase 2 — Shared-boss vertical slice | 🟡 Implemented; Studio specs + playtest pending | 4 services, 4 client controllers, arena, 73 specs (20 new) |
+| Phase 2 — Shared-boss vertical slice | 🟡 Implemented, 73/73 specs pass; playtest pending | 4 services, 4 client controllers, arena, 73 specs (20 new) |
 | Phases 3–6 | ⬜ | |
 | §5 Design decisions | 🟡 3 of 5 decided | Shared bosses (+ reward/respawn rules) · end on defeat · hammer-driven damage. Open: persistence library, monetization |
 
@@ -28,7 +28,7 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 
 ## 1. Where the project stands
 
-**Stage:** playable shared-boss loop implemented (Phase 2), awaiting Studio test run and playtest. No persistence yet.
+**Stage:** playable shared-boss loop implemented (Phase 2), specs passing, awaiting playtest. No persistence yet.
 
 | Area | Status | Notes |
 |---|---|---|
@@ -44,7 +44,7 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 | Client controllers (Input, Gameplay, UI, Feedback, Audio) | 🟡 4 of 5 | Input, Gameplay, UI, Feedback. Audio in Phase 4 |
 | UI screens | 🟡 Code-built placeholder | HUD (Stress Meter, score, hint), boss HP billboards, Victory Card. Art pass in Phase 4 |
 | Arena | 🟡 Placeholder | Floor + spawn in `default.project.json`; boss is a coloured block until real art |
-| Tests (TestEZ) | 🟡 | 73 specs. 53 passed in Studio; 20 new (BossState 9, CombatRules 5, ArenaConfig 4, GameConfig 2) pass static checks, **not yet run in Studio** |
+| Tests (TestEZ) | ✅ | 73 specs: 73 passed, 0 failed in Studio (2026-10-05) |
 | Checks script | ✅ | `scripts/check.ps1` (format, lint, type-check, build; `-Tests` for TestEZ) |
 | Docs | 🟡 | `DEVELOPMENT_WORKFLOW`, `GAMEPLAY_RULES`, `REMOTE_CONTRACTS`, `PLAYTEST` current; `DATA_SCHEMA` still a template (Phase 3) |
 | CI | ✅ | `.github/workflows/ci.yml` green on GitHub; `actions/checkout` moved to v7 (Node 24) |
@@ -182,7 +182,7 @@ Goal: a clean clone builds, formats, lints, type-checks, and runs the test suite
 
 ### Phase 2 — Vertical slice: one shared boss, full loop, no persistence — 🟡 Implemented, verification pending
 
-**Status:** ✅ code · ✅ static checks · ⬜ 73 specs in Studio · ⬜ playtest (`docs/PLAYTEST.md` checks 1–17)
+**Status:** ✅ code · ✅ static checks · ✅ 73/73 specs in Studio · ⬜ playtest (`docs/PLAYTEST.md` checks 1–17)
 
 Server: `SessionService` (join/leave, per-player state), `BossService` (spawns shared boss instances with server-issued ids, authoritative HP, per-player damage contribution, respawn after defeat), `CombatService` (validates hit: boss instance alive, live character, reach, cooldown; damage via `CombatRules`), `StressService` (stress from config formula, P2-4).
 Client: `InputController` (UserInputService: click/tap/gamepad R2·X, ignoring GUI-processed input), `GameplayController`, `UIController` (boss name, HP bar, Stress Meter, score, Victory Card), `FeedbackController` (hit flash, damage numbers, camera shake, defeat fade; presentation only).
@@ -209,7 +209,6 @@ Security/abuse pass, performance (MicroProfiler, remote traffic, memory per play
 
 ## 7. Immediate next steps
 
-1. **You:** run `build/tests.rbxl` in Studio (close the old copy first): expect `[Tests] PASSED: 73 test(s)`.
-2. **You:** playtest `build/WhackItOut.rbxl` with `docs/PLAYTEST.md` (solo, 2–3 players, abuse checks) and report anything off.
-3. PR + CI + merge `feat/phase2-vertical-slice`.
-4. Decide the persistence library (§5 #4) before Phase 3.
+1. **You:** playtest `build/WhackItOut.rbxl` with `docs/PLAYTEST.md` (solo, 2–3 players, abuse checks) and report anything off.
+2. PR + CI + merge `feat/phase2-vertical-slice`.
+3. Decide the persistence library (§5 #4) before Phase 3.
