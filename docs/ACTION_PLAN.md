@@ -1,6 +1,6 @@
 # WHACK IT OUT! — Progress Review & Action Plan
 
-_Review date: 2026-10-05 · Last status update: 2026-10-05 · `master` after PR #2_
+_Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase2-vertical-slice`_
 
 **Status legend:** ✅ Done · 🟡 Partly done / awaiting verification · ⬜ Not started
 
@@ -20,31 +20,33 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · `master` after PR 
 | Git: single default branch | ✅ | `master` is default; `main` deleted; its `LICENSE` kept (`53d8a56`) |
 | Phase 0 — Foundation | ✅ Complete | CI green on PR #1 and on `master` (`f2faca7`) |
 | Phase 1 — Core architecture | ✅ Complete (PR #2) | Lifecycle, config, Types, Validate, RateLimiter, RemoteController, REMOTE_CONTRACTS; 46/46 specs pass in Studio |
-| Phases 2–6 | ⬜ | |
+| Phase 2 — Shared-boss vertical slice | 🟡 Implemented; Studio specs + playtest pending | 4 services, 4 client controllers, arena, 73 specs (20 new) |
+| Phases 3–6 | ⬜ | |
 | §5 Design decisions | 🟡 3 of 5 decided | Shared bosses (+ reward/respawn rules) · end on defeat · hammer-driven damage. Open: persistence library, monetization |
 
 ---
 
 ## 1. Where the project stands
 
-**Stage:** foundation and core server plumbing in place (boot, config, combat formula, remote validation and rate limiting). No gameplay services yet.
+**Stage:** playable shared-boss loop implemented (Phase 2), awaiting Studio test run and playtest. No persistence yet.
 
 | Area | Status | Notes |
 |---|---|---|
 | Toolchain (Rokit: Rojo 7.7.1, Wally 0.3.2, StyLua 2.5.2, Selene 0.32.0, luau-lsp 1.70.1, run-in-roblox 0.3.0) | ✅ Installed | run-in-roblox blocked on this machine (port 50312 reserved by Windows) |
 | Rojo project / instance tree | ✅ | Builds on fresh clone; one `Main` Script + one `Main` LocalScript; `Services`/`Controllers`/`Screens` are Folders |
 | Boot pattern | ✅ | `Shared/Lifecycle`: all `init()` then all `start()`, name-ordered |
-| Shared config | ✅ Hardened | `GameConfig`, `BossConfig` (5 bosses), `HammerConfig` (1 hammer): frozen, `List` + `ById`, duplicate ids fail at load |
-| Combat formula | ✅ | `Shared/CombatRules.computeHitDamage`, documented in `docs/GAMEPLAY_RULES.md` |
+| Shared config | ✅ Hardened | `GameConfig`, `BossConfig` (5 bosses), `HammerConfig` (1 hammer), `ArenaConfig` (boss spawns): frozen, `List` + `ById`, duplicate ids fail at load |
+| Combat & stress rules | ✅ | `Shared/CombatRules` (damage, cooldown, reach), `Shared/StressRules`, documented in `docs/GAMEPLAY_RULES.md` |
 | Shared types | ✅ | `Types`: `BossInstanceId`, `CombatFeedback` payload (PascalCase). Unused camelCase `PlayerStats` removed. `PlayerData` arrives with Phase 3 |
-| Remotes | 🟡 Contracted, not yet handled | `RequestHammerHit(bossInstanceId)` and `CombatFeedback` specified in `REMOTE_CONTRACTS.md`; handlers bind via `RemoteController` in Phase 2 |
-| Server services (Boss, Combat, Stress, PlayerData, Reward, Purchase, Session, RemoteController) | 🟡 1 of 8 | `RemoteController` done (guards, rate limits, error containment, throttled reject logs) |
+| Remotes | ✅ Handled | `RequestHammerHit` → `CombatService`; `CombatFeedback`, `BossDefeated` sent by server; replicated attributes documented in `REMOTE_CONTRACTS.md` |
+| Server services (Boss, Combat, Stress, PlayerData, Reward, Purchase, Session, RemoteController) | 🟡 5 of 8 | `RemoteController`, `SessionService`, `BossService` (+ `Lib/BossState`), `CombatService`, `StressService`. Phase 2 grants score inside `CombatService`; `RewardService` (Phase 4) takes that over |
 | Server-only config | ✅ | `ServerScriptService.Config` (`src/server/config`): `RemoteLimits` |
-| Client controllers (Input, Gameplay, UI, Feedback, Audio) | ⬜ None | |
-| UI screens | ⬜ None | |
-| Tests (TestEZ) | ✅ | 53 specs: 53 passed, 0 failed in Studio (2026-10-05). Expected warnings from RemoteController specs |
+| Client controllers (Input, Gameplay, UI, Feedback, Audio) | 🟡 4 of 5 | Input, Gameplay, UI, Feedback. Audio in Phase 4 |
+| UI screens | 🟡 Code-built placeholder | HUD (Stress Meter, score, hint), boss HP billboards, Victory Card. Art pass in Phase 4 |
+| Arena | 🟡 Placeholder | Floor + spawn in `default.project.json`; boss is a coloured block until real art |
+| Tests (TestEZ) | 🟡 | 73 specs. 53 passed in Studio; 20 new (BossState 9, CombatRules 5, ArenaConfig 4, GameConfig 2) pass static checks, **not yet run in Studio** |
 | Checks script | ✅ | `scripts/check.ps1` (format, lint, type-check, build; `-Tests` for TestEZ) |
-| Docs | 🟡 | `DEVELOPMENT_WORKFLOW`, `GAMEPLAY_RULES`, `REMOTE_CONTRACTS` current; `DATA_SCHEMA` still a template (Phase 3) |
+| Docs | 🟡 | `DEVELOPMENT_WORKFLOW`, `GAMEPLAY_RULES`, `REMOTE_CONTRACTS`, `PLAYTEST` current; `DATA_SCHEMA` still a template (Phase 3) |
 | CI | ✅ | `.github/workflows/ci.yml` green on GitHub; `actions/checkout` moved to v7 (Node 24) |
 | License | ✅ | MIT `LICENSE` on `master` |
 
@@ -178,10 +180,13 @@ Goal: a clean clone builds, formats, lints, type-checks, and runs the test suite
 5. ✅ `docs/REMOTE_CONTRACTS.md` rewritten; `RequestHammerHit(bossInstanceId)` takes a server-issued boss instance id. → P2-1
 6. ✅ Specs: Validate (15), RateLimiter (7), RemoteController (5). 46/46 pass in Studio.
 
-### Phase 2 — Vertical slice: one shared boss, full loop, no persistence — ⬜
+### Phase 2 — Vertical slice: one shared boss, full loop, no persistence — 🟡 Implemented, verification pending
+
+**Status:** ✅ code · ✅ static checks · ⬜ 73 specs in Studio · ⬜ playtest (`docs/PLAYTEST.md` checks 1–17)
+
 Server: `SessionService` (join/leave, per-player state), `BossService` (spawns shared boss instances with server-issued ids, authoritative HP, per-player damage contribution, respawn after defeat), `CombatService` (validates hit: boss instance alive, live character, reach, cooldown; damage via `CombatRules`), `StressService` (stress from config formula, P2-4).
-Client: `InputController` (ContextActionService: click/tap/gamepad), `GameplayController`, `UIController` (boss name, HP bar, Stress Meter, score), `FeedbackController` (hit flash, squash, camera shake; presentation only).
-Flow: input → client cooldown sanity → `RequestHammerHit` → server validation → state update → `CombatFeedback` (HP to players near the boss; hit confirmation to the hitter) → defeat → contributors rewarded → Victory Card → boss respawns.
+Client: `InputController` (UserInputService: click/tap/gamepad R2·X, ignoring GUI-processed input), `GameplayController`, `UIController` (boss name, HP bar, Stress Meter, score, Victory Card), `FeedbackController` (hit flash, damage numbers, camera shake, defeat fade; presentation only).
+Flow: input → client cooldown sanity → `RequestHammerHit` → server validation → state update → `CombatFeedback` (all clients) → defeat → contributors rewarded (`BossDefeated`) → Victory Card → boss respawns with a new instance id.
 
 **Specs:** stress formula, defeat transition (exactly once even with simultaneous hits), contribution tracking, cooldown rejection, out-of-range rejection, hits after defeat rejected, cleanup when a player leaves mid-fight.
 **Playtest:** 1 player and 2–3 players hitting the same boss on a local server; autoclicker / remote-spam test.
@@ -204,4 +209,7 @@ Security/abuse pass, performance (MicroProfiler, remote traffic, memory per play
 
 ## 7. Immediate next steps
 
-1. Start Phase 2: shared-boss vertical slice.
+1. **You:** run `build/tests.rbxl` in Studio (close the old copy first): expect `[Tests] PASSED: 73 test(s)`.
+2. **You:** playtest `build/WhackItOut.rbxl` with `docs/PLAYTEST.md` (solo, 2–3 players, abuse checks) and report anything off.
+3. PR + CI + merge `feat/phase2-vertical-slice`.
+4. Decide the persistence library (§5 #4) before Phase 3.

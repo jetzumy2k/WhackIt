@@ -33,6 +33,11 @@
         "$path": { "optional": "src/server/config" }
       },
 
+      "Lib": {
+        "$className": "Folder",
+        "$path": { "optional": "src/server/lib" }
+      },
+
       "Services": {
         "$className": "Folder",
         "$path": { "optional": "src/server/services" }

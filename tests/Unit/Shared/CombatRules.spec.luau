@@ -59,4 +59,38 @@ return function()
 			end
 		end)
 	end)
+
+	describe("CombatRules.isOffCooldown", function()
+		local cooldown = GameConfig.HitCooldown
+
+		it("allows the first hit", function()
+			expect(CombatRules.isOffCooldown(10, nil, 0)).to.equal(true)
+		end)
+
+		it("blocks hits inside the cooldown and allows them after", function()
+			expect(CombatRules.isOffCooldown(cooldown / 2, 0, 0)).to.equal(false)
+			expect(CombatRules.isOffCooldown(cooldown, 0, 0)).to.equal(true)
+		end)
+
+		it("forgives exactly the grace period and no more", function()
+			local grace = GameConfig.HitCooldownGrace
+			expect(CombatRules.isOffCooldown(cooldown - grace, 0, grace)).to.equal(true)
+			expect(CombatRules.isOffCooldown(cooldown - grace * 2, 0, grace)).to.equal(false)
+		end)
+	end)
+
+	describe("CombatRules.isInReach", function()
+		it("accepts positions within HitReach, inclusive", function()
+			local origin = Vector3.new(0, 0, 0)
+			expect(CombatRules.isInReach(origin, Vector3.new(GameConfig.HitReach, 0, 0))).to.equal(
+				true
+			)
+			expect(CombatRules.isInReach(origin, origin)).to.equal(true)
+		end)
+
+		it("rejects positions beyond HitReach", function()
+			local beyond = Vector3.new(GameConfig.HitReach + 0.1, 0, 0)
+			expect(CombatRules.isInReach(Vector3.new(0, 0, 0), beyond)).to.equal(false)
+		end)
+	end)
 end

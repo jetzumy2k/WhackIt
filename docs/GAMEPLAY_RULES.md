@@ -25,21 +25,21 @@ damage per hit it took before hammers existed (Deadline 10, Meeting 8, Reply-All
 Production Bug 15, Monday 20).
 
 ## Hit acceptance (server)
-A hit request is applied only if all of these hold (details in `docs/REMOTE_CONTRACTS.md`, Phase 1–2):
+A hit request is applied only if all of these hold (`CombatService`; details in `docs/REMOTE_CONTRACTS.md`):
 - the player has a live character;
 - the target boss exists and is not defeated;
-- the player is within reach of the boss;
-- at least `GameConfig.HitCooldown` seconds since the player's last accepted hit.
+- the player's root is within `GameConfig.HitReach` (12 studs) of the boss centre;
+- at least `HitCooldown − HitCooldownGrace` (0.25 − 0.05 s) since the player's last accepted hit. The client waits the full cooldown; the grace only absorbs network jitter.
 
 ## Shared-boss rules (confirmed 2026-10-05)
 - **Contribution:** the server records accepted damage per player per boss.
 - **Rewards:** on defeat, every player whose accepted damage is at least a minimum share of the boss's MaxHealth receives the **full** reward. Cooperative: no kill-stealing, no last-hit bonus.
-- **Respawn:** a defeated boss respawns at full HP after a configured delay.
+- **Respawn:** a defeated boss stays visible (defeated) for `BossRespawnDelay`, then is replaced by a fresh boss at full HP with a new instance id.
 
-Tunable values (added to `GameConfig` when Phase 2 implements them; starting proposals):
-| Key | Proposed start | Meaning |
+Tunable values (`GameConfig`):
+| Key | Value | Meaning |
 |---|---|---|
-| `MinRewardDamageShare` | 0.10 | fraction of boss MaxHealth a player must deal to qualify for the reward |
+| `MinRewardDamageShare` | 0.1 | fraction of boss MaxHealth a player must deal to qualify for the reward |
 | `BossRespawnDelay` | 5 s | time from defeat to the boss reappearing at full HP |
 
 ## Stress Meter
@@ -60,3 +60,7 @@ Starting balance: soloing a 100-HP boss relieves 10 + 5 = 15 stress, so about 7 
 player from 100 to 0. Better hammers relieve stress faster because relief follows damage.
 Open (Phase 2+): what happens at 0 stress (e.g. a "Zen" celebration), and whether stress
 persists between sessions (Phase 3).
+
+## Arena
+Boss spawn points and the placeholder boss look are in `src/config/ArenaConfig.luau`. The floor and
+player spawn are in `default.project.json` (`Workspace.Arena`). Phase 2 spawns one Deadline Boss.

@@ -1,0 +1,158 @@
+--!strict
+-- Hit feedback: flash, floating damage numbers, camera shake for the hitter and
+-- a fade on defeat. Purely local visuals driven by Combat.CombatFeedback.
+
+local Debris = game:GetService("Debris")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
+local GameplayController = require(script.Parent.GameplayController)
+
+local FeedbackController = {}
+
+local FLASH_SECONDS = 0.12
+local DAMAGE_NUMBER_SECONDS = 0.7
+local DAMAGE_NUMBER_RISE = 3
+local SHAKE_SECONDS = 0.08
+local SHAKE_STRENGTH = 0.35
+local DEFEAT_FADE_SECONDS = 0.6
+
+local localPlayer = Players.LocalPlayer
+local random = Random.new()
+
+type Feedback = {
+	BossInstanceId: string,
+	Damage: number,
+	HitterUserId: number,
+	Defeated: boolean,
+}
+
+-- Server messages are still checked before use: a malformed payload must not
+-- throw inside the event handler.
+local function parse(payload: unknown): Feedback?
+	if typeof(payload) ~= "table" then
+		return nil
+	end
+	local data = payload :: { [string]: unknown }
+	local id, damage, hitter, defeated =
+		data.BossInstanceId, data.Damage, data.HitterUserId, data.Defeated
+	if
+		typeof(id) ~= "string"
+		or typeof(damage) ~= "number"
+		or typeof(hitter) ~= "number"
+		or typeof(defeated) ~= "boolean"
+	then
+		return nil
+	end
+	return { BossInstanceId = id, Damage = damage, HitterUserId = hitter, Defeated = defeated }
+end
+
+local function flash(model: Model): ()
+	local highlight = Instance.new("Highlight")
+	highlight.FillColor = Color3.new(1, 1, 1)
+	highlight.FillTransparency = 0.3
+	highlight.OutlineTransparency = 1
+	highlight.DepthMode = Enum.HighlightDepthMode.Occluded
+	highlight.Parent = model
+	Debris:AddItem(highlight, FLASH_SECONDS)
+end
+
+local function showDamageNumber(
+	body: BasePart,
+	damage: number,
+	isOwnHit: boolean,
+	parent: Instance
+): ()
+	local billboard = Instance.new("BillboardGui")
+	billboard.ResetOnSpawn = false
+	billboard.Adornee = body
+	billboard.AlwaysOnTop = true
+	billboard.Size = UDim2.fromOffset(80, 40)
+	local startOffset = Vector3.new(random:NextNumber(-1.5, 1.5), body.Size.Y / 2, 0)
+	billboard.StudsOffset = startOffset
+
+	local label = Instance.new("TextLabel")
+	label.BackgroundTransparency = 1
+	label.Size = UDim2.fromScale(1, 1)
+	label.Font = Enum.Font.FredokaOne
+	label.TextScaled = true
+	label.Text = "-" .. damage
+	-- Own hits stand out; teammates' hits are softer so the screen stays readable.
+	label.TextColor3 = if isOwnHit
+		then Color3.fromRGB(255, 230, 80)
+		else Color3.fromRGB(230, 230, 230)
+	label.TextStrokeTransparency = 0.4
+	label.Parent = billboard
+	billboard.Parent = parent
+
+	local info =
+		TweenInfo.new(DAMAGE_NUMBER_SECONDS, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	TweenService
+		:Create(
+			billboard,
+			info,
+			{ StudsOffset = startOffset + Vector3.new(0, DAMAGE_NUMBER_RISE, 0) }
+		)
+		:Play()
+	TweenService:Create(label, info, { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+	Debris:AddItem(billboard, DAMAGE_NUMBER_SECONDS)
+end
+
+local function shakeCamera(): ()
+	local character = localPlayer.Character
+	local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
+	if humanoid == nil then
+		return
+	end
+	local offset = Vector3.new(random:NextNumber(-1, 1), random:NextNumber(-1, 1), 0)
+		* SHAKE_STRENGTH
+	local info =
+		TweenInfo.new(SHAKE_SECONDS, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, 0, true)
+	TweenService:Create(humanoid, info, { CameraOffset = offset }):Play()
+end
+
+-- Local-only fade; the server destroys the model when the boss respawns.
+local function fadeOut(model: Model): ()
+	local info = TweenInfo.new(DEFEAT_FADE_SECONDS)
+	for _, descendant in model:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			TweenService:Create(descendant, info, { Transparency = 0.85 }):Play()
+		end
+	end
+end
+
+function FeedbackController.start(): ()
+	local effects = Instance.new("Folder")
+	effects.Name = "HitEffects"
+	effects.Parent = localPlayer:WaitForChild("PlayerGui")
+
+	local combatFeedback = ReplicatedStorage:WaitForChild("Remotes")
+		:WaitForChild("Combat")
+		:WaitForChild("CombatFeedback")
+	assert(combatFeedback:IsA("RemoteEvent"), "CombatFeedback must be a RemoteEvent")
+
+	combatFeedback.OnClientEvent:Connect(function(payload: unknown)
+		local feedback = parse(payload)
+		if feedback == nil then
+			return
+		end
+		local model = GameplayController.findBoss(feedback.BossInstanceId)
+		local body = if model then model.PrimaryPart else nil
+		if model == nil or body == nil then
+			return -- streamed out or already gone; nothing to show
+		end
+
+		local isOwnHit = feedback.HitterUserId == localPlayer.UserId
+		flash(model)
+		showDamageNumber(body, feedback.Damage, isOwnHit, effects)
+		if isOwnHit then
+			shakeCamera()
+		end
+		if feedback.Defeated then
+			fadeOut(model)
+		end
+	end)
+end
+
+return FeedbackController

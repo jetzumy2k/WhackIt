@@ -20,4 +20,18 @@ function CombatRules.computeHitDamage(
 	return math.max(GameConfig.MinHitDamage, math.floor(raw + 0.5))
 end
 
+-- `lastHitAt` is nil before a player's first hit. The server passes
+-- GameConfig.HitCooldownGrace to forgive network jitter; the client passes 0 so
+-- it never sends hits the server would drop.
+function CombatRules.isOffCooldown(now: number, lastHitAt: number?, graceSeconds: number): boolean
+	if lastHitAt == nil then
+		return true
+	end
+	return now - lastHitAt >= GameConfig.HitCooldown - graceSeconds
+end
+
+function CombatRules.isInReach(playerPosition: Vector3, bossPosition: Vector3): boolean
+	return (playerPosition - bossPosition).Magnitude <= GameConfig.HitReach
+end
+
 return CombatRules
