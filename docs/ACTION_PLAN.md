@@ -41,7 +41,7 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 | Server services (Boss, Combat, Stress, PlayerData, Reward, Purchase, Session, RemoteController) | ⬜ None | |
 | Client controllers (Input, Gameplay, UI, Feedback, Audio) | ⬜ None | |
 | UI screens | ⬜ None | |
-| Tests (TestEZ) | 🟡 | Harness proven (4/4 in Studio). New specs for Boss/Hammer/GameConfig + CombatRules (19 tests) type-check but are **not yet run in Studio** |
+| Tests (TestEZ) | ✅ | 19 specs (Boss/Hammer/GameConfig, CombatRules): 19 passed, 0 failed in Studio (2026-10-05) |
 | Checks script | ✅ | `scripts/check.ps1` (format, lint, type-check, build; `-Tests` for TestEZ) |
 | Docs | 🟡 | `DEVELOPMENT_WORKFLOW`, `GAMEPLAY_RULES` current; `DATA_SCHEMA`, `REMOTE_CONTRACTS` still templates |
 | CI | 🟡 Added | `.github/workflows/ci.yml` (Ubuntu, pwsh `scripts/check.ps1`); not yet run on GitHub |
@@ -203,7 +203,6 @@ Security/abuse pass, performance (MicroProfiler, remote traffic, memory per play
 
 ## 7. Immediate next steps
 
-1. **You:** rebuild and run `build/tests.rbxl` in Studio (F8): expect `[Tests] PASSED: 19 test(s)`.
-2. Push `feat/phase1-config`, confirm the CI workflow goes green on GitHub, then merge to `master`.
-3. Confirm the shared-boss rules proposed in `docs/GAMEPLAY_RULES.md` (rewards, respawn).
-4. Continue Phase 1: shared types, RemoteController + validators + rate limiter with specs, real `REMOTE_CONTRACTS.md` (P2-1).
+1. Push `feat/phase1-config`, confirm the CI workflow goes green on GitHub, then merge to `master`.
+2. Confirm the shared-boss rules proposed in `docs/GAMEPLAY_RULES.md` (rewards, respawn).
+3. Continue Phase 1: shared types, RemoteController + validators + rate limiter with specs, real `REMOTE_CONTRACTS.md` (P2-1).
