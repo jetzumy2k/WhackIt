@@ -1,6 +1,6 @@
 # WHACK IT OUT! — Progress Review & Action Plan
 
-_Review date: 2026-10-05 · Last status update: 2026-10-05 · `master` after PR #5_
+_Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase7-content` (on top of `feat/phase6-hardening`)_
 
 **Status legend:** ✅ Done · 🟡 Partly done / awaiting verification · ⬜ Not started
 
@@ -24,7 +24,8 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · `master` after PR 
 | Phase 3 — Persistence | ✅ Complete (PR #4): 108/108 specs; save playtest reported no errors or warnings (2026-10-05) | ProfileStore via `PlayerDataService`, schema v1 with migrations and validation |
 | Phase 4 — Rewards, progression, content | ✅ Accepted (2026-10-05, PR #5) | Coins, boss unlocks, hammer shop, offices, schema v3: Zen (mood faces, glowing hammer, idle stress regen), damage-share rewards + last-hit bonus; 176/176 specs |
 | Phase 5 — Monetization | ⏭ Skipped for v1 | Nothing for sale at launch |
-| Phase 6 — Hardening & release | 🟡 In progress | branch `feat/phase6-hardening` |
+| Phase 6 — Hardening & release | 🟡 Code done; your RC checks pending | Movement guard, `docs/RELEASE.md` |
+| Phase 7 — Content & polish (feedback 2026-10-05) | 🟡 Implemented; specs + playtest pending | Player Level, global leaderboard, save indicator, Senior floor (Lv 10), building interior/exterior, swing polish, music player (needs track IDs) |
 | §5 Design decisions | 🟡 3 of 5 decided | Shared bosses (+ reward/respawn rules) · end on defeat · hammer-driven damage. Open: persistence library, monetization |
 
 ---
@@ -47,7 +48,7 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · `master` after PR 
 | Client controllers (Input, Gameplay, UI, Feedback, Audio) | 🟡 4 of 5 (+ BossVisual, HammerPose, Progress, Shop) | Audio deferred: needs uploaded/licensed sound assets |
 | UI screens | 🟡 Code-built placeholder | HUD (Stress Meter, score, hint), boss HP billboards, Victory Card. Art pass in Phase 4 |
 | Arena | 🟡 Placeholder art | Office floor (user request 2026-10-05): one furnished office per boss, corridor and lobby, built from parts by `Lib/OfficeBuilder`; replace with modelled assets later |
-| Tests (TestEZ) | 🟡 | 183 specs. 176 passed in Studio (2026-10-05); 7 new movement specs pass static checks, not yet run in Studio |
+| Tests (TestEZ) | 🟡 | 213 specs. 176 passed in Studio; 37 new (movement, level, leaderboard, Senior unlocks, building, swing effects, music config) pass static checks, not yet run in Studio |
 | Checks script | ✅ | `scripts/check.ps1` (format, lint, type-check, build; `-Tests` for TestEZ) |
 | Docs | 🟡 | `DEVELOPMENT_WORKFLOW`, `GAMEPLAY_RULES`, `REMOTE_CONTRACTS`, `PLAYTEST` current; `DATA_SCHEMA` still a template (Phase 3) |
 | CI | ✅ | `.github/workflows/ci.yml` green on GitHub; `actions/checkout` moved to v7 (Node 24) |
@@ -221,6 +222,7 @@ Security/abuse pass, performance (MicroProfiler, remote traffic, memory per play
 
 ## 7. Immediate next steps
 
-1. **You:** run `build/tests.rbxl` (expect 183 passed) and `PLAYTEST.md` 42–43 (movement guard).
-2. **You:** the release-candidate gate in `docs/RELEASE.md` §1–3 (multiplayer + abuse playtests, performance, Roblox settings).
-3. PR + CI + merge `feat/phase6-hardening`, then publish a private beta (`RELEASE.md` §5).
+1. **You:** run `build/tests.rbxl` (expect 213 passed) and `PLAYTEST.md` 42–51.
+2. **You:** send 3–5 licensed music track IDs (Creator Store → Audio → Music) for `MusicConfig`.
+3. **You:** decide whether to build the monetization kill switch / schedule now (and what to sell).
+4. PR + CI + merge (Phase 6 + 7), then the RC gate in `docs/RELEASE.md` and a private beta.

@@ -13,6 +13,7 @@ v1 sells nothing (Phase 5 skipped), so there is no purchase flow to verify.
 | 5 | **Abuse playtest** | `PLAYTEST.md` 14–17, 31–32, 42 (server Output) | QA |
 | 6 | Performance | See §2 | Dev |
 | 7 | No P0/P1 defects open | crash, data loss, exploitable rewards, broken core loop | Lead |
+| 8a | Leaderboard | Board shows "All servers, all time" on a live/API-enabled server |
 | 8 | Data compatibility | Live players load cleanly: schema migrations v0→v3 are spec-covered; never deploy a server that can't read the live schema | Dev |
 | 9 | Docs current | `GAMEPLAY_RULES`, `REMOTE_CONTRACTS`, `DATA_SCHEMA`, `ACTION_PLAN` match the build | Dev |
 
@@ -54,6 +55,9 @@ Answer honestly; these are the facts about the current build:
 | Swing sound | `rbxasset://sounds/swordslash.wav` (ships with the Roblox client) | Roblox built-in content |
 | Hammer glow | Roblox `PointLight` + `Sparkles` instances | Built-in engine effects |
 | Fonts | Roblox `FredokaOne` | Roblox built-in |
+| Offices, outdoors (terrain, trees, skyline) | Roblox Terrain + parts built in code | Original to this project |
+| Spark burst, swing trail | Roblox `ParticleEmitter` (default texture) and `Trail` | Built-in engine effects |
+| Background music | `MusicConfig.Tracks`: **empty**; add only Creator Store music licensed for Roblox use or audio you own, and list each track here with its source | n/a until added |
 | ProfileStore | `lm-loleris/profilestore@1.0.3` | Apache-2.0 (code dependency) |
 | TestEZ | `roblox/testez@0.4.1` | Apache-2.0, dev-only, not shipped |
 

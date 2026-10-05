@@ -76,7 +76,7 @@ When Roblox sends a "Right to Erasure" request for a UserId:
    local PS = require(game.ServerScriptService.ServerPackages.ProfileStore)
    print(PS.New("PlayerData"):RemoveAsync("Player_123456"))
    ```
-   `true` means the profile was deleted.
+   `true` means the profile was deleted. Also remove the leaderboard entry (see **Leaderboard store** below).
 3. Record the request date and UserId (not the player's name) in your compliance log.
 
 ## Studio testing
@@ -84,3 +84,17 @@ When Roblox sends a "Right to Erasure" request for a UserId:
   nothing is saved between Play sessions.
 - To test real saving, turn it on. That reads and writes the **live** DataStore for your own account, so
   only do it on a test place or with your own test account.
+
+## Leaderboard store
+| Setting | Value |
+|---|---|
+| OrderedDataStore | `ScoreLeaderboard` (`DataConfig.LeaderboardStoreName`) |
+| Key / value | `<UserId>` → lifetime Score (integer) |
+| Writes | from the server's saved data, every `LeaderboardWriteInterval` (120 s) if changed, and on leave |
+| Reads | top `LeaderboardSize` (10), every `LeaderboardReadInterval` (60 s) per server |
+
+For a right-to-erasure request also remove the player's leaderboard entry (Command Bar, API access on):
+```lua
+print(game:GetService("DataStoreService"):GetOrderedDataStore("ScoreLeaderboard"):RemoveAsync("123456"))
+```
+Player Level is derived from Score and is not stored.

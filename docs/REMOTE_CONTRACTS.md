@@ -34,7 +34,7 @@ so clients can't read them.
 | `maxArgs` | 1 |
 | Validation | `Validate.id(bossInstanceId, RemoteLimits.MaxIdLength)`: 1–64 chars of `[A-Za-z0-9_-]` |
 | Rate limit | `RemoteLimits.RequestHammerHit`: burst 10, refill 8/s (flood guard only) |
-| Server checks (`CombatService`) | player has a session and loaded data; not flagged by `MovementGuardService`; the boss is **unlocked for this player** (`ProgressionRules.isBossUnlocked`); at least `HitCooldown − HitCooldownGrace` since the player's last **accepted** hit (`CombatRules.isOffCooldown`); boss instance exists and is not defeated; live character **holding a hammer Tool** (tagged `HammerId`) whose root is within `GameConfig.HitReach + HitReachGrace` of the boss (`CombatRules.isInReach`; the client checks the exact `HitReach`, the grace absorbs movement during network lag). The Tool only gates the swing: damage comes from the session's `EquippedHammerId`, so editing the Tool changes nothing. The handler never yields, so checks and the state change are atomic. |
+| Server checks (`CombatService`) | player has a session and loaded data; not flagged by `MovementGuardService`; the boss is **unlocked for this player** (`ProgressionRules.isBossUnlocked`, including the Senior bosses' Player Level requirement); at least `HitCooldown − HitCooldownGrace` since the player's last **accepted** hit (`CombatRules.isOffCooldown`); boss instance exists and is not defeated; live character **holding a hammer Tool** (tagged `HammerId`) whose root is within `GameConfig.HitReach + HitReachGrace` of the boss (`CombatRules.isInReach`; the client checks the exact `HitReach`, the grace absorbs movement during network lag). The Tool only gates the swing: damage comes from the session's `EquippedHammerId`, so editing the Tool changes nothing. The handler never yields, so checks and the state change are atomic. |
 | Effect | damage = `CombatRules.computeHitDamage(equipped hammer, boss)`; HP reduced (overkill not credited); damage credited to the player's contribution; stress relieved by `StressRules.reliefForHit(applied)`. On the defeating hit: rewards (see `BossDefeated`) and respawn after `BossRespawnDelay` with a **new** instance id. |
 | Response | `Combat.CombatFeedback` on success. Nothing on rejection (no oracle for probing). |
 | Failure | invalid payload / rate limited → `reject` + drop. Cooldown or reach failures are normal play → drop without logging. |
@@ -64,6 +64,13 @@ so clients can't read them.
 | When | inside `StressService.relieve`, after the bonus coins and Zen Level are granted on the server |
 | Client handling | display only: your own Zen → big card; anyone else's → toast |
 
+## `Profile.Saved`: server -> one client
+| | |
+|---|---|
+| Purpose | Show "Progress saved" briefly after ProfileStore saves the player's data |
+| Payload | none |
+| When | ProfileStore `OnAfterSave` for that player |
+
 ## `Shop.BuyHammer`: client -> server
 | | |
 |---|---|
@@ -88,7 +95,7 @@ so clients can't read them.
 | | |
 |---|---|
 | Purpose | The player's own progression for the UI (HUD, shop, locked bosses) |
-| Payload | `Types.ProfileSnapshot`: `{ Coins, OwnedHammerIds, EquippedHammerId, BossDefeats, UnlockedBossIds, ZenLevel }` |
+| Payload | `Types.ProfileSnapshot`: `{ Coins, OwnedHammerIds, EquippedHammerId, BossDefeats, UnlockedBossIds, ZenLevel, Level }` |
 | When | on data load, after every reward, purchase and equip request |
 | Client handling | display only; parsed defensively (`ProgressController`) |
 
@@ -102,6 +109,7 @@ Names live in `Shared/Attributes`. Only the server writes them; clients read the
 | Boss `Model` under `Workspace.Bosses` | `BossInstanceId`, `BossId`, `Health`, `MaxHealth`, `Defeated` | live boss state for HP bars, target selection and the client-drawn monster's hit/defeat animations |
 | Hammer `Tool` (server-created, in the character) | `HammerId` | marks the Tool as a hammer for the server's hand check |
 | `Player` | `Stress` | the player's Stress Meter (also drives the server-drawn mood face and hammer glow) |
+| `Player` | `Level` | Player Level from lifetime score (HUD, "Lv N" head tag, Senior unlocks) |
 | `Player.leaderstats.Score`, `.Coins` (IntValue) | | lifetime score and coins (saved values, mirrored for display) |
 
 ## Movement sanity (`MovementGuardService`)

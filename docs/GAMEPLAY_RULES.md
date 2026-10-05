@@ -93,8 +93,9 @@ sound plays on the downswing. The hit request is sent at the impact moment (`Swi
 halfway through the swing), so the boss reacts as the hammer lands. Joint animation is local, so other clients replay the strike on
 the hitter's character when the hit is confirmed. Presses during a swing are ignored.
 
-The map is an office floor (`ArenaConfig.Offices`, built by the server's `Lib/OfficeBuilder` from simple
-parts): each boss stands in **its own 32×32 office** along a carpeted corridor, with a name plate over
+The map is a two-storey office building (`ArenaConfig.Offices`, built by the server's `Lib/OfficeBuilder`
+from simple parts; ceilings with lights, office windows, a roof, and outdoor grass, street, trees and a
+city skyline from `Lib/OutdoorBuilder`): each boss stands in **its own 32×32 office** along a carpeted corridor, with a name plate over
 the open doorway, a carpet in the boss's tint, and a desk (monitor joke per boss), chair, filing
 cabinet, plants and a themed poster, all kept clear of the boss and the walk from the door. South
 of the corridor is the lobby (welcome sign, reception desk, couches, water cooler, plants) with the
@@ -136,3 +137,38 @@ show "Defeat <previous> N more times to unlock!".
 
 A bought hammer is equipped immediately; any owned hammer can be re-equipped. Pricier hammers always
 hit harder (spec-enforced).
+
+## Player Level, leaderboard and the Senior floor (2026-10-05)
+### Player Level
+`level = floor(sqrt(lifetimeScore / LevelScoreFactor)) + 1` (`Shared/LevelRules`, factor 600). It is
+derived from score, never stored, and shown in the HUD and as "Lv N" above every head.
+
+| Level | Lifetime score |
+|---|---|
+| 1 | 0 |
+| 2 | 600 |
+| 5 | 9,600 |
+| 10 | 48,600 |
+
+### Senior floor (upstairs, Level 10+)
+Stairs along the lobby's east wall lead to the upper corridor. Each ground-floor boss has a **Senior**
+version in the office directly above it: 3× HP, 3× score and coins, a gold crown and its own jokes.
+A Senior boss unlocks with **Player Level ≥ `UpstairsMinLevel` (10)** and **1 defeat of its
+ground-floor version** (`BossConfig.UnlockAfterBossId` / `UnlockDefeats` / `MinLevel`). Below the
+level its bar reads "LOCKED: reach Lv 10" and swings show "Reach Level 10 to fight this Senior boss!".
+This spreads experienced players across two floors instead of crowding one boss.
+
+### Global leaderboard
+A board on the lobby's west wall lists the all-time top 10 by lifetime score across all servers
+(`LeaderboardService`, OrderedDataStore `ScoreLeaderboard`). Scores are written from the server's saved
+data every 2 minutes (when changed) and on leave; the board refreshes every minute. Without DataStore
+access (Studio with API access off) it ranks the players in the current server and says so.
+
+### Swing feel
+The swing eases into a short anticipation pause at the top, the hammer head stretches on the
+downswing and squashes on impact, a white trail follows the fast part of the swing, and each confirmed
+hit throws a spark burst on the boss (`SwingPose.headScale` / `trailActive`, local visuals).
+
+### Music
+`AudioController` loops `MusicConfig.Tracks` with fades and a "Music: On/Off" button. The list is
+empty until licensed tracks are added (see `docs/RELEASE.md` §4).
