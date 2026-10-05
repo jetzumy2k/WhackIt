@@ -15,13 +15,13 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 | P1-3 Format gate fails (CRLF) | ✅ | `06043a6` — `.gitattributes` LF |
 | P1-4 `--!strict` unenforced | ✅ | `06043a6` — luau-lsp + strict `.luaurc` |
 | P1-5 No test harness | ✅ | `06043a6` — harness + first spec; 4/4 passed in Studio (2026-10-05) |
-| P2-1 … P2-8 Standards issues | 🟡 2 of 8 done (P2-2, P2-3); P2-6, P2-7 partly | §3 |
+| P2-1 … P2-8 Standards issues | 🟡 3 of 8 done (P2-2, P2-3, P2-6); P2-7 partly | §3 |
 | P3 Cleanup | 🟡 9 of 10 done | §3 |
 | Git: single default branch | ✅ | `master` is default; `main` deleted; its `LICENSE` kept (`53d8a56`) |
 | Phase 0 — Foundation | 🟡 7 of 7 steps; CI not yet run on GitHub | `.github/workflows/ci.yml` added; confirm green on first push |
 | Phase 1 — Core architecture | 🟡 2 of 6 steps | Lifecycle loader; config hardening + hammer-driven damage |
 | Phases 2–6 | ⬜ | |
-| §5 Design decisions | 🟡 3 of 5 decided | Shared bosses · end on defeat · hammer-driven damage. Open: persistence library, monetization, shared-boss reward rules |
+| §5 Design decisions | 🟡 3 of 5 decided | Shared bosses (+ reward/respawn rules) · end on defeat · hammer-driven damage. Open: persistence library, monetization |
 
 ---
 
@@ -102,7 +102,7 @@ P0 = crash/data loss/security catastrophe · P1 = major failure / blocks next ph
 | P2-3 | ✅ | Damage rules were duplicated/ambiguous. | Hammer-driven: `max(MinHitDamage, round(hammer.Damage × boss.DamageTakenMultiplier))`. `HitDamage` → `DamageTakenMultiplier`, `DefaultHitDamage` → `DefaultHammerId`. Multipliers chosen so hits-to-defeat match the old balance (spec-guarded). |
 | P2-4 | ⬜ | Stress Meter has no rules. | Add `StressReliefPerHit` / formula to config + docs. |
 | P2-5 | ⬜ | Naming: `Types.PlayerStats` camelCase vs `DATA_SCHEMA.md` PascalCase. | Pick one (recommend PascalCase) and apply everywhere. |
-| P2-6 | 🟡 | Timed rounds vs defeat→reward→replay loop. | Decided: shared bosses, end on defeat. `RoundDuration` and `Round.RoundState` removed. **Open:** shared-boss reward/respawn rules (see `docs/GAMEPLAY_RULES.md`). |
+| P2-6 | ✅ | Timed rounds vs defeat→reward→replay loop. | Decided: shared bosses, end on defeat. `RoundDuration` and `Round.RoundState` removed. Shared-boss reward/respawn rules confirmed; numeric values land in config in Phase 2. |
 | P2-7 | 🟡 | Docs referenced `skills/`; CLAUDE.md "preferred repository" layout differs from actual. | ✅ `skills/` paths fixed (`ef7aefd`). **Open:** CLAUDE.md layout tree still shows `src/ReplicatedStorage/...` instead of `src/server`, `src/client`, `src/config`, `src/shared`. |
 | P2-8 | ⬜ | Nothing marks which config values are server-only. | Rule: client-hidden values (anti-cheat thresholds, reward tables) go in `ServerStorage`/server modules. |
 
@@ -144,7 +144,7 @@ None of these are due yet; each is mapped to the phase where it lands.
 
 ## 5. Design decisions — 🟡 3 of 5 decided
 
-1. ✅ **Session model:** **shared bosses** (decided 2026-10-05). Follow-up rules proposed in `docs/GAMEPLAY_RULES.md` (contribution-based full rewards, timed respawn): ⬜ confirm before Phase 2.
+1. ✅ **Session model:** **shared bosses** (decided 2026-10-05). Follow-up rules ✅ confirmed (2026-10-05): contribution-based full rewards, timed respawn (`docs/GAMEPLAY_RULES.md`).
 2. ✅ **Encounter end:** **on defeat**; no round timer in v1 (decided 2026-10-05).
 3. ✅ **Damage:** **hammer-driven** (decided 2026-10-05), implemented in `CombatRules`.
 4. ⬜ **Persistence library** (needed before Phase 3): hand-written `PlayerDataService` or ProfileStore (Wally) with a thin wrapper? _Recommendation: ProfileStore — battle-tested session locking; justified dependency under CLAUDE.md._
@@ -204,5 +204,4 @@ Security/abuse pass, performance (MicroProfiler, remote traffic, memory per play
 ## 7. Immediate next steps
 
 1. Push `feat/phase1-config`, confirm the CI workflow goes green on GitHub, then merge to `master`.
-2. Confirm the shared-boss rules proposed in `docs/GAMEPLAY_RULES.md` (rewards, respawn).
-3. Continue Phase 1: shared types, RemoteController + validators + rate limiter with specs, real `REMOTE_CONTRACTS.md` (P2-1).
+2. Continue Phase 1: shared types, RemoteController + validators + rate limiter with specs, real `REMOTE_CONTRACTS.md` (P2-1).

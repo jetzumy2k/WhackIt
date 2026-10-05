@@ -30,8 +30,14 @@ A hit request is applied only if all of these hold (details in `docs/REMOTE_CONT
 - the player is within reach of the boss;
 - at least `GameConfig.HitCooldown` seconds since the player's last accepted hit.
 
-## Shared-boss rules: proposed, to confirm before Phase 2
+## Shared-boss rules (confirmed 2026-10-05)
 - **Contribution:** the server records accepted damage per player per boss.
-- **Rewards:** on defeat, every player who dealt at least a minimum share of damage receives the full reward (cooperative: no kill-stealing, no last-hit bonus).
+- **Rewards:** on defeat, every player whose accepted damage is at least a minimum share of the boss's MaxHealth receives the **full** reward. Cooperative: no kill-stealing, no last-hit bonus.
 - **Respawn:** a defeated boss respawns at full HP after a configured delay.
 - **Stress Meter:** rules still to be defined (P2-4).
+
+Tunable values (added to `GameConfig` when Phase 2 implements them; starting proposals):
+| Key | Proposed start | Meaning |
+|---|---|---|
+| `MinRewardDamageShare` | 0.10 | fraction of boss MaxHealth a player must deal to qualify for the reward |
+| `BossRespawnDelay` | 5 s | time from defeat to the boss reappearing at full HP |
