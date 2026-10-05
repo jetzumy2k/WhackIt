@@ -15,7 +15,7 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 | P1-3 Format gate fails (CRLF) | ✅ | `06043a6` — `.gitattributes` LF |
 | P1-4 `--!strict` unenforced | ✅ | `06043a6` — luau-lsp + strict `.luaurc` |
 | P1-5 No test harness | ✅ | `06043a6` — harness + first spec; 4/4 passed in Studio (2026-10-05) |
-| P2-1 … P2-8 Standards issues | 🟡 6 of 8 done (P2-1, P2-2, P2-3, P2-5, P2-6, P2-8); P2-7 partly; P2-4 open | §3 |
+| P2-1 … P2-8 Standards issues | 🟡 7 of 8 done; P2-7 partly (CLAUDE.md layout tree) | §3 |
 | P3 Cleanup | 🟡 9 of 10 done | §3 |
 | Git: single default branch | ✅ | `master` is default; `main` deleted; its `LICENSE` kept (`53d8a56`) |
 | Phase 0 — Foundation | ✅ Complete | CI green on PR #1 and on `master` (`f2faca7`) |
@@ -42,7 +42,7 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 | Server-only config | ✅ | `ServerScriptService.Config` (`src/server/config`): `RemoteLimits` |
 | Client controllers (Input, Gameplay, UI, Feedback, Audio) | ⬜ None | |
 | UI screens | ⬜ None | |
-| Tests (TestEZ) | ✅ | 46 specs: 46 passed, 0 failed in Studio (2026-10-05). Expected warnings from RemoteController specs; reject-log throttling observed working |
+| Tests (TestEZ) | 🟡 | 46 passed in Studio (2026-10-05); 7 new `StressRules` specs (53 total) pass static checks, not yet run in Studio |
 | Checks script | ✅ | `scripts/check.ps1` (format, lint, type-check, build; `-Tests` for TestEZ) |
 | Docs | 🟡 | `DEVELOPMENT_WORKFLOW`, `GAMEPLAY_RULES`, `REMOTE_CONTRACTS` current; `DATA_SCHEMA` still a template (Phase 3) |
 | CI | ✅ | `.github/workflows/ci.yml` green on GitHub; `actions/checkout` moved to v7 (Node 24) |
@@ -101,7 +101,7 @@ P0 = crash/data loss/security catastrophe · P1 = major failure / blocks next ph
 | P2-1 | ✅ | `RequestHammerHit` contract takes a config `{ bossId }` from the client. With shared bosses (decided), several boss instances can be in the world. | Payload: a server-issued boss **instance** id (bounded string), never a config id or damage. Server checks the instance exists, is alive and is within reach, plus cooldown. **Done:** contract in `REMOTE_CONTRACTS.md`; enforcement code lands with `CombatService` in Phase 2. |
 | P2-2 | ✅ | Config tables were mutable; `BossConfig` had no lookup. | All config deep-frozen; `List` + `ById`; duplicate ids error at require; specs check freezing, indexing, values. |
 | P2-3 | ✅ | Damage rules were duplicated/ambiguous. | Hammer-driven: `max(MinHitDamage, round(hammer.Damage × boss.DamageTakenMultiplier))`. `HitDamage` → `DamageTakenMultiplier`, `DefaultHitDamage` → `DefaultHammerId`. Multipliers chosen so hits-to-defeat match the old balance (spec-guarded). |
-| P2-4 | ⬜ | Stress Meter has no rules. | Add `StressReliefPerHit` / formula to config + docs. |
+| P2-4 | ✅ | Stress Meter had no rules. | Damage-proportional relief + defeat bonus: `StressRules` (`reliefForHit`, `applyRelief`), `GameConfig.StressReliefPerDamage` / `DefeatStressRelief`, documented in `GAMEPLAY_RULES.md`, specs. |
 | P2-5 | ✅ | Naming: `Types.PlayerStats` camelCase vs `DATA_SCHEMA.md` PascalCase. | PascalCase for data/payload fields; `PlayerStats` removed; `Types` documents the rule. |
 | P2-6 | ✅ | Timed rounds vs defeat→reward→replay loop. | Decided: shared bosses, end on defeat. `RoundDuration` and `Round.RoundState` removed. Shared-boss reward/respawn rules confirmed; numeric values land in config in Phase 2. |
 | P2-7 | 🟡 | Docs referenced `skills/`; CLAUDE.md "preferred repository" layout differs from actual. | ✅ `skills/` paths fixed (`ef7aefd`). **Open:** CLAUDE.md layout tree still shows `src/ReplicatedStorage/...` instead of `src/server`, `src/client`, `src/config`, `src/shared`. |
@@ -205,5 +205,4 @@ Security/abuse pass, performance (MicroProfiler, remote traffic, memory per play
 ## 7. Immediate next steps
 
 1. Open a PR for `feat/phase1-remotes`, confirm CI is green, merge to `master`.
-2. Define Stress Meter rules (P2-4) before Phase 2.
-3. Start Phase 2: shared-boss vertical slice.
+2. Start Phase 2: shared-boss vertical slice.
