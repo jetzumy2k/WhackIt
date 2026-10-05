@@ -206,8 +206,8 @@ local function buildHud(): (ScreenGui, Frame)
 	hint.Size = UDim2.new(0.6, 0, 0, 28)
 	hint.TextTransparency = 0.2
 	hint.Text = if UserInputService.TouchEnabled
-		then "Walk up to a boss and tap to swing your hammer!"
-		else "Walk up to a boss and click to swing your hammer!"
+		then "Walk up to a boss and tap to swing your hammer! Tap Sprint to run."
+		else "Walk up to a boss and click to swing your hammer! Hold Shift to sprint."
 
 	-- "Progress saved" note, bottom-left, shown briefly after each save.
 	local saved = makeLabel("Saved", gui)
