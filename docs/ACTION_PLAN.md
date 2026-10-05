@@ -20,7 +20,7 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 | Git: single default branch | ✅ | `master` is default; `main` deleted; its `LICENSE` kept (`53d8a56`) |
 | Phase 0 — Foundation | ✅ Complete | CI green on PR #1 and on `master` (`f2faca7`) |
 | Phase 1 — Core architecture | ✅ Complete (PR #2) | Lifecycle, config, Types, Validate, RateLimiter, RemoteController, REMOTE_CONTRACTS; 46/46 specs pass in Studio |
-| Phase 2 — Shared-boss vertical slice | 🟡 Implemented, 73/73 specs pass; playtest pending | 4 services, 4 client controllers, arena, 73 specs (20 new) |
+| Phase 2 — Shared-boss vertical slice | 🟡 Implemented; cartoon boss + hammer swing added after first playtest; specs + playtest pending | 5 services, 5 client controllers, arena, 85 specs |
 | Phases 3–6 | ⬜ | |
 | §5 Design decisions | 🟡 3 of 5 decided | Shared bosses (+ reward/respawn rules) · end on defeat · hammer-driven damage. Open: persistence library, monetization |
 
@@ -39,12 +39,12 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 | Combat & stress rules | ✅ | `Shared/CombatRules` (damage, cooldown, reach), `Shared/StressRules`, documented in `docs/GAMEPLAY_RULES.md` |
 | Shared types | ✅ | `Types`: `BossInstanceId`, `CombatFeedback` payload (PascalCase). Unused camelCase `PlayerStats` removed. `PlayerData` arrives with Phase 3 |
 | Remotes | ✅ Handled | `RequestHammerHit` → `CombatService`; `CombatFeedback`, `BossDefeated` sent by server; replicated attributes documented in `REMOTE_CONTRACTS.md` |
-| Server services (Boss, Combat, Stress, PlayerData, Reward, Purchase, Session, RemoteController) | 🟡 5 of 8 | `RemoteController`, `SessionService`, `BossService` (+ `Lib/BossState`), `CombatService`, `StressService`. Phase 2 grants score inside `CombatService`; `RewardService` (Phase 4) takes that over |
+| Server services (Boss, Combat, Stress, PlayerData, Reward, Purchase, Session, RemoteController) | 🟡 5 of 8 (+ `HammerService`) | `RemoteController`, `SessionService`, `BossService` (+ `Lib/BossState`), `CombatService`, `StressService`; `HammerService` (+ `Lib/HammerTool`) hands out the hammer Tool. Phase 2 grants score inside `CombatService`; `RewardService` (Phase 4) takes that over |
 | Server-only config | ✅ | `ServerScriptService.Config` (`src/server/config`): `RemoteLimits` |
-| Client controllers (Input, Gameplay, UI, Feedback, Audio) | 🟡 4 of 5 | Input, Gameplay, UI, Feedback. Audio in Phase 4 |
+| Client controllers (Input, Gameplay, UI, Feedback, Audio) | 🟡 4 of 5 (+ `BossVisualController`) | Input (hammer Tool swing), Gameplay, UI, Feedback, BossVisual (cartoon monster + animations). Audio in Phase 4 (swing uses a built-in Roblox sound) |
 | UI screens | 🟡 Code-built placeholder | HUD (Stress Meter, score, hint), boss HP billboards, Victory Card. Art pass in Phase 4 |
-| Arena | 🟡 Placeholder | Floor + spawn in `default.project.json`; boss is a coloured block until real art |
-| Tests (TestEZ) | ✅ | 73 specs: 73 passed, 0 failed in Studio (2026-10-05) |
+| Arena | 🟡 Placeholder | Floor + spawn in `default.project.json`; bosses are code-built cartoon monsters (`BossVisualConfig`) until real art |
+| Tests (TestEZ) | 🟡 | 85 specs. 73 passed in Studio; 12 new (BossVisualConfig 4, BossVisual 4, HammerTool 4) pass static checks, **not yet run in Studio** |
 | Checks script | ✅ | `scripts/check.ps1` (format, lint, type-check, build; `-Tests` for TestEZ) |
 | Docs | 🟡 | `DEVELOPMENT_WORKFLOW`, `GAMEPLAY_RULES`, `REMOTE_CONTRACTS`, `PLAYTEST` current; `DATA_SCHEMA` still a template (Phase 3) |
 | CI | ✅ | `.github/workflows/ci.yml` green on GitHub; `actions/checkout` moved to v7 (Node 24) |
@@ -182,7 +182,7 @@ Goal: a clean clone builds, formats, lints, type-checks, and runs the test suite
 
 ### Phase 2 — Vertical slice: one shared boss, full loop, no persistence — 🟡 Implemented, verification pending
 
-**Status:** ✅ code · ✅ static checks · ✅ 73/73 specs in Studio · ⬜ playtest (`docs/PLAYTEST.md` checks 1–17)
+**Status:** ✅ code · ✅ static checks · 🟡 specs (73/73 passed before the visual pass; 85 now) · 🟡 playtest round 1: boss was a plain block and the character didn't swing → fixed with a client-drawn cartoon boss + hammer Tool with swing; round 2 pending (`docs/PLAYTEST.md` checks 1–17)
 
 Server: `SessionService` (join/leave, per-player state), `BossService` (spawns shared boss instances with server-issued ids, authoritative HP, per-player damage contribution, respawn after defeat), `CombatService` (validates hit: boss instance alive, live character, reach, cooldown; damage via `CombatRules`), `StressService` (stress from config formula, P2-4).
 Client: `InputController` (UserInputService: click/tap/gamepad R2·X, ignoring GUI-processed input), `GameplayController`, `UIController` (boss name, HP bar, Stress Meter, score, Victory Card), `FeedbackController` (hit flash, damage numbers, camera shake, defeat fade; presentation only).
@@ -209,6 +209,6 @@ Security/abuse pass, performance (MicroProfiler, remote traffic, memory per play
 
 ## 7. Immediate next steps
 
-1. **You:** playtest `build/WhackItOut.rbxl` with `docs/PLAYTEST.md` (solo, 2–3 players, abuse checks) and report anything off.
+1. **You:** run `build/tests.rbxl` (expect 85 passed), then playtest round 2 with `docs/PLAYTEST.md`, especially checks 1, 3 and 3b (boss look, swing, hammer orientation).
 2. PR + CI + merge `feat/phase2-vertical-slice`.
 3. Decide the persistence library (§5 #4) before Phase 3.

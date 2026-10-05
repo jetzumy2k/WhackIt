@@ -17,6 +17,7 @@ local BossState = require(ServerScriptService.Lib.BossState)
 local CombatRules = require(ReplicatedStorage.Shared.CombatRules)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
+local HammerTool = require(ServerScriptService.Lib.HammerTool)
 local RemoteController = require(ServerScriptService.Controllers.RemoteController)
 local RemoteLimits = require(ServerScriptService.Config.RemoteLimits)
 local SessionService = require(script.Parent.SessionService)
@@ -33,7 +34,9 @@ local CombatService = {}
 
 local lastHitAt: { [Player]: number } = {}
 
-local function getLiveRootPosition(player: Player): Vector3?
+-- Root position of a live character holding a hammer, or nil. The equipped Tool
+-- only gates the swing; damage still comes from the session's EquippedHammerId.
+local function getSwingPosition(player: Player): Vector3?
 	local character = player.Character
 	if character == nil then
 		return nil
@@ -41,6 +44,10 @@ local function getLiveRootPosition(player: Player): Vector3?
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	local root = character:FindFirstChild("HumanoidRootPart")
 	if humanoid == nil or humanoid.Health <= 0 or root == nil or not root:IsA("BasePart") then
+		return nil
+	end
+	local tool = character:FindFirstChildOfClass("Tool")
+	if tool == nil or tool:GetAttribute(HammerTool.HAMMER_ID_ATTRIBUTE) == nil then
 		return nil
 	end
 	return root.Position
@@ -103,7 +110,7 @@ local function onHammerHit(player: Player, rawBossInstanceId: unknown): ()
 		return
 	end
 
-	local rootPosition = getLiveRootPosition(player)
+	local rootPosition = getSwingPosition(player)
 	if rootPosition == nil or not CombatRules.isInReach(rootPosition, live.Body.Position) then
 		return
 	end

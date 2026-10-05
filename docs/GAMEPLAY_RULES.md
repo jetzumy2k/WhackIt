@@ -26,7 +26,7 @@ Production Bug 15, Monday 20).
 
 ## Hit acceptance (server)
 A hit request is applied only if all of these hold (`CombatService`; details in `docs/REMOTE_CONTRACTS.md`):
-- the player has a live character;
+- the player has a live character holding their hammer;
 - the target boss exists and is not defeated;
 - the player's root is within `GameConfig.HitReach` (12 studs) of the boss centre;
 - at least `HitCooldown − HitCooldownGrace` (0.25 − 0.05 s) since the player's last accepted hit. The client waits the full cooldown; the grace only absorbs network jitter.
@@ -62,5 +62,12 @@ Open (Phase 2+): what happens at 0 stress (e.g. a "Zen" celebration), and whethe
 persists between sessions (Phase 3).
 
 ## Arena
-Boss spawn points and the placeholder boss look are in `src/config/ArenaConfig.luau`. The floor and
+Boss spawn points and hitbox size are in `src/config/ArenaConfig.luau`. The server's boss is an
+invisible hitbox; each client draws a cartoon monster over it (`Shared/BossVisual`, looks in
+`src/config/BossVisualConfig.luau`) and animates it locally: idle bob, turning to face the player,
+a lean-back hop on each confirmed hit, and a spin-and-shrink on defeat.
+
+Every player is handed their hammer Tool on spawn (`HammerService`, built by `Lib/HammerTool`).
+Clicking, tapping or pressing R2 swings it with Roblox's built-in slash animation and sound;
+the swing plays immediately, and the boss reacts when the server confirms the hit. The floor and
 player spawn are in `default.project.json` (`Workspace.Arena`). Phase 2 spawns one Deadline Boss.

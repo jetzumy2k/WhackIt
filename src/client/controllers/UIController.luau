@@ -7,6 +7,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
 
 local Attributes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Attributes"))
@@ -116,8 +117,8 @@ local function buildHud(): (ScreenGui, Frame)
 	hint.Size = UDim2.new(0.6, 0, 0, 28)
 	hint.TextTransparency = 0.2
 	hint.Text = if UserInputService.TouchEnabled
-		then "Walk up to a boss and tap to whack it!"
-		else "Walk up to a boss and click to whack it!"
+		then "Walk up to a boss and tap to swing your hammer!"
+		else "Walk up to a boss and click to swing your hammer!"
 
 	-- Victory Card, centre, hidden until a boss you fought is defeated.
 	local card = Instance.new("Frame")
@@ -245,6 +246,10 @@ local function showVictoryCard(card: Frame, payload: unknown): ()
 end
 
 function UIController.start(): ()
+	-- The hammer is the only tool and stays in hand; hiding the hotbar stops
+	-- players accidentally unequipping it with number keys.
+	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+
 	local _, card = buildHud()
 
 	local billboards = Instance.new("Folder")

@@ -7,6 +7,8 @@ export type HammerDefinition = {
 	DisplayName: string,
 	Description: string,
 	Damage: number,
+	HeadColor: Color3,
+	HandleColor: Color3,
 }
 
 export type HammerConfig = {
@@ -20,6 +22,8 @@ local list: { HammerDefinition } = {
 		DisplayName = "Squeaky Hammer",
 		Description = "A trusty foam hammer. Squeaks on every whack.",
 		Damage = 10,
+		HeadColor = Color3.fromRGB(255, 70, 90),
+		HandleColor = Color3.fromRGB(255, 210, 60),
 	},
 }
 

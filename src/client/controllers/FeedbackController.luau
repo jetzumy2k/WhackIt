@@ -1,6 +1,7 @@
 --!strict
--- Hit feedback: flash, floating damage numbers, camera shake for the hitter and
--- a fade on defeat. Purely local visuals driven by Combat.CombatFeedback.
+-- Hit feedback: flash, floating damage numbers and camera shake for the hitter.
+-- Purely local visuals driven by Combat.CombatFeedback. The boss's own hit and
+-- defeat animations live in BossVisualController.
 
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
@@ -16,7 +17,6 @@ local DAMAGE_NUMBER_SECONDS = 0.7
 local DAMAGE_NUMBER_RISE = 3
 local SHAKE_SECONDS = 0.08
 local SHAKE_STRENGTH = 0.35
-local DEFEAT_FADE_SECONDS = 0.6
 
 local localPlayer = Players.LocalPlayer
 local random = Random.new()
@@ -112,16 +112,6 @@ local function shakeCamera(): ()
 	TweenService:Create(humanoid, info, { CameraOffset = offset }):Play()
 end
 
--- Local-only fade; the server destroys the model when the boss respawns.
-local function fadeOut(model: Model): ()
-	local info = TweenInfo.new(DEFEAT_FADE_SECONDS)
-	for _, descendant in model:GetDescendants() do
-		if descendant:IsA("BasePart") then
-			TweenService:Create(descendant, info, { Transparency = 0.85 }):Play()
-		end
-	end
-end
-
 function FeedbackController.start(): ()
 	local effects = Instance.new("Folder")
 	effects.Name = "HitEffects"
@@ -144,13 +134,15 @@ function FeedbackController.start(): ()
 		end
 
 		local isOwnHit = feedback.HitterUserId == localPlayer.UserId
-		flash(model)
+		-- Flash the drawn monster, not the boss Model: that also holds the
+		-- invisible hitbox, which a Highlight would reveal as a white box.
+		local visual = model:FindFirstChild("Visual")
+		if visual and visual:IsA("Model") then
+			flash(visual)
+		end
 		showDamageNumber(body, feedback.Damage, isOwnHit, effects)
 		if isOwnHit then
 			shakeCamera()
-		end
-		if feedback.Defeated then
-			fadeOut(model)
 		end
 	end)
 end

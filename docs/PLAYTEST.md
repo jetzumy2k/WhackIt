@@ -15,19 +15,20 @@ Record the date, build (commit) and result for each run in the PR.
 ### Solo (Test → Play, F5)
 | # | Check | Expected |
 |---|---|---|
-| 1 | Spawn | Floor, an orange "Deadline Boss" block ahead with name + HP bar `100 / 100`; HUD shows `Stress 100 / 100`, `Score: 0`, hint at the bottom |
-| 2 | Click while far from the boss | Nothing happens (out of reach) |
-| 3 | Walk up and click | White flash, yellow `-10`, small camera shake, HP `90 / 100`, stress drops by 1 |
+| 1 | Spawn | Floor; an orange cartoon monster with angry eyes, a toothy mouth and a "DUE TODAY!" sign, bobbing and turning to face you, with name + HP bar `100 / 100`. You hold a red-and-yellow hammer. HUD shows `Stress 100 / 100`, `Score: 0`, hint at the bottom; no hotbar |
+| 2 | Click while far from the boss | Your character swings the hammer (animation + swish sound) but the boss doesn't react |
+| 3 | Walk up and click | Swing + swish; the boss flashes white, leans back with a hop, yellow `-10` floats up, small camera shake, HP `90 / 100`, stress drops by 1 |
+| 3b | Hammer orientation | The hammer sits in your hand with the head at the far end, and the swing looks like a downward whack. **Report if the hammer points the wrong way.** |
 | 4 | Click as fast as possible | At most ~4 hits per second land |
-| 5 | Defeat the boss | HP bar shows `DEFEATED!`, boss fades, Victory Card `+100 score -5 stress`, Score `100` in HUD and player list |
+| 5 | Defeat the boss | HP bar shows `DEFEATED!`, the monster spins and shrinks away, Victory Card `+100 score -5 stress`, Score `100` in HUD and player list |
 | 6 | Wait ~5 s | A fresh boss at `100 / 100` replaces it; hitting works again |
-| 7 | Reset character (Esc → Reset) mid-fight | HUD and HP bars stay; hitting works after respawn |
+| 7 | Reset character (Esc → Reset) mid-fight | You respawn holding a new hammer; HUD and HP bars stay; hitting works again |
 | 8 | Output window | No errors. No `[Remote] rejected` warnings during normal play |
 
 ### Shared boss (Test → Clients and Servers → 2 or 3 players → Start)
 | # | Check | Expected |
 |---|---|---|
-| 9 | Both players hit the same boss | Both see the same HP; each sees their own hits in yellow, the other's in grey |
+| 9 | Both players hit the same boss | Both see the same HP and each other's swings; each sees their own hits in yellow, the other's in grey; the monster turns to face each viewer |
 | 10 | Player A deals most damage, player B ≥ 1 hit (≥ 10 HP) | Both get `+100 score` Victory Cards |
 | 11 | Player B never hits the boss | B gets no Victory Card and no score (the below-10%-share case is covered by `BossState` specs) |
 | 12 | Both hit on the defeating moment | Exactly one defeat; each qualifying player rewarded once |

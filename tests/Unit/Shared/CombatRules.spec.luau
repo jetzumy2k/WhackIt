@@ -8,7 +8,14 @@ local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
 
 local function hammerWith(damage: number): HammerConfig.HammerDefinition
-	return { Id = "test_hammer", DisplayName = "Test", Description = "Test", Damage = damage }
+	return {
+		Id = "test_hammer",
+		DisplayName = "Test",
+		Description = "Test",
+		Damage = damage,
+		HeadColor = Color3.new(1, 1, 1),
+		HandleColor = Color3.new(1, 1, 1),
+	}
 end
 
 local function bossWith(multiplier: number): BossConfig.BossDefinition

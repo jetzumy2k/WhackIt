@@ -51,6 +51,8 @@ local function buildModel(
 	body.Size = ArenaConfig.PlaceholderBossSize
 	body.Color = ArenaConfig.PlaceholderBossColor
 	body.Material = Enum.Material.SmoothPlastic
+	-- Invisible hitbox: each client draws the cartoon monster over it (Shared/BossVisual).
+	body.Transparency = 1
 	body.CFrame = CFrame.new(spawn.Position)
 	body.Parent = model
 	model.PrimaryPart = body

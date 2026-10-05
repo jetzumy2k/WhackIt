@@ -34,7 +34,7 @@ so clients can't read them.
 | `maxArgs` | 1 |
 | Validation | `Validate.id(bossInstanceId, RemoteLimits.MaxIdLength)`: 1–64 chars of `[A-Za-z0-9_-]` |
 | Rate limit | `RemoteLimits.RequestHammerHit`: burst 10, refill 8/s (flood guard only) |
-| Server checks (`CombatService`) | player has a session; at least `HitCooldown − HitCooldownGrace` since the player's last **accepted** hit (`CombatRules.isOffCooldown`); boss instance exists and is not defeated; live character whose root is within `GameConfig.HitReach` of the boss (`CombatRules.isInReach`). The handler never yields, so checks and the state change are atomic. |
+| Server checks (`CombatService`) | player has a session; at least `HitCooldown − HitCooldownGrace` since the player's last **accepted** hit (`CombatRules.isOffCooldown`); boss instance exists and is not defeated; live character **holding a hammer Tool** (tagged `HammerId`) whose root is within `GameConfig.HitReach` of the boss (`CombatRules.isInReach`). The Tool only gates the swing: damage comes from the session's `EquippedHammerId`, so editing the Tool changes nothing. The handler never yields, so checks and the state change are atomic. |
 | Effect | damage = `CombatRules.computeHitDamage(equipped hammer, boss)`; HP reduced (overkill not credited); damage credited to the player's contribution; stress relieved by `StressRules.reliefForHit(applied)`. On the defeating hit: rewards (see `BossDefeated`) and respawn after `BossRespawnDelay` with a **new** instance id. |
 | Response | `Combat.CombatFeedback` on success. Nothing on rejection (no oracle for probing). |
 | Failure | invalid payload / rate limited → `reject` + drop. Cooldown or reach failures are normal play → drop without logging. |
@@ -63,7 +63,8 @@ Names live in `Shared/Attributes`. Only the server writes them; clients read the
 
 | Where | Attribute | Meaning |
 |---|---|---|
-| Boss `Model` under `Workspace.Bosses` | `BossInstanceId`, `BossId`, `Health`, `MaxHealth`, `Defeated` | live boss state for HP bars and target selection |
+| Boss `Model` under `Workspace.Bosses` | `BossInstanceId`, `BossId`, `Health`, `MaxHealth`, `Defeated` | live boss state for HP bars, target selection and the client-drawn monster's hit/defeat animations |
+| Hammer `Tool` (server-created, in the character) | `HammerId` | marks the Tool as a hammer for the server's hand check |
 | `Player` | `Stress` | the player's Stress Meter |
 | `Player.leaderstats.Score` (IntValue) | | session score |
 
