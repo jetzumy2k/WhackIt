@@ -10,6 +10,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local BossService = require(script.Parent.BossService)
@@ -18,6 +19,7 @@ local CombatRules = require(ReplicatedStorage.Shared.CombatRules)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
 local HammerTool = require(ServerScriptService.Lib.HammerTool)
+local RateLimiter = require(ReplicatedStorage.Shared.RateLimiter)
 local RemoteController = require(ServerScriptService.Controllers.RemoteController)
 local RemoteLimits = require(ServerScriptService.Config.RemoteLimits)
 local SessionService = require(script.Parent.SessionService)
@@ -28,29 +30,40 @@ local Validate = require(ReplicatedStorage.Shared.Validate)
 
 local CombatRemotes = ReplicatedStorage.Remotes.Combat
 
+local IS_STUDIO = RunService:IsStudio()
+local dropLogLimiter = RateLimiter.new({ Capacity = 1, RefillPerSecond = 1 })
+
 local REMOTE_NAME = "RequestHammerHit"
 
 local CombatService = {}
 
 local lastHitAt: { [Player]: number } = {}
 
--- Root position of a live character holding a hammer, or nil. The equipped Tool
--- only gates the swing; damage still comes from the session's EquippedHammerId.
-local function getSwingPosition(player: Player): Vector3?
+-- Root position of a live character holding a hammer, or nil plus the reason.
+-- The equipped Tool only gates the swing; damage comes from EquippedHammerId.
+local function getSwingPosition(player: Player): (Vector3?, string?)
 	local character = player.Character
 	if character == nil then
-		return nil
+		return nil, "no character"
 	end
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	local root = character:FindFirstChild("HumanoidRootPart")
 	if humanoid == nil or humanoid.Health <= 0 or root == nil or not root:IsA("BasePart") then
-		return nil
+		return nil, "character not alive"
 	end
 	local tool = character:FindFirstChildOfClass("Tool")
 	if tool == nil or tool:GetAttribute(HammerTool.HAMMER_ID_ATTRIBUTE) == nil then
-		return nil
+		return nil, "no hammer in hand"
 	end
-	return root.Position
+	return root.Position, nil
+end
+
+-- Studio-only: explain dropped hits during playtests (at most once per second
+-- per player). Live servers stay silent so normal misses never spam the log.
+local function explainDrop(player: Player, reason: string): ()
+	if IS_STUDIO and dropLogLimiter.allow(player.UserId) then
+		print(string.format("[Combat] hit from %s ignored: %s", player.Name, reason))
+	end
 end
 
 local function rewardContributors(live: BossService.LiveBoss): ()
@@ -94,25 +107,32 @@ local function onHammerHit(player: Player, rawBossInstanceId: unknown): ()
 	end
 
 	-- The checks below fail in normal play (lag, a boss just defeated, walking
-	-- away), so they drop silently instead of logging.
+	-- away), so they drop without warnings; explainDrop prints only in Studio.
 	local session = SessionService.get(player)
 	if session == nil then
-		return
+		return explainDrop(player, "no session yet")
 	end
 
 	local now = os.clock()
 	if not CombatRules.isOffCooldown(now, lastHitAt[player], GameConfig.HitCooldownGrace) then
-		return
+		return explainDrop(player, "cooldown")
 	end
 
 	local live = BossService.getLive(bossInstanceId)
 	if live == nil then
-		return
+		return explainDrop(player, "boss " .. bossInstanceId .. " is gone or defeated")
 	end
 
-	local rootPosition = getSwingPosition(player)
-	if rootPosition == nil or not CombatRules.isInReach(rootPosition, live.Body.Position) then
-		return
+	local rootPosition, notReadyReason = getSwingPosition(player)
+	if rootPosition == nil then
+		return explainDrop(player, notReadyReason or "not ready")
+	end
+	if not CombatRules.isInReach(rootPosition, live.Body.Position) then
+		local distance = (rootPosition - live.Body.Position).Magnitude
+		return explainDrop(
+			player,
+			string.format("out of reach (%.1f > %d studs)", distance, GameConfig.HitReach)
+		)
 	end
 
 	local hammer = HammerConfig.ById[session.EquippedHammerId]
@@ -156,6 +176,7 @@ function CombatService.init(): ()
 
 	Players.PlayerRemoving:Connect(function(player: Player)
 		lastHitAt[player] = nil
+		dropLogLimiter.remove(player.UserId)
 	end)
 end
 

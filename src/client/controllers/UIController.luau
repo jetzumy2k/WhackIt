@@ -22,9 +22,13 @@ local PANEL_COLOR = Color3.fromRGB(30, 30, 40)
 local STRESS_COLOR = Color3.fromRGB(235, 80, 80)
 local HEALTH_COLOR = Color3.fromRGB(90, 210, 110)
 local TEXT_COLOR = Color3.fromRGB(255, 255, 255)
+local TOAST_COLOR = Color3.fromRGB(255, 230, 80)
+local TOAST_SECONDS = 1.2
 
 local localPlayer = Players.LocalPlayer
 local victoryCardShownAt = 0
+local toastLabel: TextLabel? = nil
+local toastShownAt = 0
 
 local function makeLabel(name: string, parent: Instance): TextLabel
 	local label = Instance.new("TextLabel")
@@ -119,6 +123,16 @@ local function buildHud(): (ScreenGui, Frame)
 	hint.Text = if UserInputService.TouchEnabled
 		then "Walk up to a boss and tap to swing your hammer!"
 		else "Walk up to a boss and click to swing your hammer!"
+
+	-- Short-lived tips (e.g. "Get closer to the boss!"), just above the hint.
+	local toast = makeLabel("Toast", gui)
+	toast.AnchorPoint = Vector2.new(0.5, 1)
+	toast.Position = UDim2.new(0.5, 0, 1, -64)
+	toast.Size = UDim2.new(0.5, 0, 0, 32)
+	toast.TextColor3 = TOAST_COLOR
+	toast.TextStrokeTransparency = 0.3
+	toast.Visible = false
+	toastLabel = toast
 
 	-- Victory Card, centre, hidden until a boss you fought is defeated.
 	local card = Instance.new("Frame")
@@ -241,6 +255,23 @@ local function showVictoryCard(card: Frame, payload: unknown): ()
 	task.delay(VICTORY_CARD_SECONDS, function()
 		if victoryCardShownAt == shownAt then
 			card.Visible = false
+		end
+	end)
+end
+
+-- Shows a short tip; a newer tip replaces the current one. No-op before the HUD exists.
+function UIController.showToast(text: string): ()
+	local toast = toastLabel
+	if toast == nil then
+		return
+	end
+	toast.Text = text
+	toast.Visible = true
+	toastShownAt = os.clock()
+	local shownAt = toastShownAt
+	task.delay(TOAST_SECONDS, function()
+		if toastShownAt == shownAt then
+			toast.Visible = false
 		end
 	end)
 end
