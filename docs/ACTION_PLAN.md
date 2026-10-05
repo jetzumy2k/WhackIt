@@ -1,6 +1,6 @@
 # WHACK IT OUT! — Progress Review & Action Plan
 
-_Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase4-progression`_
+_Review date: 2026-10-05 · Last status update: 2026-10-05 · `master` after PR #5_
 
 **Status legend:** ✅ Done · 🟡 Partly done / awaiting verification · ⬜ Not started
 
@@ -22,7 +22,7 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 | Phase 1 — Core architecture | ✅ Complete (PR #2) | Lifecycle, config, Types, Validate, RateLimiter, RemoteController, REMOTE_CONTRACTS; 46/46 specs pass in Studio |
 | Phase 2 — Shared-boss vertical slice | ✅ Accepted for now (2026-10-05, solo playtest after 6 rounds); multiplayer/abuse playtest checks 9–17 still to run | 5 services, 6 client controllers, arena, 93 specs |
 | Phase 3 — Persistence | ✅ Complete (PR #4): 108/108 specs; save playtest reported no errors or warnings (2026-10-05) | ProfileStore via `PlayerDataService`, schema v1 with migrations and validation |
-| Phase 4 — Rewards, progression, content | 🟡 Implemented; specs + playtest pending | Coins, boss unlocks, hammer shop, offices, schema v3: Zen (mood faces, glowing hammer, idle stress regen), damage-share rewards + last-hit bonus |
+| Phase 4 — Rewards, progression, content | ✅ Accepted (2026-10-05, PR #5) | Coins, boss unlocks, hammer shop, offices, schema v3: Zen (mood faces, glowing hammer, idle stress regen), damage-share rewards + last-hit bonus; 176/176 specs |
 | Phases 5–6 | ⬜ | |
 | §5 Design decisions | 🟡 3 of 5 decided | Shared bosses (+ reward/respawn rules) · end on defeat · hammer-driven damage. Open: persistence library, monetization |
 
@@ -200,9 +200,9 @@ Flow: input → client cooldown sanity → `RequestHammerHit` → server validat
 `PlayerDataService`: schema v1 (`docs/DATA_SCHEMA.md` made real), defaults, validation, migration pipeline (`v0→v1` test), session locking, autosave, `BindToClose`, retry/backoff within budget, **load failure = kick with friendly message, never overwrite**. Erasure script.
 **Specs:** migration, corrupt-data rejection, failed-load path never saves. **Manual:** Studio with API access on, rejoin, two-server simulation.
 
-### Phase 4 — Rewards, progression & content — 🟡 Implemented, verification pending
+### Phase 4 — Rewards, progression & content — ✅ Accepted
 
-**Status:** ✅ code · ✅ static checks · ⬜ 137 specs in Studio · ⬜ playtest (`docs/PLAYTEST.md` checks 23–32). Decisions (2026-10-05): score + coins, bosses unlock in order, hammers bought with coins, all five bosses at stations. Added after playtests (2026-10-05): furnished offices per boss; Zen (0 stress → +100 coins, Zen Level coin bonus, glowing hammer, re-armed at 50 stress), mood faces, stress rising after 2 min idle (+5 per 5 s; tuned from 3 min / 10 s after playtest), rewards split by damage share with a 5 % last-hit bonus. Deferred: global leaderboard (OrderedDataStore) and audio (needs licensed assets).
+**Status:** ✅ code · ✅ static checks · ✅ 176/176 specs in Studio · ✅ playtested over several rounds and accepted by the user ("good now"). Not explicitly reported: every individual check in `docs/PLAYTEST.md` 23–41 (re-run before release). Decisions (2026-10-05): score + coins, bosses unlock in order, hammers bought with coins, all five bosses at stations. Added after playtests (2026-10-05): furnished offices per boss; Zen (0 stress → +100 coins, Zen Level coin bonus, glowing hammer, re-armed at 50 stress), mood faces, stress rising after 2 min idle (+5 per 5 s; tuned from 3 min / 10 s after playtest), rewards split by damage share with a 5 % last-hit bonus. Deferred: global leaderboard (OrderedDataStore) and audio (needs licensed assets).
 
 `RewardService` (coins/score only on server-confirmed defeat; idempotent per encounter id), boss unlocks, hammer ownership/selection (server-validated), all 5 bosses with cartoon reactions, `AudioController`, particles, mobile-friendly UI, leaderboard (OrderedDataStore, throttled).
 **Specs:** reward granted exactly once per defeat; locked boss / unowned hammer requests rejected.
@@ -217,6 +217,5 @@ Security/abuse pass, performance (MicroProfiler, remote traffic, memory per play
 
 ## 7. Immediate next steps
 
-1. **You:** run `build/tests.rbxl` (expect 176 passed) and `docs/PLAYTEST.md` checks 23–41.
-2. PR + CI + merge `feat/phase4-progression`.
-3. Before release: `docs/PLAYTEST.md` checks 9–17 (multiplayer, abuse).
+1. Decide the monetization scope for v1 (§5 #5), then Phase 5.
+2. Before release: `docs/PLAYTEST.md` checks 9–17 (multiplayer, abuse).
