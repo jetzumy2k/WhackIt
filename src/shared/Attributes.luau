@@ -11,6 +11,10 @@ return table.freeze({
 	Defeated = "Defeated",
 	ShoutText = "ShoutText", -- latest speech-bubble line
 	ShoutSeq = "ShoutSeq", -- increments on every shout, so repeats still show
+	-- Admin-created (custom) bosses only: not in BossConfig, so the client reads
+	-- the name and the look (a BossConfig id for model and colours) from here.
+	BossName = "BossName",
+	BossLook = "BossLook",
 
 	-- On each Player
 	Stress = "Stress",

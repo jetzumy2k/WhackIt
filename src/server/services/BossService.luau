@@ -6,6 +6,10 @@
 
 	Clients see a boss as a Model under Workspace.Bosses whose attributes
 	(Shared/Attributes) mirror the server state for display only.
+
+	Besides the office bosses (ArenaConfig), admin-created custom bosses come
+	and go at runtime: CustomBossService hands over the full list whenever it
+	changes, and setCustomBosses() spawns, replaces or removes them.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -27,11 +31,21 @@ export type LiveBoss = {
 	Spawn: ArenaConfig.BossSpawn,
 }
 
+-- A custom boss to keep spawned. Signature changes when anything about it
+-- changes, so an edited boss is respawned with its new stats.
+export type CustomSpawn = {
+	Definition: BossConfig.BossDefinition,
+	Spawn: ArenaConfig.BossSpawn,
+	Signature: string,
+}
+
 local BossService = {}
 
 local bossesFolder: Folder
 local liveBosses: { [string]: LiveBoss } = {}
 local nextInstanceNumber = 0
+-- Custom boss id -> what should be spawned for it right now.
+local customSpawns: { [string]: CustomSpawn } = {}
 
 local function newInstanceId(): string
 	nextInstanceNumber += 1
@@ -64,14 +78,27 @@ local function buildModel(
 	model:SetAttribute(Attributes.Health, state.Health)
 	model:SetAttribute(Attributes.MaxHealth, state.Definition.MaxHealth)
 	model:SetAttribute(Attributes.Defeated, false)
+	if state.Definition.Custom then
+		model:SetAttribute(Attributes.BossName, state.Definition.DisplayName)
+		model:SetAttribute(Attributes.BossLook, state.Definition.LookId)
+	end
 
 	return model, body
 end
 
+-- The definition for a spawn: an office boss, or a custom boss still wanted.
+local function definitionFor(spawn: ArenaConfig.BossSpawn): BossConfig.BossDefinition?
+	local custom = customSpawns[spawn.BossId]
+	if custom then
+		return if custom.Spawn == spawn then custom.Definition else nil
+	end
+	return BossConfig.ById[spawn.BossId]
+end
+
 local function spawnBoss(spawn: ArenaConfig.BossSpawn): ()
-	local definition = BossConfig.ById[spawn.BossId]
+	local definition = definitionFor(spawn)
 	if definition == nil then
-		warn(string.format("[BossService] unknown BossId %q in ArenaConfig", spawn.BossId))
+		-- A custom boss that was removed or replaced while it was respawning.
 		return
 	end
 
@@ -89,6 +116,51 @@ local function scheduleRespawn(live: LiveBoss): ()
 		live.Model:Destroy()
 		spawnBoss(live.Spawn)
 	end)
+end
+
+local function despawnBossId(bossId: string): ()
+	for instanceId, live in liveBosses do
+		if live.State.Definition.Id == bossId then
+			liveBosses[instanceId] = nil
+			-- Ends the fight for this life: late hits find no live boss.
+			live.State.Defeated = true
+			live.Model:Destroy()
+		end
+	end
+end
+
+-- Makes the spawned custom bosses match `wanted` (by Definition.Id): new ones
+-- spawn, removed ones disappear, changed ones respawn fresh.
+function BossService.setCustomBosses(wanted: { CustomSpawn }): ()
+	local wantedById: { [string]: CustomSpawn } = {}
+	for _, entry in wanted do
+		wantedById[entry.Definition.Id] = entry
+	end
+	for bossId, current in customSpawns do
+		local wantedEntry = wantedById[bossId]
+		if wantedEntry == nil or wantedEntry.Signature ~= current.Signature then
+			customSpawns[bossId] = nil
+			despawnBossId(bossId)
+		end
+	end
+	for bossId, entry in wantedById do
+		if customSpawns[bossId] == nil then
+			customSpawns[bossId] = entry
+			spawnBoss(entry.Spawn)
+		end
+	end
+end
+
+-- Where every boss stands (office and custom), for spacing checks.
+function BossService.spawnPositions(): { Vector3 }
+	local positions: { Vector3 } = {}
+	for _, spawn in ArenaConfig.BossSpawns do
+		table.insert(positions, spawn.Position)
+	end
+	for _, entry in customSpawns do
+		table.insert(positions, entry.Spawn.Position)
+	end
+	return positions
 end
 
 -- Every boss that can currently be hit (for ShoutService).

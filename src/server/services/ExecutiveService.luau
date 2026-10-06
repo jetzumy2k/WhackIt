@@ -47,7 +47,8 @@ local function hasAccess(player: Player): boolean
 	return ProgressionRules.isBossUnlocked(
 		executive.CeoBossId,
 		data.BossDefeats,
-		LevelRules.levelFor(data.Xp)
+		LevelRules.levelFor(data.Xp),
+		data.AdminUnlocks
 	)
 end
 
@@ -60,7 +61,8 @@ local function denyReason(player: Player): string
 	local status = ProgressionRules.unlockStatus(
 		executive.CeoBossId,
 		data.BossDefeats,
-		LevelRules.levelFor(data.Xp)
+		LevelRules.levelFor(data.Xp),
+		data.AdminUnlocks
 	)
 	if status.LevelNeeded > 0 then
 		return string.format("Executive Floor: reach Level %d first.", status.LevelNeeded)

@@ -75,6 +75,16 @@ function SessionService.addXp(player: Player, amount: number): ()
 	player:SetAttribute(Attributes.Level, LevelRules.levelFor(data.Xp))
 end
 
+-- Replaces XP outright (admin Set Level) and refreshes the Level attribute.
+function SessionService.setXp(player: Player, xp: number): ()
+	local data = PlayerDataService.get(player)
+	if sessions[player] == nil or data == nil or xp < 0 or xp ~= xp then
+		return
+	end
+	data.Xp = math.floor(xp)
+	player:SetAttribute(Attributes.Level, LevelRules.levelFor(data.Xp))
+end
+
 function SessionService.addCoins(player: Player, amount: number): ()
 	local session = sessions[player]
 	local data = PlayerDataService.get(player)

@@ -12,6 +12,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local BagRules = require(ReplicatedStorage.Shared.BagRules)
 local BossConfig = require(ReplicatedStorage.Config.BossConfig)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
@@ -39,6 +40,18 @@ export type PlayerData = {
 	ProcessedPurchases: { string }, -- recent Robux PurchaseIds, so a receipt is granted once
 	MysteryHammers: { [string]: { Damage: number, CritDamagePercent: number } }, -- "mystery_<n>"
 	NextMysteryNumber: number,
+	-- v5
+	AdminUnlocks: { [string]: boolean }, -- bosses an admin unlocked for this player
+	-- v6
+	Bag: { [string]: number }, -- unused store items by product key (Shared/BagRules)
+	ClaimedGifts: { string }, -- recent GiftIds already put in the Bag, so a gift lands once
+	-- The gift the player is buying right now (set before the purchase prompt).
+	PendingGift: PendingGift?,
+}
+
+export type PendingGift = {
+	RecipientUserId: number,
+	ProductKey: string,
 }
 
 -- Raw saved table before validation.
@@ -49,7 +62,7 @@ export type Migration = (data: RawData) -> ()
 
 local PlayerDataSchema = {}
 
-PlayerDataSchema.CURRENT_VERSION = 4
+PlayerDataSchema.CURRENT_VERSION = 6
 
 -- Upper bound for counters; far beyond legitimate play, small enough to stay
 -- an exact integer and to keep leaderboard values sane.
@@ -87,11 +100,22 @@ PlayerDataSchema.MIGRATIONS = table.freeze({
 		data.MysteryHammers = {}
 		data.NextMysteryNumber = 1
 	end,
+	[5] = function(data: RawData)
+		-- v4 -> v5: admin panel. Nobody has admin-unlocked bosses yet.
+		data.AdminUnlocks = {}
+	end,
+	[6] = function(data: RawData)
+		-- v5 -> v6: Bag and gifts. Everything bought before was already used.
+		data.Bag = {}
+		data.ClaimedGifts = {}
+	end,
 }) :: { [number]: Migration }
 
 -- Most recent purchase ids remembered for duplicate-receipt protection. Roblox
 -- retries an unacknowledged receipt soon after, so a bounded history is enough.
 PlayerDataSchema.MAX_PROCESSED_PURCHASES = 200
+-- Same idea for claimed gifts: an inbox entry is removed right after it's claimed.
+PlayerDataSchema.MAX_CLAIMED_GIFTS = 200
 local BUFF_KINDS = { "Xp", "Damage", "CritDamage" }
 
 function PlayerDataSchema.template(): PlayerData
@@ -112,6 +136,10 @@ function PlayerDataSchema.template(): PlayerData
 		ProcessedPurchases = {},
 		MysteryHammers = {},
 		NextMysteryNumber = 1,
+		AdminUnlocks = {},
+		Bag = {},
+		ClaimedGifts = {},
+		PendingGift = nil,
 	}
 end
 
@@ -194,6 +222,51 @@ function PlayerDataSchema.sanitize(data: RawData): ()
 		end
 	end
 	data.BossDefeats = defeats
+
+	-- Rebuilt from scratch: only known bosses, only `true`.
+	local adminUnlocks: { [string]: boolean } = {}
+	local rawUnlocks = data.AdminUnlocks
+	if typeof(rawUnlocks) == "table" then
+		for bossId, value in rawUnlocks :: { [unknown]: unknown } do
+			if typeof(bossId) == "string" and BossConfig.ById[bossId] and value == true then
+				adminUnlocks[bossId] = true
+			end
+		end
+	end
+	data.AdminUnlocks = adminUnlocks
+
+	data.Bag = BagRules.sanitize(data.Bag)
+
+	-- Claimed gift ids: strings only, newest last, bounded.
+	local claimed: { string } = {}
+	local rawClaimed = data.ClaimedGifts
+	if typeof(rawClaimed) == "table" then
+		for _, id in rawClaimed :: { unknown } do
+			if typeof(id) == "string" and #id > 0 and #id <= 128 then
+				table.insert(claimed, id)
+			end
+		end
+	end
+	while #claimed > PlayerDataSchema.MAX_CLAIMED_GIFTS do
+		table.remove(claimed, 1)
+	end
+	data.ClaimedGifts = claimed
+
+	-- A pending gift must name a real, giftable product and a real user.
+	local pending = data.PendingGift
+	if typeof(pending) == "table" then
+		local raw = pending :: { [string]: unknown }
+		local key, recipient = raw.ProductKey, raw.RecipientUserId
+		local product = if typeof(key) == "string" then StoreConfig.ByKey[key] else nil
+		local valid = product ~= nil
+			and BagRules.isGiftable(product)
+			and isFiniteNumber(recipient)
+			and (recipient :: number) >= 1
+			and (recipient :: number) % 1 == 0
+		data.PendingGift = if valid then { RecipientUserId = recipient, ProductKey = key } else nil
+	else
+		data.PendingGift = nil
+	end
 
 	data.ZenLevel = counter(data.ZenLevel, defaults.ZenLevel)
 	if typeof(data.ZenArmed) ~= "boolean" then

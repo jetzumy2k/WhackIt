@@ -55,6 +55,15 @@ Answer honestly; these are the facts about the current build:
 - [ ] Test purchase of one boost and the Mystery Hammer in a published test place; rejoin shows them kept
 - [ ] `StoreAdminConfig.AdminUserIds` holds only intended admins; `StudioTesterIsAdmin` only affects Studio
 
+### Bag and gifts (see docs/STORE.md)
+- [ ] One gift tested between two friend accounts in a published test place, with the friend online and offline (PLAYTEST 96-97)
+- [ ] Bought items land in the Bag and are only used on Use / Open (PLAYTEST 63-67)
+
+### Admin panel (see docs/ADMIN.md)
+- [ ] Every custom boss has a fictional, harmless name (no real people or groups) and sensible rewards
+- [ ] Ban and Unban tested once in a published test place with a second account
+- [ ] Non-admin account can't see the Admin button and its remote calls are rejected (PLAYTEST 91)
+
 ## 4. Asset licensing audit (current build)
 | Asset | Source | Licence status |
 |---|---|---|

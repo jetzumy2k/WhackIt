@@ -108,7 +108,9 @@ function attach(boss: Model): ()
 	if typeof(bossId) ~= "string" then
 		return
 	end
-	local look = BossVisualConfig[bossId]
+	-- Admin-created bosses borrow the look of an office boss.
+	local lookId = boss:GetAttribute(Attributes.BossLook)
+	local look = BossVisualConfig[if typeof(lookId) == "string" then lookId else bossId]
 	if look == nil then
 		return
 	end

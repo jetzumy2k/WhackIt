@@ -41,8 +41,8 @@ fallbacks and suggestions.
 - XP boost multiplies XP from defeats. Score and coins are not boosted.
 - Damage boost multiplies hit damage. Crit Damage boost adds to the crit multiplier
   (base crit +50 %).
-- **Mystery Hammer:** rolled once at purchase and kept forever. It is equipped straight away and
-  listed under "Hammers".
+- **Mystery Hammer:** waits unopened in the Bag. When the player taps **Open**, its stats are rolled
+  once and it's theirs forever: equipped straight away and listed under "Hammers".
 
   | Stat | Range | Odds |
   |---|---|---|
@@ -53,11 +53,45 @@ fallbacks and suggestions.
   whose `PolicyService` info has `ArePaidRandomItemsRestricted` (or whose lookup fails) never see the
   Mystery tab, and the server refuses to prompt it for them.
 
+## Bag and gifts (2026-10-06)
+Nothing bought is used automatically any more. Everything goes into the player's **Bag** (button
+above Store), saved with their data (`Bag`, schema v6), and the player decides when to use it:
+- **Use** on a boost starts it (or adds its time to the same kind already running, as above);
+- **Open** on a Mystery Hammer rolls, adds and equips it.
+
+The Bag also collects **gifts** from friends and **custom-boss drops** (docs/ADMIN.md).
+Purchases made before this change were already applied and stay that way.
+
+### Gifting
+Every boost has a **Gift** button next to Buy. The Mystery Hammer can't be gifted: it's a paid
+random item, and Roblox requires checking the *recipient's* PolicyService rules, which isn't possible
+for an offline friend.
+1. The buyer picks one of their Roblox friends (online or offline) from the friend list.
+2. The server checks they really are friends (`Player:IsFriendsWithAsync`) and that the product is on
+   sale, records the choice in the buyer's data (`PendingGift`), and opens the normal purchase prompt.
+   The buyer pays as usual.
+3. `ProcessReceipt` sees the `PendingGift` and writes the gift to the friend's **gift inbox**
+   (DataStore `GiftInbox`, key `Inbox_<UserId>`), keyed by the buyer's `PurchaseId` so a retried
+   receipt can't deliver it twice. The buyer gets "Gift sent to <name>".
+4. The friend's server claims the inbox into their Bag when their data loads, right away if they're
+   in the same server, within seconds if they're in another one (MessagingService topic `Gifts`), and
+   every 5 minutes otherwise. They get "Gift from <name>: ... It's in your Bag!".
+
+Claiming never loses or doubles a gift: the gift is added to the Bag and its id to `ClaimedGifts` in
+one step, and it's removed from the inbox only after that save is confirmed (`GiftService`).
+
+A plain **Buy** clears any `PendingGift`, and so does cancelling the gift's purchase prompt, so a
+later purchase is never sent to a friend by mistake. Known limitation: if a buyer starts a second
+gift of the **same** boost before the first receipt arrives (normally instant), both go to the
+second friend.
+
 ## Purchase delivery (`PurchaseService`)
 `MarketplaceService.ProcessReceipt` handles each receipt as follows:
 1. Wait (up to 20 s) for the buyer's data. ProfileStore's session lock means only one server owns it.
 2. If the receipt's `PurchaseId` is already in `ProcessedPurchases` (last 200 kept), don't grant again.
-3. Otherwise grant the product and record the `PurchaseId` in the same step, with no yield in between.
+3. Otherwise put the product in the buyer's Bag (or, for a gift, in the friend's gift inbox; see
+   above) and record the `PurchaseId`. Bag grants have no yield in between; gift delivery is safe to
+   repeat because the inbox is keyed by `PurchaseId`.
 4. Return `PurchaseGranted` only once a save containing that `PurchaseId` has reached the DataStore.
    Otherwise return `NotProcessedYet` so Roblox retries later.
 
@@ -73,7 +107,7 @@ The setting is saved in DataStore `StoreSettings` (key `Global`) and pushed to e
 MessagingService topic `StoreSettings`. Servers also re-read it every 5 minutes. Until an admin saves a
 setting, the store uses `StoreAdminConfig.DefaultMode` (`"On"`).
 
-The server decides who is an admin (`StoreService.checkAdmin`):
+The server decides who is an admin (`Lib/AdminAuth`, shared with the Admin panel):
 - the experience owner: the user, or the owner of the creator group;
 - any UserId in `StoreAdminConfig.AdminUserIds`;
 - the local tester in Studio (`StudioTesterIsAdmin`).

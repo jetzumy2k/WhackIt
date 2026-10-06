@@ -14,6 +14,7 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local BagRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BagRules"))
 local StoreConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("StoreConfig"))
 
 local StoreController = {}
@@ -28,6 +29,59 @@ local STORE_COLOR = Color3.fromRGB(230, 170, 40)
 local MUTED_COLOR = Color3.fromRGB(90, 90, 100)
 local ROW_HEIGHT = 56
 local MIN_TOUCH_SIZE = 44
+local GIFT_COLOR = Color3.fromRGB(220, 90, 150)
+-- Friends shown in the gift picker (the friends list is read once per session).
+local MAX_FRIENDS = 200
+
+type Friend = { Id: number, Username: string, DisplayName: string }
+local friendsCache: { Friend }? = nil
+
+-- The local player's Roblox friends, sorted by display name. Yields the first time.
+local function loadFriends(): { Friend }
+	local cached = friendsCache
+	if cached then
+		return cached
+	end
+	local friends: { Friend } = {}
+	local ok, pages = pcall(function()
+		return Players:GetFriendsAsync(Players.LocalPlayer.UserId)
+	end)
+	if ok and pages then
+		while #friends < MAX_FRIENDS do
+			for _, entry in pages:GetCurrentPage() do
+				if
+					typeof(entry) == "table"
+					and typeof(entry.Id) == "number"
+					and typeof(entry.Username) == "string"
+				then
+					table.insert(friends, {
+						Id = entry.Id,
+						Username = entry.Username,
+						DisplayName = if typeof(entry.DisplayName) == "string"
+							then entry.DisplayName
+							else entry.Username,
+					})
+				end
+			end
+			if pages.IsFinished then
+				break
+			end
+			local advanced = pcall(function()
+				pages:AdvanceToNextPageAsync()
+			end)
+			if not advanced then
+				break
+			end
+		end
+		table.sort(friends, function(a, b)
+			return string.lower(a.DisplayName) < string.lower(b.DisplayName)
+		end)
+		friendsCache = friends
+	end
+	return friends
+end
+
+local openFriendPicker: (product: StoreConfig.Product, text: string) -> ()
 
 local TABS = {
 	{ Id = "Xp", Label = "XP Boost" },
@@ -149,7 +203,7 @@ local function oddsText(): string
 	local damageCount = mystery.DamageMax - mystery.DamageMin + 1
 	local critCount = mystery.CritDamageMaxPercent - mystery.CritDamageMinPercent + 1
 	return string.format(
-		"Odds: Damage %d to %d, each value 1 in %d (%.2f%%).  Crit damage +%d%% to +%d%%, each 1 in %d (%.1f%%). Rolled once when bought; yours to keep.",
+		"Odds: Damage %d to %d, each value 1 in %d (%.2f%%).  Crit damage +%d%% to +%d%%, each 1 in %d (%.1f%%). It waits in your Bag; the stats are rolled once when you open it, and it's yours to keep.",
 		mystery.DamageMin,
 		mystery.DamageMax,
 		damageCount,
@@ -164,10 +218,12 @@ end
 function StoreController.start(): ()
 	local remotes = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Store")
 	local requestRemote = remotes:WaitForChild("RequestPurchase")
+	local giftRemote = remotes:WaitForChild("RequestGift")
 	local adminRemote = remotes:WaitForChild("AdminSetMode")
 	local stateRemote = remotes:WaitForChild("State")
 	assert(
 		requestRemote:IsA("RemoteEvent")
+			and giftRemote:IsA("RemoteEvent")
 			and adminRemote:IsA("RemoteEvent")
 			and stateRemote:IsA("RemoteEvent"),
 		"Store remotes must be RemoteEvents"
@@ -262,6 +318,115 @@ function StoreController.start(): ()
 		return line
 	end
 
+	-- Friend picker for gifts, drawn over the store list.
+	local picker = Instance.new("Frame")
+	picker.Name = "GiftPicker"
+	picker.BackgroundColor3 = PANEL_COLOR
+	picker.Position = UDim2.fromOffset(0, 0)
+	picker.Size = UDim2.fromScale(1, 1)
+	picker.ZIndex = 5
+	picker.Visible = false
+	picker.Parent = panel
+	corner(picker)
+	local pickerTitle = label("Title", picker)
+	pickerTitle.Position = UDim2.fromOffset(16, 10)
+	pickerTitle.Size = UDim2.new(1, -90, 0, 30)
+	pickerTitle.ZIndex = 6
+	local pickerClose = button("Cancel", picker)
+	pickerClose.Text = "X"
+	pickerClose.BackgroundColor3 = MUTED_COLOR
+	pickerClose.AnchorPoint = Vector2.new(1, 0)
+	pickerClose.Position = UDim2.new(1, -10, 0, 8)
+	pickerClose.Size = UDim2.fromOffset(MIN_TOUCH_SIZE, MIN_TOUCH_SIZE)
+	pickerClose.ZIndex = 6
+	pickerClose.Activated:Connect(function()
+		picker.Visible = false
+	end)
+	local search = Instance.new("TextBox")
+	search.Name = "Search"
+	search.Position = UDim2.fromOffset(10, 56)
+	search.Size = UDim2.new(1, -20, 0, MIN_TOUCH_SIZE)
+	search.BackgroundColor3 = ROW_COLOR
+	search.TextColor3 = TEXT_COLOR
+	search.PlaceholderText = "Search friends"
+	search.Font = Enum.Font.FredokaOne
+	search.TextSize = 18
+	search.ClearTextOnFocus = false
+	search.Text = ""
+	search.ZIndex = 6
+	search.Parent = picker
+	corner(search)
+	local friendList = Instance.new("ScrollingFrame")
+	friendList.Name = "Friends"
+	friendList.BackgroundTransparency = 1
+	friendList.BorderSizePixel = 0
+	friendList.Position = UDim2.fromOffset(10, 108)
+	friendList.Size = UDim2.new(1, -20, 1, -118)
+	friendList.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	friendList.CanvasSize = UDim2.new()
+	friendList.ScrollBarThickness = 6
+	friendList.ZIndex = 6
+	friendList.Parent = picker
+	local friendLayout = Instance.new("UIListLayout")
+	friendLayout.Padding = UDim.new(0, 6)
+	friendLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	friendLayout.Parent = friendList
+
+	local giftProduct: StoreConfig.Product? = nil
+	local function showFriends(): ()
+		for _, child in friendList:GetChildren() do
+			if not child:IsA("UIListLayout") then
+				child:Destroy()
+			end
+		end
+		local friends = loadFriends()
+		local query = string.lower(search.Text)
+		local shown = 0
+		for index, friend in friends do
+			local matches = query == ""
+				or string.find(string.lower(friend.DisplayName), query, 1, true) ~= nil
+				or string.find(string.lower(friend.Username), query, 1, true) ~= nil
+			if matches then
+				shown += 1
+				local choice = button("Friend", friendList)
+				choice.LayoutOrder = index
+				choice.Size = UDim2.new(1, -8, 0, MIN_TOUCH_SIZE)
+				choice.BackgroundColor3 = ROW_COLOR
+				choice.TextXAlignment = Enum.TextXAlignment.Left
+				choice.ZIndex = 7
+				choice.Text = string.format("  %s (@%s)", friend.DisplayName, friend.Username)
+				choice.Activated:Connect(function()
+					local productToGift = giftProduct
+					if productToGift then
+						picker.Visible = false
+						giftRemote:FireServer(productToGift.Key, friend.Id)
+					end
+				end)
+			end
+		end
+		if shown == 0 then
+			local empty = label("Empty", friendList)
+			empty.Size = UDim2.new(1, 0, 0, 30)
+			empty.ZIndex = 7
+			empty.Text = if #friends == 0
+				then "No Roblox friends found."
+				else "No friend matches that name."
+		end
+	end
+	search:GetPropertyChangedSignal("Text"):Connect(function()
+		if picker.Visible then
+			showFriends()
+		end
+	end)
+
+	function openFriendPicker(product: StoreConfig.Product, text: string): ()
+		giftProduct = product
+		pickerTitle.Text = "Gift " .. text .. " to..."
+		search.Text = ""
+		picker.Visible = true
+		showFriends()
+	end
+
 	local function productRow(product: StoreConfig.Product, text: string, order: number): ()
 		local row = Instance.new("Frame")
 		row.Name = product.Key
@@ -271,15 +436,28 @@ function StoreController.start(): ()
 		row.Parent = list
 		corner(row)
 
+		local giftable = BagRules.isGiftable(product)
 		local name = label("Name", row)
 		name.Position = UDim2.fromOffset(12, 10)
-		name.Size = UDim2.new(0.62, -12, 0, ROW_HEIGHT - 20)
+		name.Size = UDim2.new(if giftable then 0.46 else 0.62, -12, 0, ROW_HEIGHT - 20)
 		name.Text = text
+
+		if giftable then
+			local gift = button("Gift", row)
+			gift.AnchorPoint = Vector2.new(1, 0.5)
+			gift.Position = UDim2.new(0.7, -14, 0.5, 0)
+			gift.Size = UDim2.new(0.2, 0, 0, MIN_TOUCH_SIZE)
+			gift.BackgroundColor3 = GIFT_COLOR
+			gift.Text = "Gift"
+			gift.Activated:Connect(function()
+				openFriendPicker(product, text)
+			end)
+		end
 
 		local buy = button("Buy", row)
 		buy.AnchorPoint = Vector2.new(1, 0.5)
 		buy.Position = UDim2.new(1, -10, 0.5, 0)
-		buy.Size = UDim2.new(0.33, 0, 0, MIN_TOUCH_SIZE)
+		buy.Size = UDim2.new(if giftable then 0.28 else 0.33, 0, 0, MIN_TOUCH_SIZE)
 		buy.BackgroundColor3 = ROBUX_COLOR
 		buy.Text = "R$ " .. product.SuggestedPrice
 		buy.Activated:Connect(function()
@@ -416,9 +594,9 @@ function StoreController.start(): ()
 		end
 
 		note(
-			"Boosts count down only while you play. Buying the same kind again adds the time; the strongest boost applies.",
+			"Bought boosts go to your Bag: use them when you like. Gift sends one to a Roblox friend (it waits for them if they're offline). Active boosts count down only while you play.",
 			1,
-			44
+			62
 		)
 		local any = false
 		for _, product in StoreConfig.Products do

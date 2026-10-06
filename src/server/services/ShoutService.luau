@@ -61,7 +61,9 @@ end
 
 local function shout(live: BossService.LiveBoss, now: number): ()
 	local state = stateFor(live.Model, now)
-	local line = pickLine(live.State.Definition.Id, state.LastLine)
+	-- Custom bosses shout the lines of the boss whose look they borrow.
+	local definition = live.State.Definition
+	local line = pickLine(definition.LookId or definition.Id, state.LastLine)
 	if line == nil then
 		return
 	end

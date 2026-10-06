@@ -36,12 +36,16 @@ local GameConfig = table.freeze({
 	StartingScore = 0,
 	StartingCoins = 0,
 
-	-- Player Level (Shared/LevelRules): level = floor(sqrt(score / factor)) + 1
+	-- Player Level (Shared/LevelRules): level = floor(sqrt(xp / factor)) + 1
 	LevelScoreFactor = 600,
 	-- Senior bosses upstairs need at least this Player Level.
 	UpstairsMinLevel = 10,
-	-- The CEO (3rd floor) has this many times the HP of the toughest other boss.
-	CeoHealthMultiplier = 150,
+	-- The CEO (3rd floor) has this many times the HP of the toughest other boss
+	-- (37.5 x 2,400 = 90,000 HP).
+	CeoHealthMultiplier = 37.5,
+	-- XP earned per point of boss Score (before XP store boosts). Score itself,
+	-- and so the leaderboard, is not affected.
+	XpRewardMultiplier = 1.2,
 
 	-- Movement (client-applied; the server's MovementGuard still caps speed).
 	WalkSpeed = 16, -- Roblox default

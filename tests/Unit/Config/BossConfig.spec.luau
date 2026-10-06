@@ -117,4 +117,30 @@ return function()
 			expect(ceo.MaxHealth).to.equal(toughest * GameConfig.CeoHealthMultiplier)
 		end)
 	end)
+	describe("BossConfig difficulty", function()
+		local function effective(boss: BossConfig.BossDefinition): number
+			return boss.MaxHealth / boss.DamageTakenMultiplier
+		end
+
+		it("gives every boss more HP than the boss before it", function()
+			for index = 2, #BossConfig.List do
+				local previous, boss = BossConfig.List[index - 1], BossConfig.List[index]
+				expect(boss.MaxHealth > previous.MaxHealth).to.equal(true)
+			end
+		end)
+
+		it("needs more hammer damage for every boss than the boss before it", function()
+			for index = 2, #BossConfig.List do
+				local previous, boss = BossConfig.List[index - 1], BossConfig.List[index]
+				expect(effective(boss) > effective(previous)).to.equal(true)
+			end
+		end)
+
+		it("never uses the custom boss id prefix", function()
+			for _, boss in BossConfig.List do
+				expect(string.sub(boss.Id, 1, 7)).never.to.equal("custom_")
+				expect(boss.Custom).to.equal(nil)
+			end
+		end)
+	end)
 end

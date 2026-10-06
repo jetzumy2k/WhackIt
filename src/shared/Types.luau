@@ -28,6 +28,9 @@ export type BossDefeated = {
 	UnlockedBossIds: { string }, -- bosses this defeat newly unlocked for the player
 	SharePercent: number, -- the player's share of the boss's HP, 0..100
 	LastHit: boolean, -- the player landed the defeating hit (bonus included)
+	BossName: string, -- display name (custom bosses aren't in BossConfig)
+	BuffDropText: string?, -- custom bosses: the store boost this player got
+	AdminDamage: boolean, -- the player hit with admin-set damage, so got no reward
 }
 
 -- Mood.ZenAchieved (server -> all clients): a player reached 0 stress.
@@ -52,6 +55,10 @@ export type ProfileSnapshot = {
 	Buffs: { [string]: { Percent: number, SecondsLeft: number } },
 	-- Owned Mystery Hammers with their rolled stats.
 	MysteryHammers: { { Id: string, Damage: number, CritDamagePercent: number } },
+	-- Bosses an admin unlocked for this player.
+	AdminUnlocks: { string },
+	-- Unused store items by product key (Shared/BagRules).
+	Bag: { [string]: number },
 }
 
 return {}

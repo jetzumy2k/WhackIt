@@ -31,6 +31,15 @@ local function mysteryList(
 	return list
 end
 
+local function adminUnlockList(data: PlayerDataService.PlayerData): { string }
+	local list: { string } = {}
+	for bossId in data.AdminUnlocks do
+		table.insert(list, bossId)
+	end
+	table.sort(list)
+	return list
+end
+
 function ProgressService.snapshot(data: PlayerDataService.PlayerData): Types.ProfileSnapshot
 	local ownedIds: { string } = {}
 	for _, hammer in HammerConfig.List do
@@ -45,13 +54,16 @@ function ProgressService.snapshot(data: PlayerDataService.PlayerData): Types.Pro
 		BossDefeats = table.clone(data.BossDefeats),
 		UnlockedBossIds = ProgressionRules.unlockedBossIds(
 			data.BossDefeats,
-			LevelRules.levelFor(data.Xp)
+			LevelRules.levelFor(data.Xp),
+			data.AdminUnlocks
 		),
 		ZenLevel = data.ZenLevel,
 		Level = LevelRules.levelFor(data.Xp),
 		Xp = data.Xp,
 		Buffs = table.clone(data.Buffs),
 		MysteryHammers = mysteryList(data),
+		AdminUnlocks = adminUnlockList(data),
+		Bag = table.clone(data.Bag),
 	}
 end
 

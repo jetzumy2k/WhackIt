@@ -5,6 +5,8 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local CustomBossRules =
+	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CustomBossRules"))
 local ProgressionRules =
 	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ProgressionRules"))
 local Types = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Types"))
@@ -68,6 +70,18 @@ local function parseMystery(
 	return list
 end
 
+local function parseBag(raw: unknown): { [string]: number }
+	local bag: { [string]: number } = {}
+	if typeof(raw) == "table" then
+		for key, count in raw :: { [unknown]: unknown } do
+			if typeof(key) == "string" and typeof(count) == "number" and count >= 1 then
+				bag[key] = math.floor(count)
+			end
+		end
+	end
+	return bag
+end
+
 -- Server messages are still checked so a malformed one can't break the UI.
 local function parse(payload: unknown): Types.ProfileSnapshot?
 	if typeof(payload) ~= "table" then
@@ -110,6 +124,8 @@ local function parse(payload: unknown): Types.ProfileSnapshot?
 		Xp = xp,
 		Buffs = parseBuffs(data.Buffs),
 		MysteryHammers = parseMystery(data.MysteryHammers),
+		AdminUnlocks = stringList(data.AdminUnlocks) or {},
+		Bag = parseBag(data.Bag),
 	}
 end
 
@@ -118,19 +134,25 @@ function ProgressController.get(): Types.ProfileSnapshot?
 end
 
 -- False until the first snapshot arrives, so nothing looks unlocked by mistake.
+-- Admin-created bosses are open to everyone.
 function ProgressController.isBossUnlocked(bossId: string): boolean
 	local current = snapshot
 	if current == nil then
 		return false
 	end
-	return table.find(current.UnlockedBossIds, bossId) ~= nil
+	return CustomBossRules.isCustomId(bossId) or table.find(current.UnlockedBossIds, bossId) ~= nil
 end
 
 function ProgressController.unlockStatus(bossId: string): ProgressionRules.UnlockStatus?
 	local current = snapshot
-	return if current
-		then ProgressionRules.unlockStatus(bossId, current.BossDefeats, current.Level)
-		else nil
+	if current == nil then
+		return nil
+	end
+	local adminUnlocks: { [string]: boolean } = {}
+	for _, id in current.AdminUnlocks do
+		adminUnlocks[id] = true
+	end
+	return ProgressionRules.unlockStatus(bossId, current.BossDefeats, current.Level, adminUnlocks)
 end
 
 function ProgressController.ownsHammer(hammerId: string): boolean

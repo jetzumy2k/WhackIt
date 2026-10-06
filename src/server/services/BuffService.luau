@@ -5,8 +5,10 @@
 	    they count down only while the player is online (Shared/BuffRules);
 	  * the Zen buff (+flat damage, +crit chance) for ZenBuffSeconds after
 	    reaching 0 stress; not saved, it's a moment-to-moment reward.
-	CombatService asks statsFor() for each hit; RewardService asks
-	xpMultiplier(). The server is the only place buffs are applied.
+	  * admin-set damage (docs/ADMIN.md): a fixed damage per hit, for this
+	    session only; hits with it earn no rewards (CombatService/RewardService).
+	CombatService asks statsFor() and damageOverride() for each hit;
+	RewardService asks xpMultiplier(). The server is the only place buffs are applied.
 ]]
 
 local Players = game:GetService("Players")
@@ -26,6 +28,17 @@ local TICK_SECONDS = 1
 local BuffService = {}
 
 local zenBuffUntil: { [Player]: number } = {}
+local damageOverrides: { [Player]: number? } = {}
+
+-- Admin-set damage per hit, or nil for normal hammer damage.
+function BuffService.damageOverride(player: Player): number?
+	return damageOverrides[player]
+end
+
+-- nil clears it. Only AdminService calls this, after its own checks.
+function BuffService.setDamageOverride(player: Player, damage: number?): ()
+	damageOverrides[player] = damage
+end
 
 local function zenSecondsLeft(player: Player): number
 	local untilTime = zenBuffUntil[player]
@@ -121,6 +134,7 @@ end
 function BuffService.init(): ()
 	Players.PlayerRemoving:Connect(function(player: Player)
 		zenBuffUntil[player] = nil
+		damageOverrides[player] = nil
 	end)
 end
 

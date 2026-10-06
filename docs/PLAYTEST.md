@@ -118,11 +118,11 @@ works but nothing is kept between Play sessions.
 | 60 | Reach 0 stress | Under the score line: "ZEN +10 dmg +5% crit 2:59" counting down; hits do about 10 more damage; crits more frequent; line disappears after 3 minutes |
 | 61 | Existing save from before Phase 8 | Same Level as before (XP starts at old Score); Score unchanged |
 | 62 | "Store" button (above "Hammers") with no product ids configured | Tabs XP Boost / Damage / Crit Dmg / (Mystery) / (Admin in Studio); each shows "Coming soon." |
-| 63 | Add one test product id to `StoreConfig.PRODUCT_IDS` (e.g. `xp_10_30m`), buy it in Studio (test purchase) | Toast "+10% XP boost added (30 min of play time)."; HUD shows "XP +10% 29:59"; Output has no `[Purchase]` warnings |
-| 64 | Buy the same boost again | Time adds up (about 59:xx); percent stays the strongest |
+| 63 | Buy a boost in Studio (test purchase), e.g. +10% XP 30 min | Toast "+10% XP boost (30 min) added to your Bag..."; the boost is **not** active yet; "Bag (1)"; Output has no `[Purchase]` warnings |
+| 64 | Open the Bag and press Use; buy and use the same boost again | HUD shows "XP +10% 29:59"; the second Use adds the time (about 59:xx), percent stays the strongest |
 | 65 | Leave and rejoin | Boost still there with the same time left (it doesn't count down while offline) |
 | 66 | Mystery tab | Odds text: damage 20 to 35, each 1 in 16 (6.25%); crit +5% to +10%, each 1 in 6 (16.7%) |
-| 67 | Buy the Mystery Hammer (test product id) | Toast with the rolled stats; gold and purple hammer in hand; listed under "Hammers" with "Equipped"; switching hammers and back works |
+| 67 | Buy the Mystery Hammer (test product id), then Bag > Open | After buying: in the Bag, nothing equipped yet. After Open: toast with the rolled stats; gold and purple hammer in hand; listed under "Hammers" with "Equipped" |
 | 68 | Admin tab: "Close now" | Store shows "The store is closed right now" for other players (a second client loses the Store button); "Open now" brings it back |
 | 69 | Admin tab: schedule from 1 minute from now for 2 minutes | Store opens at the start time and closes at the end time (within ~5 s), without anyone pressing anything |
 | 70 | Non-admin (published game, another account) | No Admin tab; firing `AdminSetMode` from the console is rejected (`[Remote] rejected AdminSetMode … not an admin`) |
@@ -134,3 +134,37 @@ works but nothing is kept between Play sessions.
 | 72 | Hold Shift while walking; release | Noticeably faster run with a slight camera zoom-out; back to normal speed on release; no `[MovementGuard]` lines in the server Output |
 | 73 | Touch (Studio device emulator) / gamepad: tap Sprint or press L3, then move; stop | Button turns green and you run; about half a second after stopping, sprint switches off (button grey) |
 | 74 | Sprint up to a boss and swing straight away | Hits land normally |
+
+## Balance, boss labels, XP bar and the Admin panel (2026-10-06)
+| # | Check | Expected |
+|---|---|---|
+| 75 | Stand in the corridor and in the lobby, look at the offices | Each boss's name/HP label shows only when you can see that boss (through the doorway); no labels piled up on the walls; upstairs labels don't show through the ceiling |
+| 76 | Hit a boss while a second client hits one in another office | You don't see the other client's damage numbers through the wall |
+| 77 | Look at the bottom of the screen | Thin blue XP bar under the hint: "Lv N  x / y XP to Lv N+1"; it fills after a defeat; doesn't cover buttons (also in the phone emulator) |
+| 78 | Defeat the Deadline Boss solo with 0 XP | Score +105 (100 + 5 last-hit bonus); XP +126 (105 x 1.2), shown on the XP bar |
+| 79 | Walk past each ground-floor office | HP bars read 100, 140, 240, 360, 560 |
+| 80 | Studio (you're admin): Admin button above Store | Panel with Players / Bosses / Moderation tabs |
+| 81 | Players: Set level 10 on yourself | Toast; HUD "Lv 10"; Senior bosses no longer say "reach Lv 10" (they still need their ground-floor defeat) |
+| 82 | Players: Set damage 999, hit a boss to defeat | Every hit shows -999 (or the HP left); Victory Card says admin damage was on and gives no score/coins; "Normal" turns it off |
+| 83 | Players: pick Senior Monday Monster, Unlock (on a level-1 test player) | That boss is hittable for them; "Reset admin unlocks" (click twice) locks it again |
+| 84 | Bosses: create "Printer Jam" with look Deadline Boss, 300 HP, here in the lobby | Toast "Printer Jam created here..."; boss appears where you stood with that name and 300 HP; listed in the panel |
+| 85 | Create another boss right next to the first one | Toast "Too close to another boss" |
+| 86 | Defeat Printer Jam (deal 10 %+) | Victory Card "BONUS DROP: +N% ... boost (30 min), in your Bag!"; the boost is in the Bag, not active; it respawns after 5 s |
+| 87 | Move here / Delete (click twice) | Boss moves to you / disappears; panel list updates |
+| 88 | Stop and start the playtest (API access on) | Custom bosses come back where they were |
+| 89 | Moderation: Ban in Studio | Toast "Ban failed (it only works in a published game)." |
+| 90 | Published test place, second account: ban for 1 hour, then Unban | Second account is kicked and can't rejoin; after Unban it can |
+| 91 | Non-admin account (published): fire `Remotes.Admin.SetLevel` from the console | Server log `[Remote] rejected Admin.SetLevel ... not an admin`; nothing changes |
+
+## Bag and gifts (2026-10-06)
+| # | Check | Expected |
+|---|---|---|
+| 92 | Existing save from before the Bag | Empty Bag; active boosts and owned Mystery Hammers unchanged |
+| 93 | Use the last item of a kind | Row disappears; "Bag" button count goes down; pressing Use twice quickly uses only what you have |
+| 94 | Store row for a boost | "Gift" button next to Buy; no Gift button on the Mystery Hammer |
+| 95 | Gift: the friend list | Your Roblox friends, searchable by name; X closes it |
+| 96 | Published test place, two accounts that are friends, both in the same server: A gifts a boost to B | A: "Gift sent to B: ..."; B: "Gift from A: ... It's in your Bag!" and it's in B's Bag; A's Bag unchanged |
+| 97 | Same, but B is offline; B joins later | B gets the gift toast and the item within a few seconds of joining |
+| 98 | Same, but B is in another server | B gets it within a few seconds (or at most 5 minutes) |
+| 99 | Gift, cancel the prompt, then Buy the same boost | The bought boost goes to your own Bag, not to the friend |
+| 100 | Fire `Remotes.Store.RequestGift` from the console with a non-friend's UserId, or with `mystery_hammer` | Rejected in the server log; no prompt |

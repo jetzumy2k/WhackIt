@@ -75,11 +75,55 @@
             "$className": "RemoteEvent"
           },
 
+          "RequestGift": {
+            "$className": "RemoteEvent"
+          },
+
           "AdminSetMode": {
             "$className": "RemoteEvent"
           },
 
           "State": {
+            "$className": "RemoteEvent"
+          }
+        },
+
+        "Admin": {
+          "$className": "Folder",
+
+          "SetLevel": {
+            "$className": "RemoteEvent"
+          },
+
+          "SetDamage": {
+            "$className": "RemoteEvent"
+          },
+
+          "SetUnlock": {
+            "$className": "RemoteEvent"
+          },
+
+          "CreateBoss": {
+            "$className": "RemoteEvent"
+          },
+
+          "EditBoss": {
+            "$className": "RemoteEvent"
+          },
+
+          "Moderate": {
+            "$className": "RemoteEvent"
+          },
+
+          "State": {
+            "$className": "RemoteEvent"
+          }
+        },
+
+        "Bag": {
+          "$className": "Folder",
+
+          "Use": {
             "$className": "RemoteEvent"
           }
         },
