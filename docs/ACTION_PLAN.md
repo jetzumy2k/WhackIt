@@ -26,8 +26,8 @@ _Review date: 2026-10-05 · Last status update: 2026-10-05 · branch `feat/phase
 | Phase 5 — Monetization | ⏭ Skipped for v1 | Nothing for sale at launch |
 | Phase 6 — Hardening & release | 🟡 Code done; your RC checks pending | Movement guard, `docs/RELEASE.md` |
 | Phase 7 — Content & polish (feedback 2026-10-05) | 🟡 Implemented; specs + playtest pending | Player Level, global leaderboard, save indicator, Senior floor (Lv 10), building interior/exterior + eye-friendly palette, swing polish, licensed music, boss shouts, Executive Floor + CEO raid boss (90,000 HP), unlocks after 1 defeat |
-| Feedback 2026-10-06 — balance + Admin panel | 🟡 Implemented; static checks pass; specs + playtest pending | Boss labels no longer show through walls, XP +20 %, boss HP rises boss by boss, XP bar; Admin panel: set level, set damage (no rewards), unlock bosses, custom bosses with store-boost drops (all servers), ban/suspend (`docs/ADMIN.md`); schema v5 |
-| Feedback 2026-10-06 — Bag and gifts | 🟡 Implemented; static checks pass; specs + playtest pending | Bought items, gifts and custom-boss drops go to a saved Bag and are used when the player chooses (Mystery Hammer opened from the Bag); boosts can be gifted to any Roblox friend, online or not, via a gift inbox; schema v6 |
+| Feedback 2026-10-06 — balance + Admin panel | 🟡 Implemented (PR #8); 310/310 specs pass in Studio (2026-10-06); playtest pending | Boss labels no longer show through walls, XP +20 %, boss HP rises boss by boss, XP bar; Admin panel: set level, set damage (no rewards), unlock bosses, custom bosses with store-boost drops (all servers), ban/suspend (`docs/ADMIN.md`); schema v5 |
+| Feedback 2026-10-06 — Bag and gifts | 🟡 Implemented (PR #8); 310/310 specs pass in Studio (2026-10-06); playtest pending | Bought items, gifts and custom-boss drops go to a saved Bag and are used when the player chooses (Mystery Hammer opened from the Bag); boosts can be gifted to any Roblox friend, online or not, via a gift inbox; schema v6 |
 | §5 Design decisions | 🟡 3 of 5 decided | Shared bosses (+ reward/respawn rules) · end on defeat · hammer-driven damage. Open: persistence library, monetization |
 
 ---
