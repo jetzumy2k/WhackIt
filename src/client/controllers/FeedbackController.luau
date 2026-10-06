@@ -16,6 +16,7 @@ local FeedbackController = {}
 local FLASH_SECONDS = 0.12
 local DAMAGE_NUMBER_SECONDS = 0.7
 local DAMAGE_NUMBER_RISE = 3
+local DAMAGE_NUMBER_MAX_DISTANCE = 60 -- studs; matches the boss HP label
 local SHAKE_SECONDS = 0.08
 local SHAKE_STRENGTH = 0.6
 local BURST_PARTICLES = 14
@@ -81,9 +82,13 @@ local function showDamageNumber(
 	local billboard = Instance.new("BillboardGui")
 	billboard.ResetOnSpawn = false
 	billboard.Adornee = body
-	billboard.AlwaysOnTop = true
+	-- Not AlwaysOnTop, so hits in other offices or floors don't show through
+	-- walls; it starts a little above the boss so its own model can't hide it.
+	billboard.AlwaysOnTop = false
+	billboard.LightInfluence = 0
+	billboard.MaxDistance = DAMAGE_NUMBER_MAX_DISTANCE
 	billboard.Size = if isCrit then UDim2.fromOffset(150, 60) else UDim2.fromOffset(80, 40)
-	local startOffset = Vector3.new(random:NextNumber(-1.5, 1.5), body.Size.Y / 2, 0)
+	local startOffset = Vector3.new(random:NextNumber(-1.5, 1.5), body.Size.Y / 2 + 1, 0)
 	billboard.StudsOffset = startOffset
 
 	local label = Instance.new("TextLabel")

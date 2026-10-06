@@ -22,6 +22,8 @@ export type BossState = {
 	-- UserIds already rewarded for this boss life (rewards are granted once).
 	Rewarded: { [number]: boolean },
 	LastHitterUserId: number?, -- who landed the defeating hit
+	-- UserIds that hit this boss life with admin-set damage: they get no reward.
+	AdminBoosted: { [number]: boolean },
 }
 
 export type HitResult = {
@@ -41,6 +43,7 @@ function BossState.new(definition: BossConfig.BossDefinition, instanceId: string
 		Contributions = {},
 		Rewarded = {},
 		LastHitterUserId = nil,
+		AdminBoosted = {},
 	}
 end
 
@@ -79,6 +82,11 @@ function BossState.qualifyingUserIds(state: BossState, minShare: number): { numb
 	end
 	table.sort(userIds)
 	return userIds
+end
+
+-- Marks that `userId` hit this boss life with admin-set damage.
+function BossState.markAdminBoosted(state: BossState, userId: number): ()
+	state.AdminBoosted[userId] = true
 end
 
 -- Records that `userId` is being rewarded for this defeated boss. Returns false

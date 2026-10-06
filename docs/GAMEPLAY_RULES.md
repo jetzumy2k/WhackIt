@@ -125,15 +125,27 @@ extra `LastHitBonusShare` (5 %) of the boss's score and coins, at least 1 of eac
 Zen Level bonus. Only players with at least `MinRewardDamageShare` (10 %) **qualify**: their defeat
 counts toward unlocking the next boss and they get the stress bonus. (`Lib/RewardRules`)
 
-The full boss reward (100 % share, solo):
+The full boss reward (100 % share, solo), and how tough each boss is. **Effective HP** is
+`MaxHealth / DamageTakenMultiplier`: the hammer damage it really takes to win. Since 2026-10-06 both
+HP and effective HP rise with every boss down the list (ground floor, then Senior floor, then the
+CEO); `BossConfig.spec` enforces it.
 
-| Boss | Score | Coins | Unlocks after |
-|---|---|---|---|
-| Deadline Boss | 100 | 10 | always open |
-| Meeting Master | 120 | 15 | 1 defeat of Deadline Boss |
-| Reply-All Boss | 150 | 20 | 1 defeat of Meeting Master |
-| Production Bug | 200 | 30 | 1 defeat of Reply-All Boss |
-| Monday Monster | 300 | 50 | 1 defeat of Production Bug (lowered from 3 on 2026-10-05) |
+| Boss | HP | Effective HP | Score | Coins | Unlocks after |
+|---|---|---|---|---|---|
+| Deadline Boss | 100 | 100 | 100 | 10 | always open |
+| Meeting Master | 140 | 175 | 120 | 15 | 1 defeat of Deadline Boss |
+| Reply-All Boss | 240 | 200 | 150 | 20 | 1 defeat of Meeting Master |
+| Production Bug | 360 | 240 | 200 | 30 | 1 defeat of Reply-All Boss |
+| Monday Monster | 560 | 280 | 300 | 50 | 1 defeat of Production Bug (lowered from 3 on 2026-10-05) |
+| Senior Deadline Boss | 600 | 600 | 550 | 55 | Lv 10 + 1 defeat of Deadline Boss |
+| Senior Meeting Master | 640 | 800 | 700 | 70 | Lv 10 + 1 defeat of Meeting Master |
+| Senior Reply-All Boss | 1,080 | 900 | 850 | 90 | Lv 10 + 1 defeat of Reply-All Boss |
+| Senior Production Bug | 1,500 | 1,000 | 1,000 | 120 | Lv 10 + 1 defeat of Production Bug |
+| Senior Monday Monster | 2,400 | 1,200 | 1,300 | 170 | Lv 10 + 1 defeat of Monday Monster |
+| The CEO | 90,000 | 90,000 | 5,000 | 1,000 | Lv 10 + every other boss once |
+
+Before 2026-10-06 the HP went up and down (Reply-All had 80 HP after Meeting Master's 120, and
+effective HP went 100, 150, 67, 100, 100), so later bosses could feel easier than earlier ones.
 
 Score is the lifetime leaderboard number and never goes down; coins are spent in the hammer shop.
 Locked bosses are drawn greyed out with "LOCKED: beat <previous> xN"; swings at them don't count and
@@ -152,8 +164,8 @@ hit harder (spec-enforced).
 
 ## Player Level, leaderboard and the Senior floor (2026-10-05)
 ### Player Level
-`level = floor(sqrt(Xp / LevelScoreFactor)) + 1` (`Shared/LevelRules`, factor 600). **XP** grows with
-score (each defeat's score), multiplied by any XP store boost. Score itself is never boosted, so the
+`level = floor(sqrt(Xp / LevelScoreFactor)) + 1` (`Shared/LevelRules`, factor 600). **XP** per defeat
+is the score earned x `XpRewardMultiplier` (1.2, i.e. +20 %, since 2026-10-06) x any XP store boost. Score itself is never boosted, so the
 leaderboard stays fair. Level is derived from XP, never stored, and shown in the HUD and as "Lv N"
 above every head. Existing players start with XP equal to their score (schema v4).
 
@@ -164,13 +176,31 @@ above every head. Existing players start with XP equal to their score (schema v4
 | 5 | 9,600 |
 | 10 | 48,600 |
 
+### XP bar
+A thin blue bar along the bottom edge of the screen shows progress to the next level
+("Lv 4   1200 / 4200 XP to Lv 5"). It sits below the how-to-play hint, clear of the Stress Meter,
+the buttons on the right and the mobile thumbstick and jump button.
+
 ### Senior floor (upstairs, Level 10+)
 Stairs along the lobby's east wall lead to the upper corridor. Their foot is 9 studs from the front wall, so there's open floor to walk onto them. Each ground-floor boss has a **Senior**
-version in the office directly above it: 3× HP, 3× score and coins, a gold crown and its own jokes.
+version in the office directly above it: tougher than every ground-floor boss, paying more than its
+ground version, with a gold crown and its own jokes (numbers in the table above).
 A Senior boss unlocks with **Player Level ≥ `UpstairsMinLevel` (10)** and **1 defeat of its
 ground-floor version** (`BossConfig.UnlockAfterBossId` / `UnlockDefeats` / `MinLevel`). Below the
 level its bar reads "LOCKED: reach Lv 10" and swings show "Reach Level 10 to fight this Senior boss!".
 This spreads experienced players across two floors instead of crowding one boss.
+
+### Boss labels (2026-10-06)
+A boss's name, HP bar and speech bubble float above it, sized in studs (they shrink with distance) and
+shown up to 60 studs away. They are **not** drawn on top of walls: before, every boss in the building
+showed its label through the walls and they piled up on top of each other. Damage numbers follow the
+same rule.
+
+### Admin-created bosses
+Admins can place extra bosses anywhere (docs/ADMIN.md). They're open to every player, take normal
+damage, give the score and coins the admin set, and each qualifying player (10 % of its HP) gets one
+random 30-minute store boost in their Bag (docs/STORE.md "Bag and gifts"). They don't count toward
+unlocking office bosses.
 
 ### Global leaderboard
 A board on the lobby's west wall lists the all-time top 10 by lifetime score across all servers

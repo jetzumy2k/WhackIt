@@ -187,4 +187,31 @@ return function()
 			)
 		end)
 	end)
+	describe("ProgressionRules admin unlocks and custom bosses", function()
+		it("opens a locked boss the admin unlocked", function()
+			expect(ProgressionRules.isBossUnlocked(SECOND.Id, {}, 1)).to.equal(false)
+			local unlocks = { [SECOND.Id] = true }
+			expect(ProgressionRules.isBossUnlocked(SECOND.Id, {}, 1, unlocks)).to.equal(true)
+			expect(ProgressionRules.isBossUnlocked(THIRD.Id, {}, 1, unlocks)).to.equal(false)
+		end)
+
+		it("opens a Senior boss below its level when admin-unlocked", function()
+			local senior = BossConfig.ById["senior_" .. FIRST.Id]
+			expect(ProgressionRules.isBossUnlocked(senior.Id, {}, 1)).to.equal(false)
+			expect(ProgressionRules.isBossUnlocked(senior.Id, {}, 1, { [senior.Id] = true })).to.equal(
+				true
+			)
+		end)
+
+		it("lists admin-unlocked bosses as unlocked", function()
+			local ids = ProgressionRules.unlockedBossIds({}, 1, { [THIRD.Id] = true })
+			expect(table.find(ids, THIRD.Id)).never.to.equal(nil)
+			expect(table.find(ids, SECOND.Id)).to.equal(nil)
+		end)
+
+		it("always opens custom bosses, and still locks unknown ids", function()
+			expect(ProgressionRules.isBossUnlocked("custom_1_1234", {}, 1)).to.equal(true)
+			expect(ProgressionRules.isBossUnlocked("no_such_boss", {}, 1)).to.equal(false)
+		end)
+	end)
 end

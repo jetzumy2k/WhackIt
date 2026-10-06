@@ -10,6 +10,14 @@
 	  4. return PurchaseGranted only once a save containing that PurchaseId has
 	     reached the DataStore; otherwise NotProcessedYet so Roblox retries.
 	Delivery never depends on the store being open: paid is paid.
+
+	What is delivered (docs/STORE.md "Bag and gifts"):
+	  * normally, one of the item into the buyer's Bag; they use it when they like;
+	  * if the buyer chose "Gift" for this product (PendingGift, set by
+	    StoreService before the prompt), the item goes to the friend's gift inbox
+	    (GiftService) instead. The PendingGift is cleared only after the purchase
+	    is recorded, so a retried receipt delivers the same gift again, which
+	    GiftService ignores (same GiftId).
 ]]
 
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -17,24 +25,17 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
-local BuffService = require(script.Parent.BuffService)
-local HammerRules = require(ReplicatedStorage.Shared.HammerRules)
-local HammerService = require(script.Parent.HammerService)
+local BagRules = require(ReplicatedStorage.Shared.BagRules)
+local GiftService = require(script.Parent.GiftService)
 local PlayerDataSchema = require(ServerScriptService.Lib.PlayerDataSchema)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressService = require(script.Parent.ProgressService)
-local SessionService = require(script.Parent.SessionService)
 local StoreAdminConfig = require(ServerScriptService.Config.StoreAdminConfig)
 local StoreConfig = require(ReplicatedStorage.Config.StoreConfig)
 
 local ToastRemote = ReplicatedStorage.Remotes.Notify.Toast
 
 local PurchaseService = {}
-
-local rollRandom = Random.new()
-
-local BUFF_NAMES: { [string]: string } =
-	{ Xp = "XP", Damage = "Damage", CritDamage = "Crit Damage" }
 
 local function waitForData(player: Player): PlayerDataSchema.PlayerData?
 	local deadline = os.clock() + StoreAdminConfig.ReceiptDataWaitSeconds
@@ -49,38 +50,62 @@ local function waitForData(player: Player): PlayerDataSchema.PlayerData?
 end
 
 local function recordPurchase(data: PlayerDataSchema.PlayerData, purchaseId: string): ()
+	if table.find(data.ProcessedPurchases, purchaseId) then
+		return
+	end
 	table.insert(data.ProcessedPurchases, purchaseId)
 	while #data.ProcessedPurchases > PlayerDataSchema.MAX_PROCESSED_PURCHASES do
 		table.remove(data.ProcessedPurchases, 1)
 	end
 end
 
--- Applies the product. Never yields, so granting and recording are atomic.
-local function grant(
+-- Puts the product in the buyer's Bag. Never yields, so granting and
+-- recording are atomic.
+local function grantToBag(
 	player: Player,
 	data: PlayerDataSchema.PlayerData,
 	product: StoreConfig.Product
 ): string
-	if product.Kind == "MysteryHammer" then
-		local hammerId = HammerRules.mysteryId(data.NextMysteryNumber)
-		data.NextMysteryNumber += 1
-		local roll = HammerRules.rollMystery(rollRandom)
-		data.MysteryHammers[hammerId] = roll
-		SessionService.setEquippedHammer(player, hammerId)
-		HammerService.reequip(player)
-		ProgressService.sync(player)
-		return string.format(
-			"Mystery Hammer unboxed: %d damage, +%d%% crit damage!",
-			roll.Damage,
-			roll.CritDamagePercent
-		)
+	BagRules.add(data.Bag, product.Key, 1)
+	ProgressService.sync(player)
+	return BagRules.itemText(product) .. " added to your Bag. Use it whenever you like!"
+end
+
+-- The gift this receipt is for, if the buyer chose "Gift" for this product.
+local function pendingGiftFor(
+	data: PlayerDataSchema.PlayerData,
+	product: StoreConfig.Product
+): PlayerDataSchema.PendingGift?
+	local pending = data.PendingGift
+	if pending and pending.ProductKey == product.Key and BagRules.isGiftable(product) then
+		return pending
 	end
-	BuffService.grantTimed(player, product.Kind, product.Percent, product.Seconds)
+	return nil
+end
+
+-- Sends the gift to the friend's inbox. Yields; safe to repeat for one receipt.
+local function deliverGift(
+	player: Player,
+	pending: PlayerDataSchema.PendingGift,
+	product: StoreConfig.Product,
+	purchaseId: string
+): string?
+	local delivered = GiftService.deliver(pending.RecipientUserId, {
+		GiftId = purchaseId,
+		ProductKey = product.Key,
+		FromUserId = player.UserId,
+		FromName = player.DisplayName,
+	})
+	if not delivered then
+		return nil
+	end
+	local ok, name = pcall(function()
+		return Players:GetNameFromUserIdAsync(pending.RecipientUserId)
+	end)
 	return string.format(
-		"+%d%% %s boost added (%d min of play time).",
-		product.Percent,
-		BUFF_NAMES[product.Kind] or product.Kind,
-		product.Seconds // 60
+		"Gift sent to %s: %s!",
+		if ok and typeof(name) == "string" then name else "your friend",
+		BagRules.itemText(product)
 	)
 end
 
@@ -107,9 +132,25 @@ local function processReceipt(receipt: { [string]: any }): Enum.ProductPurchaseD
 	end
 
 	if not table.find(data.ProcessedPurchases, purchaseId) then
-		local message = grant(player, data, product)
-		recordPurchase(data, purchaseId)
-		ToastRemote:FireClient(player, message)
+		local pending = pendingGiftFor(data, product)
+		local message: string
+		if pending then
+			local sent = deliverGift(player, pending, product, purchaseId)
+			if sent == nil then
+				return Enum.ProductPurchaseDecision.NotProcessedYet
+			end
+			message = sent
+			-- Re-check after the yield: another call may have recorded it meanwhile.
+			if data.PendingGift == pending then
+				data.PendingGift = nil
+			end
+		else
+			message = grantToBag(player, data, product)
+		end
+		if not table.find(data.ProcessedPurchases, purchaseId) then
+			recordPurchase(data, purchaseId)
+			ToastRemote:FireClient(player, message)
+		end
 	end
 
 	local saved = PlayerDataService.saveAndConfirmAsync(player, function(savedData: any): boolean

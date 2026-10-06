@@ -10,19 +10,25 @@
 	    all of the above and opens Roblox's own purchase prompt. Payment and
 	    delivery are handled by PurchaseService, which always delivers what was
 	    paid for, even if the store has closed since.
+	  * Store.RequestGift: the same, but the item goes to a Roblox friend
+	    (docs/STORE.md "Bag and gifts"). The server checks the friendship and
+	    remembers the choice in the buyer's data (PendingGift) before the
+	    prompt, so PurchaseService knows where to deliver. A normal purchase
+	    request or a cancelled prompt clears it.
 	Store.State tells each client what to show; it's display only.
 ]]
 
 local DataStoreService = game:GetService("DataStoreService")
-local GroupService = game:GetService("GroupService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local MessagingService = game:GetService("MessagingService")
 local Players = game:GetService("Players")
 local PolicyService = game:GetService("PolicyService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 
+local AdminAuth = require(ServerScriptService.Lib.AdminAuth)
+local BagRules = require(ReplicatedStorage.Shared.BagRules)
+local PlayerDataService = require(script.Parent.PlayerDataService)
 local RemoteController = require(ServerScriptService.Controllers.RemoteController)
 local RemoteLimits = require(ServerScriptService.Config.RemoteLimits)
 local StoreAdminConfig = require(ServerScriptService.Config.StoreAdminConfig)
@@ -84,28 +90,6 @@ local function applySettings(raw: unknown): boolean
 	return true
 end
 
--- Experience owner, configured admins, and (optionally) the Studio tester.
--- May yield (group rank lookup), so it runs once per player on join.
-local function checkAdmin(player: Player): boolean
-	if RunService:IsStudio() and StoreAdminConfig.StudioTesterIsAdmin then
-		return true
-	end
-	if table.find(StoreAdminConfig.AdminUserIds, player.UserId) then
-		return true
-	end
-	if game.CreatorType == Enum.CreatorType.User then
-		return player.UserId == game.CreatorId
-	end
-	-- Group-owned experience: the group's owner is the admin.
-	local ok, info = pcall(function()
-		return GroupService:GetGroupInfoAsync(game.CreatorId)
-	end)
-	if not ok or typeof(info) ~= "table" or typeof(info.Owner) ~= "table" then
-		return false
-	end
-	return info.Owner.Id == player.UserId
-end
-
 -- Unknown or failed lookups count as restricted: never show a paid random
 -- item unless Roblox says it's allowed for this player.
 local function checkMysteryAllowed(player: Player): boolean
@@ -119,7 +103,7 @@ local function checkMysteryAllowed(player: Player): boolean
 end
 
 local function onPlayerAdded(player: Player): ()
-	admins[player] = checkAdmin(player)
+	admins[player] = AdminAuth.check(player)
 	mysteryAllowed[player] = checkMysteryAllowed(player)
 	if player.Parent == Players then
 		sendState(player)
@@ -198,7 +182,63 @@ local function onRequestPurchase(player: Player, raw: unknown): ()
 		sendState(player)
 		return
 	end
+	-- A plain purchase is for the buyer, whatever gift they looked at before.
+	local data = PlayerDataService.get(player)
+	if data == nil then
+		return
+	end
+	data.PendingGift = nil
 	MarketplaceService:PromptProductPurchase(player, product.ProductId)
+end
+
+local function onRequestGift(player: Player, rawKey: unknown, rawRecipient: unknown): ()
+	local key = Validate.id(rawKey, RemoteLimits.MaxIdLength)
+	local product = if key then StoreConfig.ByKey[key] else nil
+	local recipient = Validate.integer(rawRecipient, 1, 2 ^ 53)
+	if product == nil or recipient == nil then
+		return RemoteController.reject(player, "RequestGift", "bad product or recipient")
+	end
+	if not BagRules.isGiftable(product) then
+		return RemoteController.reject(player, "RequestGift", "not giftable")
+	end
+	if recipient == player.UserId then
+		ToastRemote:FireClient(player, "Pick a friend to send the gift to.")
+		return
+	end
+	if not StoreService.isOpen() or product.ProductId == 0 then
+		sendState(player)
+		return
+	end
+	-- Yields; the buyer can't name anyone who isn't their Roblox friend.
+	local ok, isFriend = pcall(function()
+		return player:IsFriendsWithAsync(recipient)
+	end)
+	if not ok then
+		ToastRemote:FireClient(player, "Couldn't check your friends list. Try again.")
+		return
+	end
+	if isFriend ~= true then
+		return RemoteController.reject(player, "RequestGift", "recipient is not a friend")
+	end
+	local data = PlayerDataService.get(player)
+	if data == nil or player.Parent ~= Players then
+		return
+	end
+	data.PendingGift = { RecipientUserId = recipient, ProductKey = product.Key }
+	MarketplaceService:PromptProductPurchase(player, product.ProductId)
+end
+
+-- A cancelled prompt must not leave a gift choice behind for a later purchase.
+local function onPromptFinished(userId: number, productId: number, purchased: boolean): ()
+	if purchased then
+		return
+	end
+	local player = Players:GetPlayerByUserId(userId)
+	local data = if player then PlayerDataService.get(player) else nil
+	local product = StoreConfig.ByProductId[productId]
+	if data and product and data.PendingGift and data.PendingGift.ProductKey == product.Key then
+		data.PendingGift = nil
+	end
 end
 
 function StoreService.init(): ()
@@ -222,6 +262,12 @@ function StoreService.init(): ()
 		maxArgs = 1,
 		rateLimit = RemoteLimits.Shop,
 	}, onRequestPurchase)
+	RemoteController.bind(StoreRemotes.RequestGift, {
+		name = "RequestGift",
+		maxArgs = 2,
+		rateLimit = RemoteLimits.Shop,
+	}, onRequestGift)
+	MarketplaceService.PromptProductPurchaseFinished:Connect(onPromptFinished)
 	RemoteController.bind(StoreRemotes.AdminSetMode, {
 		name = "AdminSetMode",
 		maxArgs = 1,

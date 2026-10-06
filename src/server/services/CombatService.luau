@@ -14,6 +14,7 @@ local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local BossService = require(script.Parent.BossService)
+local BossState = require(ServerScriptService.Lib.BossState)
 local BuffService = require(script.Parent.BuffService)
 local CombatRules = require(ReplicatedStorage.Shared.CombatRules)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
@@ -94,6 +95,11 @@ local function rewardContributors(live: BossService.LiveBoss): ()
 			UnlockedBossIds = if grant then grant.UnlockedBossIds else {},
 			SharePercent = if grant then math.floor(grant.Share * 100 + 0.5) else 0,
 			LastHit = grant ~= nil and grant.LastHit,
+			BossName = state.Definition.DisplayName,
+			BuffDropText = if grant and grant.BuffDrop
+				then RewardService.dropText(grant.BuffDrop)
+				else nil,
+			AdminDamage = state.AdminBoosted[userId] == true,
 		}
 		CombatRemotes.BossDefeated:FireClient(player, payload)
 	end
@@ -130,7 +136,8 @@ local function onHammerHit(player: Player, rawBossInstanceId: unknown): ()
 		not ProgressionRules.isBossUnlocked(
 			live.State.Definition.Id,
 			data.BossDefeats,
-			LevelRules.levelFor(data.Xp)
+			LevelRules.levelFor(data.Xp),
+			data.AdminUnlocks
 		)
 	then
 		return explainDrop(player, live.State.Definition.Id .. " is locked for this player")
@@ -164,9 +171,17 @@ local function onHammerHit(player: Player, rawBossInstanceId: unknown): ()
 
 	local damage, isCrit =
 		CombatRules.hitDamage(stats, live.State.Definition, critRandom:NextNumber())
+	-- Admin-set damage replaces the roll; such hits never earn rewards.
+	local override = BuffService.damageOverride(player)
+	if override then
+		damage, isCrit = override, false
+	end
 	local result = BossService.applyHit(live, player.UserId, damage)
 	if result == nil then
 		return
+	end
+	if override then
+		BossState.markAdminBoosted(live.State, player.UserId)
 	end
 	lastHitAt[player] = now
 	if not result.Defeated then

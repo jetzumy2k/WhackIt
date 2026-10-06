@@ -5,6 +5,11 @@
 -- UnlockDefeats rewarded defeats of that boss, and MinLevel Player Level if set.
 -- Ground-floor bosses chain one after another; Senior bosses (upstairs) need
 -- GameConfig.UpstairsMinLevel and one defeat of their ground-floor version.
+--
+-- Difficulty rises down the list: each boss has more MaxHealth AND more
+-- effective HP (MaxHealth / DamageTakenMultiplier, i.e. hammer damage needed)
+-- than the one before it. BossConfig.spec checks this, so keep it true when
+-- tuning.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -23,6 +28,9 @@ export type BossDefinition = {
 	MinLevel: number?,
 	-- Unlocks only once every other boss has been defeated at least once (the CEO).
 	UnlockAfterAllBosses: boolean?,
+	-- Admin-created bosses only (Shared/CustomBossRules): never in List/ById.
+	Custom: boolean?,
+	LookId: string?, -- the BossConfig boss whose model, colours and shouts it borrows
 }
 
 export type BossConfig = {
@@ -30,8 +38,8 @@ export type BossConfig = {
 	ById: { [string]: BossDefinition },
 }
 
--- Senior bosses live upstairs: three times the HP and rewards of their
--- ground-floor version, for experienced players (GameConfig.UpstairsMinLevel).
+-- Senior bosses live upstairs, for experienced players (GameConfig.UpstairsMinLevel):
+-- all tougher than any ground-floor boss, and paying more than their ground version.
 local SENIOR_MIN_LEVEL = GameConfig.UpstairsMinLevel
 
 local list: { BossDefinition } = {
@@ -50,7 +58,7 @@ local list: { BossDefinition } = {
 		Id = "meeting_master",
 		DisplayName = "Meeting Master",
 		Description = "A meeting that could have been an email.",
-		MaxHealth = 120,
+		MaxHealth = 140,
 		DamageTakenMultiplier = 0.8,
 		ScoreReward = 120,
 		CoinReward = 15,
@@ -62,7 +70,7 @@ local list: { BossDefinition } = {
 		Id = "reply_all_boss",
 		DisplayName = "Reply-All Boss",
 		Description = "Someone replied to everyone... again.",
-		MaxHealth = 80,
+		MaxHealth = 240,
 		DamageTakenMultiplier = 1.2,
 		ScoreReward = 150,
 		CoinReward = 20,
@@ -74,7 +82,7 @@ local list: { BossDefinition } = {
 		Id = "production_bug",
 		DisplayName = "Production Bug",
 		Description = "It worked perfectly in development.",
-		MaxHealth = 150,
+		MaxHealth = 360,
 		DamageTakenMultiplier = 1.5,
 		ScoreReward = 200,
 		CoinReward = 30,
@@ -86,7 +94,7 @@ local list: { BossDefinition } = {
 		Id = "monday_monster",
 		DisplayName = "Monday Monster",
 		Description = "Monday has entered the building.",
-		MaxHealth = 200,
+		MaxHealth = 560,
 		DamageTakenMultiplier = 2.0,
 		ScoreReward = 300,
 		CoinReward = 50,
@@ -98,10 +106,10 @@ local list: { BossDefinition } = {
 		Id = "senior_deadline_boss",
 		DisplayName = "Senior Deadline Boss",
 		Description = "The deadline moved up. To yesterday.",
-		MaxHealth = 300,
+		MaxHealth = 600,
 		DamageTakenMultiplier = 1.0,
-		ScoreReward = 300,
-		CoinReward = 30,
+		ScoreReward = 550,
+		CoinReward = 55,
 		UnlockAfterBossId = "deadline_boss",
 		UnlockDefeats = 1,
 		MinLevel = SENIOR_MIN_LEVEL,
@@ -111,10 +119,10 @@ local list: { BossDefinition } = {
 		Id = "senior_meeting_master",
 		DisplayName = "Senior Meeting Master",
 		Description = "Schedules meetings about meetings.",
-		MaxHealth = 360,
+		MaxHealth = 640,
 		DamageTakenMultiplier = 0.8,
-		ScoreReward = 360,
-		CoinReward = 45,
+		ScoreReward = 700,
+		CoinReward = 70,
 		UnlockAfterBossId = "meeting_master",
 		UnlockDefeats = 1,
 		MinLevel = SENIOR_MIN_LEVEL,
@@ -124,10 +132,10 @@ local list: { BossDefinition } = {
 		Id = "senior_reply_all_boss",
 		DisplayName = "Senior Reply-All Boss",
 		Description = "CCs the entire company on every thought.",
-		MaxHealth = 240,
+		MaxHealth = 1080,
 		DamageTakenMultiplier = 1.2,
-		ScoreReward = 450,
-		CoinReward = 60,
+		ScoreReward = 850,
+		CoinReward = 90,
 		UnlockAfterBossId = "reply_all_boss",
 		UnlockDefeats = 1,
 		MinLevel = SENIOR_MIN_LEVEL,
@@ -137,10 +145,10 @@ local list: { BossDefinition } = {
 		Id = "senior_production_bug",
 		DisplayName = "Senior Production Bug",
 		Description = "Only appears on Friday at 4:59 PM.",
-		MaxHealth = 450,
+		MaxHealth = 1500,
 		DamageTakenMultiplier = 1.5,
-		ScoreReward = 600,
-		CoinReward = 90,
+		ScoreReward = 1000,
+		CoinReward = 120,
 		UnlockAfterBossId = "production_bug",
 		UnlockDefeats = 1,
 		MinLevel = SENIOR_MIN_LEVEL,
@@ -150,10 +158,10 @@ local list: { BossDefinition } = {
 		Id = "senior_monday_monster",
 		DisplayName = "Senior Monday Monster",
 		Description = "Every day is Monday now.",
-		MaxHealth = 600,
+		MaxHealth = 2400,
 		DamageTakenMultiplier = 2.0,
-		ScoreReward = 900,
-		CoinReward = 150,
+		ScoreReward = 1300,
+		CoinReward = 170,
 		UnlockAfterBossId = "monday_monster",
 		UnlockDefeats = 1,
 		MinLevel = SENIOR_MIN_LEVEL,

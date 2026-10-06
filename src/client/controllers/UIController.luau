@@ -15,6 +15,7 @@ local Attributes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild
 local BossConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("BossConfig"))
 local GameConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("GameConfig"))
 local GameplayController = require(script.Parent.GameplayController)
+local LevelRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("LevelRules"))
 local ProgressController = require(script.Parent.ProgressController)
 
 local UIController = {}
@@ -23,11 +24,16 @@ local VICTORY_CARD_SECONDS = 3
 local PANEL_COLOR = Color3.fromRGB(30, 30, 40)
 local STRESS_COLOR = Color3.fromRGB(235, 80, 80)
 local HEALTH_COLOR = Color3.fromRGB(90, 210, 110)
+local XP_COLOR = Color3.fromRGB(110, 150, 255)
 local TEXT_COLOR = Color3.fromRGB(255, 255, 255)
 local TOAST_COLOR = Color3.fromRGB(255, 230, 80)
 local TOAST_SECONDS = 2.5
 local SAVED_SECONDS = 2
 local SHOUT_SECONDS = 4.5
+-- Boss name/HP/shout label: size in studs, and how far away it still shows
+-- (an office is 30 studs across, so this covers the room and the corridor).
+local BOSS_BAR_STUDS = Vector2.new(9, 4.2)
+local BOSS_BAR_MAX_DISTANCE = 60
 
 local localPlayer = Players.LocalPlayer
 local BUFF_ORDER = { "Xp", "Damage", "CritDamage" }
@@ -199,10 +205,44 @@ local function buildHud(): (ScreenGui, Frame)
 		end
 	end)
 
-	-- How to play, bottom centre.
+	-- XP bar: a thin strip along the bottom edge, out of the way of the
+	-- Stress Meter, the buttons on the right and the mobile thumbstick/jump.
+	local xpFill, xpLabel = makeBar("XpBar", XP_COLOR, gui)
+	local xpBar = xpFill.Parent :: Frame
+	xpBar.AnchorPoint = Vector2.new(0.5, 1)
+	xpBar.Position = UDim2.new(0.5, 0, 1, -6)
+	xpBar.Size = UDim2.new(0.36, 0, 0, 16)
+	xpBar.BackgroundTransparency = 0.25
+	local xpConstraint = Instance.new("UISizeConstraint")
+	xpConstraint.MinSize = Vector2.new(180, 14)
+	xpConstraint.MaxSize = Vector2.new(440, 18)
+	xpConstraint.Parent = xpBar
+	local function refreshXp(): ()
+		local snapshot = ProgressController.get()
+		if snapshot == nil then
+			xpFill.Size = UDim2.fromScale(0, 1)
+			xpLabel.Text = ""
+			return
+		end
+		local level = LevelRules.levelFor(snapshot.Xp)
+		local floor = LevelRules.scoreForLevel(level)
+		local nextAt = LevelRules.scoreForLevel(level + 1)
+		setFill(xpFill, snapshot.Xp - floor, nextAt - floor)
+		xpLabel.Text = string.format(
+			"Lv %d   %d / %d XP to Lv %d",
+			level,
+			snapshot.Xp - floor,
+			nextAt - floor,
+			level + 1
+		)
+	end
+	ProgressController.Changed:Connect(refreshXp)
+	refreshXp()
+
+	-- How to play, bottom centre (above the XP bar).
 	local hint = makeLabel("Hint", gui)
 	hint.AnchorPoint = Vector2.new(0.5, 1)
-	hint.Position = UDim2.new(0.5, 0, 1, -24)
+	hint.Position = UDim2.new(0.5, 0, 1, -28)
 	hint.Size = UDim2.new(0.6, 0, 0, 28)
 	hint.TextTransparency = 0.2
 	hint.Text = if UserInputService.TouchEnabled
@@ -272,14 +312,18 @@ function attachBossBar(model: Model, billboardParent: Instance): ()
 		return
 	end
 
+	-- Not AlwaysOnTop: walls and floors hide it, so bosses in other offices and
+	-- on other floors don't pile their labels up on the walls. Sized in studs,
+	-- so a distant label shrinks instead of covering the screen.
 	local billboard = Instance.new("BillboardGui")
 	billboard.Name = "BossBar"
 	billboard.ResetOnSpawn = false
 	billboard.Adornee = body
-	billboard.AlwaysOnTop = true
-	billboard.Size = UDim2.fromOffset(240, 110)
-	billboard.StudsOffset = Vector3.new(0, body.Size.Y / 2 + 2, 0)
-	billboard.MaxDistance = 120
+	billboard.AlwaysOnTop = false
+	billboard.LightInfluence = 0
+	billboard.Size = UDim2.fromScale(BOSS_BAR_STUDS.X, BOSS_BAR_STUDS.Y)
+	billboard.StudsOffset = Vector3.new(0, body.Size.Y / 2 + BOSS_BAR_STUDS.Y / 2 + 0.5, 0)
+	billboard.MaxDistance = BOSS_BAR_MAX_DISTANCE
 
 	-- Speech bubble on top (boss shouts), then the name and HP bar below it.
 	local bubble = Instance.new("TextLabel")
@@ -321,7 +365,11 @@ function attachBossBar(model: Model, billboardParent: Instance): ()
 	nameLabel.Size = UDim2.fromScale(1, 0.24)
 	local bossId = model:GetAttribute(Attributes.BossId)
 	local definition = if typeof(bossId) == "string" then BossConfig.ById[bossId] else nil
-	nameLabel.Text = if definition then definition.DisplayName else model.Name
+	local customName = model:GetAttribute(Attributes.BossName)
+	nameLabel.Text = if definition
+		then definition.DisplayName
+		elseif typeof(customName) == "string" then customName
+		else model.Name
 
 	local fill, healthLabel = makeBar("HealthBar", HEALTH_COLOR, billboard)
 	local healthBar = fill.Parent :: Frame
@@ -426,8 +474,16 @@ local function showVictoryCard(card: Frame, payload: unknown): ()
 	end
 
 	local definition = BossConfig.ById[bossId]
-	local bossName = if definition then definition.DisplayName else "Boss"
+	local bossName = if definition
+		then definition.DisplayName
+		elseif typeof(data.BossName) == "string" then data.BossName
+		else "Boss"
 	local lines = { bossName .. " defeated!" }
+	if data.AdminDamage == true then
+		table.insert(lines, "Admin damage was on: no rewards for this boss.")
+		showCard(card, table.concat(lines, "\n"))
+		return
+	end
 	if typeof(score) == "number" and typeof(coins) == "number" then
 		local share = data.SharePercent
 		table.insert(
@@ -447,6 +503,10 @@ local function showVictoryCard(card: Frame, payload: unknown): ()
 		table.insert(lines, string.format("-%d stress", math.floor(stress + 0.5)))
 	elseif not rewarded then
 		table.insert(lines, "Deal at least 10% of its HP to count the defeat.")
+	end
+	local buffDrop = data.BuffDropText
+	if typeof(buffDrop) == "string" and #buffDrop <= 60 then
+		table.insert(lines, "BONUS DROP: " .. buffDrop .. "!")
 	end
 	local unlocked = data.UnlockedBossIds
 	if typeof(unlocked) == "table" then

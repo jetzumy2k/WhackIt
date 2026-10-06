@@ -29,6 +29,9 @@ local function validData(): PlayerDataSchema.RawData
 		ProcessedPurchases = { "receipt-1" },
 		MysteryHammers = { mystery_1 = { Damage = 30, CritDamagePercent = 7 } },
 		NextMysteryNumber = 2,
+		AdminUnlocks = {},
+		Bag = { xp_10_30m = 1 },
+		ClaimedGifts = {},
 	}
 end
 
@@ -386,6 +389,97 @@ return function()
 			unowned.EquippedHammerId = "mystery_99"
 			PlayerDataSchema.prepare(unowned)
 			expect(unowned.EquippedHammerId).to.equal(GameConfig.DefaultHammerId)
+		end)
+	end)
+	describe("PlayerDataSchema v5 (admin unlocks)", function()
+		it("migrates v4 data with no admin unlocks", function()
+			local data = validData()
+			data.SchemaVersion = 4
+			data.AdminUnlocks = nil
+			expect((PlayerDataSchema.prepare(data))).to.equal(true)
+			expect(data.SchemaVersion).to.equal(PlayerDataSchema.CURRENT_VERSION)
+			expect((next(data.AdminUnlocks :: {}))).to.equal(nil)
+		end)
+
+		it("keeps known bosses and drops unknown or non-true entries", function()
+			local data = validData()
+			local mixed: { [string]: unknown } =
+				{ [BossConfig.List[2].Id] = true, fake_boss = true, [BossConfig.List[3].Id] = 1 }
+			data.AdminUnlocks = mixed
+			PlayerDataSchema.prepare(data)
+			local unlocks = data.AdminUnlocks :: { [string]: boolean }
+			expect(unlocks[BossConfig.List[2].Id]).to.equal(true)
+			expect(unlocks.fake_boss).to.equal(nil)
+			expect(unlocks[BossConfig.List[3].Id]).to.equal(nil)
+		end)
+
+		it("repairs a non-table AdminUnlocks", function()
+			local data = validData()
+			data.AdminUnlocks = "everything"
+			PlayerDataSchema.prepare(data)
+			expect(typeof(data.AdminUnlocks)).to.equal("table")
+		end)
+	end)
+	describe("PlayerDataSchema v6 (Bag and gifts)", function()
+		it("migrates v5 data with an empty Bag and no gifts", function()
+			local data = validData()
+			data.SchemaVersion = 5
+			data.Bag = nil
+			data.ClaimedGifts = nil
+			expect((PlayerDataSchema.prepare(data))).to.equal(true)
+			expect(data.SchemaVersion).to.equal(PlayerDataSchema.CURRENT_VERSION)
+			expect((next(data.Bag :: {}))).to.equal(nil)
+			expect(#(data.ClaimedGifts :: {})).to.equal(0)
+			expect(data.PendingGift).to.equal(nil)
+		end)
+
+		it("keeps known Bag items and drops unknown keys or bad counts", function()
+			local data = validData()
+			local mixed: { [string]: unknown } = {
+				xp_10_30m = 3,
+				mystery_hammer = 1.7,
+				fake_item = 2,
+				dmg_5_1h = 0,
+				crit_3_5h = "1",
+			}
+			data.Bag = mixed
+			PlayerDataSchema.prepare(data)
+			local bag = data.Bag :: { [string]: number }
+			expect(bag.xp_10_30m).to.equal(3)
+			expect(bag.mystery_hammer).to.equal(1)
+			expect(bag.fake_item).to.equal(nil)
+			expect(bag.dmg_5_1h).to.equal(nil)
+			expect(bag.crit_3_5h).to.equal(nil)
+		end)
+
+		it("keeps a valid pending gift and drops a bad or non-giftable one", function()
+			local data = validData()
+			data.PendingGift = { RecipientUserId = 42, ProductKey = "xp_10_30m" }
+			PlayerDataSchema.prepare(data)
+			expect(data.PendingGift).never.to.equal(nil)
+
+			local mystery = validData()
+			mystery.PendingGift = { RecipientUserId = 42, ProductKey = "mystery_hammer" }
+			PlayerDataSchema.prepare(mystery)
+			expect(mystery.PendingGift).to.equal(nil)
+
+			local badUser = validData()
+			badUser.PendingGift = { RecipientUserId = 1.5, ProductKey = "xp_10_30m" }
+			PlayerDataSchema.prepare(badUser)
+			expect(badUser.PendingGift).to.equal(nil)
+		end)
+
+		it("bounds the claimed gift history", function()
+			local data = validData()
+			local ids = {}
+			for index = 1, PlayerDataSchema.MAX_CLAIMED_GIFTS + 10 do
+				table.insert(ids, "gift-" .. index)
+			end
+			data.ClaimedGifts = ids
+			PlayerDataSchema.prepare(data)
+			local claimed = data.ClaimedGifts :: { string }
+			expect(#claimed).to.equal(PlayerDataSchema.MAX_CLAIMED_GIFTS)
+			expect(claimed[#claimed]).to.equal("gift-" .. (PlayerDataSchema.MAX_CLAIMED_GIFTS + 10))
 		end)
 	end)
 end
