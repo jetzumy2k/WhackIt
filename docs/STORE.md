@@ -23,8 +23,6 @@ Every boost comes in three lengths of **play time**: 30 minutes, 1 hour or 5 hou
 | +3 % Crit Damage | 10 | 19 | 79 |
 | +5 % Crit Damage | 15 | 25 | 99 |
 | +10 % Crit Damage | 25 | 45 | 149 |
-| +15 % Crit Damage | 39 | 69 | 219 |
-| +20 % Crit Damage | 49 | 89 | 279 |
 | **Mystery Hammer** (permanent) | 199 | | |
 
 Why these prices: 30-minute boosts sit at impulse prices (10–49 R$). Longer boosts give a better
