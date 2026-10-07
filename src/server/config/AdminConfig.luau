@@ -14,6 +14,12 @@ local AdminConfig = table.freeze({
 	CustomBossTopic = "CustomBosses",
 	CustomBossRefreshSeconds = 300,
 
+	-- Office boss buff drop chances (Config/DropRateConfig), shared by every server.
+	DropRateStoreName = "DropRates",
+	DropRateKey = "Global",
+	DropRateTopic = "DropRates",
+	DropRateRefreshSeconds = 300,
+
 	-- Ban / suspend (Players:BanAsync). Seconds; -1 is permanent.
 	BanDurations = table.freeze({
 		["1 hour"] = 3600,

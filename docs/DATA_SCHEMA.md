@@ -80,6 +80,13 @@ Gift inboxes are **not** player data: DataStore `GiftInbox`, key `Inbox_<UserId>
 
 Admin-created bosses are **not** player data: they live in their own DataStore `CustomBosses`
 (key `Global`), validated on every load by `Shared/CustomBossRules.parseList` (docs/ADMIN.md).
+Each record also has `RespawnMode` (`"Continuous"` or `"Once"`) and `Defeated` (true only for a
+beaten `"Once"` boss); records saved before 2026-10-07 have neither and load as `"Continuous"`, not
+defeated.
+
+Office boss drop rates are **not** player data either: DataStore `DropRates`, key `Global`, one
+`DropRateRules.Settings` table validated by `Shared/DropRateRules.parse` on every load. No saved value
+means the `Config/DropRateConfig` defaults; an invalid one is ignored (current settings kept).
 
 ## Load rules (`PlayerDataService`)
 1. `StartSessionAsync` retries until it succeeds or the player leaves.

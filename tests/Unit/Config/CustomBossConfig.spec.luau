@@ -31,5 +31,13 @@ return function()
 			expect(CustomBossConfig.BuffDropSeconds > 0).to.equal(true)
 			expect(table.isfrozen(CustomBossConfig)).to.equal(true)
 		end)
+
+		it("offers both respawn modes and defaults to one of them", function()
+			expect(table.find(CustomBossConfig.RespawnModes, "Continuous")).never.to.equal(nil)
+			expect(table.find(CustomBossConfig.RespawnModes, "Once")).never.to.equal(nil)
+			expect(table.find(CustomBossConfig.RespawnModes, CustomBossConfig.DefaultRespawnMode)).never.to.equal(
+				nil
+			)
+		end)
 	end)
 end

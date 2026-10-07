@@ -29,7 +29,7 @@ export type BossDefeated = {
 	SharePercent: number, -- the player's share of the boss's HP, 0..100
 	LastHit: boolean, -- the player landed the defeating hit (bonus included)
 	BossName: string, -- display name (custom bosses aren't in BossConfig)
-	BuffDropText: string?, -- custom bosses: the store boost this player got
+	BuffDropText: string?, -- the store boost this player got (custom bosses always, office bosses by chance)
 	AdminDamage: boolean, -- the player hit with admin-set damage, so got no reward
 }
 

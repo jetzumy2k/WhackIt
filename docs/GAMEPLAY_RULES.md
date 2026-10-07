@@ -42,7 +42,12 @@ A hit request is applied only if all of these hold (`CombatService`; details in 
 ## Shared-boss rules (confirmed 2026-10-05)
 - **Contribution:** the server records accepted damage per player per boss.
 - **Rewards:** split by damage share, with a small last-hit bonus (see Progression below). Superseded the earlier "full reward for every qualifier" rule on 2026-10-05.
-- **Respawn:** a defeated boss stays visible (defeated) for `BossRespawnDelay`, then is replaced by a fresh boss at full HP with a new instance id.
+- **Respawn:** a defeated boss stays visible (defeated) for `BossRespawnDelay`, then is replaced by a fresh boss at full HP with a new instance id. Admin-created "One time" bosses don't come back (docs/ADMIN.md).
+- **Buff drop (2026-10-07):** each qualifying player rolls once per office boss defeat. The roll's chance is picked at random within the range in effect (`Config/DropRateConfig`, probabilities, 0.30 = 30 %):
+  - **Normal** (most of the time): 0.0005 to 0.10.
+  - **Lucky window**: 0.10 to 0.30, for the first 10 minutes of every 2 hours, counted in UTC (00:00-00:10, 02:00-02:10, ...), the same in every server.
+
+  On a drop, a random 30-minute store boost (same pool as custom bosses) goes into their Bag and the Victory Card shows "BONUS DROP". Custom bosses always drop one. Players who hit with admin-set damage get nothing. Admins can change all six values in the Admin panel's **Drops** tab (docs/ADMIN.md).
 
 Tunable values (`GameConfig`):
 | Key | Value | Meaning |

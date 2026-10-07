@@ -11,6 +11,8 @@
 	  * Set Damage: fixed damage per hit for this session; such hits earn no
 	    rewards (BuffService, CombatService, RewardService);
 	  * Unlock / Lock bosses: PlayerData.AdminUnlocks (saved).
+	Drops sets the office boss buff drop chances for every server
+	(DropRateService), or resets them to Config/DropRateConfig.
 	Moderation bans or suspends by UserId or username with Players:BanAsync,
 	which kicks the player from every server and keeps them out (alt accounts
 	included) until the ban ends. Admins can't ban themselves or other admins.
@@ -32,6 +34,8 @@ local BuffService = require(script.Parent.BuffService)
 local CustomBossConfig = require(ReplicatedStorage.Config.CustomBossConfig)
 local CustomBossRules = require(ReplicatedStorage.Shared.CustomBossRules)
 local CustomBossService = require(script.Parent.CustomBossService)
+local DropRateRules = require(ReplicatedStorage.Shared.DropRateRules)
+local DropRateService = require(script.Parent.DropRateService)
 local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressService = require(script.Parent.ProgressService)
@@ -77,6 +81,8 @@ local function stateFor(player: Player): { [string]: any }
 			MaxHealth = record.MaxHealth,
 			ScoreReward = record.ScoreReward,
 			CoinReward = record.CoinReward,
+			RespawnMode = record.RespawnMode,
+			Defeated = record.Defeated,
 		})
 	end
 	-- Keys are strings: remote payloads can't mix number keys reliably.
@@ -107,6 +113,7 @@ local function stateFor(player: Player): { [string]: any }
 	return {
 		IsAdmin = true,
 		CustomBosses = bosses,
+		DropRates = DropRateService.settings(),
 		DamageOverrides = damage,
 		MaxSetLevel = AdminConfig.MaxSetLevel,
 		MaxSetDamage = AdminConfig.MaxSetDamage,
@@ -324,9 +331,10 @@ local function onCreateBoss(player: Player, raw: unknown): ()
 		audit(
 			player,
 			string.format(
-				"created boss %q (%d HP) at %.0f, %.0f, %.0f",
+				"created boss %q (%d HP, respawn %s) at %.0f, %.0f, %.0f",
 				name,
 				spec.MaxHealth,
+				spec.RespawnMode,
 				position.X,
 				position.Y,
 				position.Z
@@ -366,6 +374,48 @@ local function onEditBoss(player: Player, rawAction: unknown, rawBossId: unknown
 		if ok
 			then (if rawAction == "Move" then "Boss moved. " else "Boss deleted. ") .. message
 			else message
+	)
+end
+
+local function percent(chance: number): string
+	return string.format("%g%%", chance * 100)
+end
+
+-- `raw` is the new settings table, or "Reset" for the DropRateConfig defaults.
+local function onSetDropRates(player: Player, raw: unknown): ()
+	if not isAdmin(player) then
+		return RemoteController.reject(player, "Admin.SetDropRates", "not an admin")
+	end
+	local newSettings: DropRateRules.Settings? = nil
+	if raw ~= "Reset" then
+		local parsed, problem = DropRateRules.parse(raw)
+		if parsed == nil then
+			return toast(player, problem or "Those drop rates aren't valid.")
+		end
+		newSettings = parsed
+	end
+	local ok, message = DropRateService.save(newSettings)
+	if not ok then
+		return toast(player, message)
+	end
+	local applied = DropRateService.settings()
+	audit(
+		player,
+		string.format(
+			"set drop rates: normal %s-%s, lucky %s-%s for %d min every %d min%s",
+			percent(applied.NormalMin),
+			percent(applied.NormalMax),
+			percent(applied.LuckyMin),
+			percent(applied.LuckyMax),
+			applied.LuckyLastsMinutes,
+			applied.LuckyEveryMinutes,
+			if newSettings == nil then " (defaults)" else ""
+		)
+	)
+	toast(
+		player,
+		(if newSettings == nil then "Drop rates reset to defaults. " else "Drop rates updated. ")
+			.. message
 	)
 end
 
@@ -504,6 +554,7 @@ function AdminService.init(): ()
 		task.defer(broadcastToAdmins)
 	end)
 	CustomBossService.onChanged(broadcastToAdmins)
+	DropRateService.onChanged(broadcastToAdmins)
 
 	local options = { maxArgs = 3, rateLimit = RemoteLimits.Admin }
 	local function bind(remote: Instance, name: string, handler: RemoteController.Handler): ()
@@ -519,6 +570,11 @@ function AdminService.init(): ()
 	bind(AdminRemotes.SetUnlock, "Admin.SetUnlock", onSetUnlock :: RemoteController.Handler)
 	bind(AdminRemotes.CreateBoss, "Admin.CreateBoss", onCreateBoss :: RemoteController.Handler)
 	bind(AdminRemotes.EditBoss, "Admin.EditBoss", onEditBoss :: RemoteController.Handler)
+	bind(
+		AdminRemotes.SetDropRates,
+		"Admin.SetDropRates",
+		onSetDropRates :: RemoteController.Handler
+	)
 	bind(AdminRemotes.Moderate, "Admin.Moderate", onModerate :: RemoteController.Handler)
 end
 
