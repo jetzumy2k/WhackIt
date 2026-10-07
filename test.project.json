@@ -43,6 +43,11 @@
         "$path": { "optional": "src/server/lib" }
       },
 
+      "ClientLib": {
+        "$className": "Folder",
+        "$path": { "optional": "src/client/lib" }
+      },
+
       "Services": {
         "$className": "Folder",
         "$path": { "optional": "src/server/services" }

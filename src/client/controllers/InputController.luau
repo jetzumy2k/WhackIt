@@ -21,6 +21,7 @@ local CombatRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChil
 local SwingPose = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SwingPose"))
 local GameplayController = require(script.Parent.GameplayController)
 local ProgressController = require(script.Parent.ProgressController)
+local CharacterExpression = require(script.Parent.Parent.Lib.CharacterExpression)
 local SwingAnimator = require(script.Parent.Parent.Lib.SwingAnimator)
 local UIController = require(script.Parent.UIController)
 
@@ -140,6 +141,8 @@ local function swing(): ()
 	local character = humanoid.Parent
 	if character and character:IsA("Model") then
 		SwingAnimator.play(character)
+		-- Focused for the swing; a landed hit turns it happy (FeedbackController).
+		CharacterExpression.show(character, "Determined", SwingAnimator.secondsUntil(1))
 	end
 	task.delay(SwingAnimator.secondsUntil(WHOOSH_PROGRESS), playWhoosh, tool)
 	task.delay(SwingAnimator.secondsUntil(SwingPose.IMPACT), onImpact)

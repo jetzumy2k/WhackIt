@@ -65,6 +65,36 @@ return function()
 			head:Destroy()
 		end)
 
+		it("never draws angry brows: inner ends stay higher than outer ends", function()
+			for _, mood in { "Stressed", "Frazzled" } do
+				local head = headWithDecal()
+				MoodFace.apply(head, mood)
+				local brows = {}
+				for _, child in faceGui(head):GetChildren() do
+					if child.Name == "Brow" and child:IsA("Frame") then
+						table.insert(brows, child)
+					end
+				end
+				expect(#brows).to.equal(2)
+				for _, brow in brows do
+					local isLeft = brow.Position.X.Scale < 0.5
+					-- Positive Rotation is clockwise: the left brow must tilt up toward the middle.
+					expect(if isLeft then brow.Rotation <= 0 else brow.Rotation >= 0).to.equal(true)
+				end
+				head:Destroy()
+			end
+		end)
+
+		it("gives the calmer moods a smile", function()
+			for _, mood in { "Zen", "Relaxed", "Neutral" } do
+				local head = headWithDecal()
+				MoodFace.apply(head, mood)
+				expect(faceGui(head):FindFirstChild("Mouth")).never.to.equal(nil)
+				expect(faceGui(head):FindFirstChild("Brow")).to.equal(nil)
+				head:Destroy()
+			end
+		end)
+
 		it("shows a sweat drop only when frazzled", function()
 			local frazzled = headWithDecal()
 			MoodFace.apply(frazzled, "Frazzled")

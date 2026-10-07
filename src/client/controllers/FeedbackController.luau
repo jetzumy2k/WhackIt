@@ -1,5 +1,6 @@
 --!strict
--- Hit feedback: flash, floating damage numbers and camera shake for the hitter.
+-- Hit feedback: flash, floating damage numbers, camera shake for the hitter and
+-- a brief happy face on whoever landed the hit (Lib/CharacterExpression).
 -- Purely local visuals driven by Combat.CombatFeedback. The boss's own hit and
 -- defeat animations live in BossVisualController.
 
@@ -9,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local GameplayController = require(script.Parent.GameplayController)
+local CharacterExpression = require(script.Parent.Parent.Lib.CharacterExpression)
 local SwingAnimator = require(script.Parent.Parent.Lib.SwingAnimator)
 
 local FeedbackController = {}
@@ -24,6 +26,9 @@ local BURST_SECONDS = 1
 -- Other players' swings are shown from the start of the downswing: their hit is
 -- only known once confirmed, so replaying the wind-up would land late.
 local REMOTE_SWING_START = 0.42
+-- How long the hitter beams after a landed hit, and after the defeating one.
+local HAPPY_SECONDS = 0.7
+local HAPPY_DEFEAT_SECONDS = 1.5
 
 local localPlayer = Players.LocalPlayer
 local random = Random.new()
@@ -182,13 +187,18 @@ function FeedbackController.start(): ()
 		end
 		showDamageNumber(body, feedback.Damage, isOwnHit, feedback.Crit, effects)
 		impactBurst(body)
+		local hitter = Players:GetPlayerByUserId(feedback.HitterUserId)
 		if isOwnHit then
 			shakeCamera()
-		else
-			local hitter = Players:GetPlayerByUserId(feedback.HitterUserId)
-			if hitter and hitter.Character then
-				SwingAnimator.play(hitter.Character, REMOTE_SWING_START)
-			end
+		elseif hitter and hitter.Character then
+			SwingAnimator.play(hitter.Character, REMOTE_SWING_START)
+		end
+		if hitter and hitter.Character then
+			CharacterExpression.show(
+				hitter.Character,
+				"Happy",
+				if feedback.Defeated then HAPPY_DEFEAT_SECONDS else HAPPY_SECONDS
+			)
 		end
 	end)
 end

@@ -72,13 +72,30 @@ always:              clamped to 0..MaxStress, rounded to hundredths
 |---|---|---|
 | 0 | Zen | happy closed eyes, big smile, blush; **hammer glows** (light + sparkles) |
 | up to 25 | Relaxed | smile |
-| up to 50 | Neutral | flat mouth |
-| up to 75 | Stressed | frown, angry brows |
-| above 75 | Frazzled | frown, angry brows, sweat drop |
+| up to 50 | Neutral | small friendly smile |
+| up to 75 | Stressed | worried brows (inner ends raised), small wobbly mouth |
+| above 75 | Frazzled | worried brows, little "o" mouth, sweat drop |
 
-Faces are drawn from shapes by the server (`Lib/MoodFace`, `MoodService`), no image assets. Classic
-heads have their face decal hidden; newer animated (mesh) heads get the drawn face on top, and the
-original face may show through a little.
+Open eyes have a small white shine. **No mood uses angry brows** (changed 2026-10-07: Stressed and
+Frazzled used to frown with angry brows; Neutral had a flat mouth).
+
+Faces are drawn from shapes by the server (`Lib/MoodFace`, `MoodService`, shapes in
+`Shared/FaceShapes`), no image assets. Classic heads have their face decal hidden; newer animated
+(mesh) heads get the drawn face on top, and the original face may show through a little. R6 and R15
+both work (both have a `Head` part).
+
+**Action expressions (2026-10-07, client only, `Lib/CharacterExpression`):** short faces drawn over
+the mood face, then the mood face comes back.
+| When | Expression | How long |
+|---|---|---|
+| You swing | Determined: focused eyes, level brows, confident grin | the swing (`HitCooldown`, 0.45 s) |
+| Anyone's hit lands (`Combat.CombatFeedback`) | Happy: ^ ^ eyes, open smile, blush, on the hitter | 0.7 s, 1.5 s on the defeating hit |
+
+Every client draws them for every character it can see, from events it already gets, so there's no
+extra remote, no loop and no per-frame work: each head gets one local `ActionFace` SurfaceGui with
+both expressions built once, then only `Visible` / `Enabled` are toggled. Others see your Happy
+face (from `CombatFeedback`) but not your Determined one, since swings that miss aren't sent to
+anyone.
 
 ### Zen (reaching 0)
 - **Zen buff:** +`ZenBuffFlatDamage` (10) damage per hit and +`ZenBuffCritChance` (5 %) crit chance
