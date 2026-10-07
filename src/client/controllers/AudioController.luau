@@ -20,6 +20,7 @@ local MIN_TOUCH_SIZE = 44
 
 local muted = false
 local current: Sound? = nil
+local toggleButton: TextButton? = nil
 
 local function fadeTo(sound: Sound, volume: number): Tween
 	local tween =
@@ -81,16 +82,34 @@ local function buildToggle(): ()
 	button.Parent = gui
 	Instance.new("UICorner").Parent = button
 
+	toggleButton = button
 	button.Activated:Connect(function()
-		muted = not muted
-		button.Text = if muted then "Music: Off" else "Music: On"
-		local sound = current
-		if sound then
-			fadeTo(sound, targetVolume())
-		end
+		AudioController.setMuted(not muted)
 	end)
 
 	gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+end
+
+-- Whether there is any music to play (MusicConfig.Tracks).
+function AudioController.hasMusic(): boolean
+	return #MusicConfig.Tracks > 0
+end
+
+function AudioController.isMuted(): boolean
+	return muted
+end
+
+-- Turns the music off or on (the HUD button and the Player Panel share this).
+function AudioController.setMuted(value: boolean): ()
+	muted = value
+	local button = toggleButton
+	if button then
+		button.Text = if muted then "Music: Off" else "Music: On"
+	end
+	local sound = current
+	if sound then
+		fadeTo(sound, targetVolume())
+	end
 end
 
 function AudioController.start(): ()

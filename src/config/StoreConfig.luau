@@ -132,6 +132,7 @@ local StoreConfig = table.freeze({
 		DisplayName = "Mystery Hammer",
 		HeadColor = Color3.fromRGB(255, 200, 60),
 		HandleColor = Color3.fromRGB(120, 70, 200),
+		Style = "mystery", -- Config/HammerStyleConfig
 	}),
 
 	-- Longest a buff can be banked (play time), so stacking can't run forever.

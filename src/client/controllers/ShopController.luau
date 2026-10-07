@@ -1,7 +1,8 @@
 --!strict
 --[[
 	Hammer shop UI: a "Hammers" button opens a panel listing every hammer with
-	its damage and price, and a Buy / Equip / Equipped button. Display only:
+	a small 3D preview (Shared/HammerModel, built once per row, no effects), its
+	damage and price, and a Buy / Equip / Equipped button. Display only:
 	clicking sends the hammer id; the server checks coins and ownership and
 	answers with a fresh Profile.Sync, which redraws the panel.
 ]]
@@ -11,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local HammerConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("HammerConfig"))
 local StoreConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("StoreConfig"))
+local HammerModel = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("HammerModel"))
 local ProgressController = require(script.Parent.ProgressController)
 
 local ShopController = {}
@@ -22,9 +24,16 @@ local BUY_COLOR = Color3.fromRGB(80, 190, 90)
 local EQUIP_COLOR = Color3.fromRGB(70, 140, 230)
 local DISABLED_COLOR = Color3.fromRGB(90, 90, 100)
 local ROW_HEIGHT = 64
+local PREVIEW_SIZE = 56
+local PREVIEW_COLOR = Color3.fromRGB(36, 36, 48)
+-- Shown tilted, head up, so every hammer reads at a glance.
+local PREVIEW_TILT = CFrame.Angles(math.rad(40), 0, 0)
+local PREVIEW_FOV = 40
 local MIN_TOUCH_SIZE = 44 -- recommended minimum tap target
 
 local localPlayer = Players.LocalPlayer
+-- Set once the panel exists (start); lets other controllers open it.
+local openPanel: (() -> ())? = nil
 
 type Row = {
 	Hammer: HammerConfig.HammerDefinition,
@@ -62,6 +71,37 @@ local function button(name: string, parent: Instance): TextButton
 	return clickable
 end
 
+-- A still 3D view of the hammer (static: built once, no camera updates).
+local function buildPreview(hammer: HammerConfig.HammerDefinition, parent: Instance): ViewportFrame
+	local viewport = Instance.new("ViewportFrame")
+	viewport.Name = "Preview"
+	viewport.BackgroundColor3 = PREVIEW_COLOR
+	viewport.Position = UDim2.fromOffset(6, (ROW_HEIGHT - PREVIEW_SIZE) / 2)
+	viewport.Size = UDim2.fromOffset(PREVIEW_SIZE, PREVIEW_SIZE)
+	viewport.Ambient = Color3.fromRGB(170, 170, 180)
+	viewport.LightColor = Color3.fromRGB(255, 250, 240)
+	viewport.LightDirection = Vector3.new(-1, -1, -0.6)
+	viewport.Parent = parent
+	corner(viewport)
+
+	local model = Instance.new("Model")
+	model.Name = "Hammer"
+	local style = HammerModel.styleFor(hammer.Style, hammer.HeadColor, hammer.HandleColor)
+	HammerModel.build(style, model, PREVIEW_TILT, false)
+	model.Parent = viewport
+
+	local center, extents = model:GetBoundingBox()
+	local radius = extents.Magnitude / 2
+	local distance = radius / math.tan(math.rad(PREVIEW_FOV / 2)) * 1.05
+	local camera = Instance.new("Camera")
+	camera.FieldOfView = PREVIEW_FOV
+	-- From the side the head's faces point to: shaft across, head upright.
+	camera.CFrame = CFrame.lookAt(center.Position + Vector3.new(distance, 0, 0), center.Position)
+	camera.Parent = viewport
+	viewport.CurrentCamera = camera
+	return viewport
+end
+
 local function buildRow(hammer: HammerConfig.HammerDefinition, order: number, list: Instance): Row
 	local row = Instance.new("Frame")
 	row.Name = hammer.Id
@@ -71,22 +111,17 @@ local function buildRow(hammer: HammerConfig.HammerDefinition, order: number, li
 	row.Parent = list
 	corner(row)
 
-	local swatch = Instance.new("Frame")
-	swatch.Name = "Swatch"
-	swatch.BackgroundColor3 = hammer.HeadColor
-	swatch.Position = UDim2.fromOffset(10, 12)
-	swatch.Size = UDim2.fromOffset(40, 40)
-	swatch.Parent = row
-	corner(swatch)
+	buildPreview(hammer, row)
+	local textLeft = PREVIEW_SIZE + 14
 
 	local name = label("Name", row)
-	name.Position = UDim2.fromOffset(60, 6)
-	name.Size = UDim2.new(0.55, -60, 0, 28)
+	name.Position = UDim2.fromOffset(textLeft, 6)
+	name.Size = UDim2.new(0.55, -textLeft, 0, 28)
 	name.Text = hammer.DisplayName
 
 	local status = label("Status", row)
-	status.Position = UDim2.fromOffset(60, 34)
-	status.Size = UDim2.new(0.55, -60, 0, 22)
+	status.Position = UDim2.fromOffset(textLeft, 34)
+	status.Size = UDim2.new(0.55, -textLeft, 0, 22)
 	status.TextTransparency = 0.25
 
 	local action = button("Action", row)
@@ -224,6 +259,7 @@ function ShopController.start(): ()
 				Price = 0,
 				HeadColor = StoreConfig.Mystery.HeadColor,
 				HandleColor = StoreConfig.Mystery.HandleColor,
+				Style = StoreConfig.Mystery.Style,
 			}
 			local row = buildRow(look, 100 + #rows, list)
 			row.IsMystery = true
@@ -249,11 +285,22 @@ function ShopController.start(): ()
 	open.Activated:Connect(function()
 		panel.Visible = not panel.Visible
 	end)
+	openPanel = function()
+		panel.Visible = true
+	end
 	close.Activated:Connect(function()
 		panel.Visible = false
 	end)
 
 	gui.Parent = localPlayer:WaitForChild("PlayerGui")
+end
+
+-- Opens the hammer shop (e.g. from the vending machine, StoreMachineController).
+-- Display only: buying still goes through Shop.BuyHammer, checked by the server.
+function ShopController.open(): ()
+	if openPanel then
+		openPanel()
+	end
 end
 
 return ShopController

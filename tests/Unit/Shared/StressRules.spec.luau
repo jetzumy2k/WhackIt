@@ -65,18 +65,39 @@ return function()
 	end)
 
 	describe("StressRules idle regen", function()
-		it("waits the full idle delay before stress rises", function()
-			local delay = GameConfig.StressIdleDelay
-			expect(StressRules.shouldRegen(delay - 1, math.huge)).to.equal(false)
-			expect(StressRules.shouldRegen(delay, math.huge)).to.equal(true)
+		it("waits the grace period, then one interval, before the first rise", function()
+			local grace, interval = GameConfig.StressIdleDelay, GameConfig.StressRegenInterval
+			expect(grace).to.equal(15)
+			expect(interval).to.equal(5)
+			-- Hit at 0 s -> first rise at 20 s; hit at 23 s -> first rise at 43 s.
+			expect(StressRules.firstRiseAt(0)).to.equal(20)
+			expect(StressRules.firstRiseAt(23)).to.equal(43)
 		end)
 
-		it("then rises once per interval", function()
-			local idle = GameConfig.StressIdleDelay + 60
-			expect(StressRules.shouldRegen(idle, GameConfig.StressRegenInterval - 1)).to.equal(
-				false
-			)
-			expect(StressRules.shouldRegen(idle, GameConfig.StressRegenInterval)).to.equal(true)
+		it("then rises every interval, without bursts after a hitch", function()
+			local interval = GameConfig.StressRegenInterval
+			expect(StressRules.nextRiseAfter(20, 20)).to.equal(20 + interval)
+			expect(StressRules.nextRiseAfter(20, 20.2)).to.equal(20 + interval)
+			-- The server fell 30 s behind: one rise now, the next one interval later.
+			expect(StressRules.nextRiseAfter(20, 50)).to.equal(50 + interval)
+		end)
+
+		it("follows the example timeline: 20, 25, 30 s, then a hit at 33 s restarts it", function()
+			local rises: { number } = {}
+			local riseAt = StressRules.firstRiseAt(0)
+			for tick = 0, 33 * 4 do
+				local now = tick / 4
+				if now >= riseAt then
+					table.insert(rises, now)
+					riseAt = StressRules.nextRiseAfter(riseAt, now)
+				end
+			end
+			expect(#rises).to.equal(3)
+			expect(rises[1]).to.equal(20)
+			expect(rises[2]).to.equal(25)
+			expect(rises[3]).to.equal(30)
+			-- A hit at 33 s: nothing until 53 s.
+			expect(StressRules.firstRiseAt(33)).to.equal(53)
 		end)
 
 		it("adds one step and never exceeds MaxStress", function()

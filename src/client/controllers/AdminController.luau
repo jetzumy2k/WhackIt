@@ -4,18 +4,25 @@
 	this player is an admin, but that is display only: the server re-checks
 	admin rights, bounds and targets on every request (AdminService).
 
+	Built on Lib/PanelKit (redesigned 2026-10-07): a wide window with a sidebar
+	(a top strip on narrow screens), collapsible section cards and a scrolling
+	content area. Open with the "Admin" button or F2; close with X or F2.
+
 	Tabs:
+	  Dashboard   server info, game status, everyone here (Manage / Moderate)
 	  Players     set level, set damage, unlock / lock bosses for anyone here
 	  Bosses      create a custom boss where you stand; move or delete them
-	  Drops       office boss buff drop chances and the Lucky window (all servers)
+	  Drop Rates  office boss buff drop chances and the Lucky window (all servers)
 	  Moderation  ban, suspend or unban by player or username
 	Store opening hours stay in the Store panel's Admin tab.
 ]]
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
+local Attributes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Attributes"))
 local BossConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("BossConfig"))
 local CustomBossConfig =
 	require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("CustomBossConfig"))
@@ -24,10 +31,10 @@ local DropRateConfig =
 local DropRateRules =
 	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("DropRateRules"))
 
+local PanelKit = require(script.Parent.Parent.Lib.PanelKit)
+
 local AdminController = {}
 
-local PANEL_COLOR = Color3.fromRGB(30, 30, 40)
-local ROW_COLOR = Color3.fromRGB(48, 48, 62)
 local TEXT_COLOR = Color3.fromRGB(255, 255, 255)
 local TAB_COLOR = Color3.fromRGB(70, 70, 90)
 local TAB_ACTIVE_COLOR = Color3.fromRGB(70, 140, 230)
@@ -41,10 +48,18 @@ local ALL_BOSSES = "*"
 local RESPAWN_TEXT: { [string]: string } = { Continuous = "Respawns", Once = "One time" }
 
 local TABS = {
+	{ Id = "Dashboard", Label = "Dashboard" },
 	{ Id = "Players", Label = "Players" },
 	{ Id = "Bosses", Label = "Bosses" },
-	{ Id = "Drops", Label = "Drops" },
+	{ Id = "Drops", Label = "Drop Rates" },
 	{ Id = "Moderation", Label = "Moderation" },
+}
+-- Desktop shortcut for admins.
+local TOGGLE_KEY = Enum.KeyCode.F2
+-- Cards that start folded up (Tab/Title), so long pages stay readable.
+local START_COLLAPSED = {
+	["Players/Unlock bosses"] = true,
+	["Moderation/...or a username (used when filled in)"] = true,
 }
 
 type CustomBoss = {
@@ -72,33 +87,12 @@ type State = {
 }
 
 local localPlayer = Players.LocalPlayer
+-- Set once the window exists; let the Player Panel open this one.
+local openPanel: (() -> ())? = nil
+local isAdminNow = false
 
 local function corner(parent: Instance): ()
 	Instance.new("UICorner").Parent = parent
-end
-
-local function label(name: string, parent: Instance): TextLabel
-	local text = Instance.new("TextLabel")
-	text.Name = name
-	text.BackgroundTransparency = 1
-	text.TextColor3 = TEXT_COLOR
-	text.Font = Enum.Font.FredokaOne
-	text.TextScaled = true
-	text.TextXAlignment = Enum.TextXAlignment.Left
-	text.Parent = parent
-	return text
-end
-
-local function button(name: string, parent: Instance): TextButton
-	local clickable = Instance.new("TextButton")
-	clickable.Name = name
-	clickable.TextColor3 = TEXT_COLOR
-	clickable.Font = Enum.Font.FredokaOne
-	clickable.TextScaled = true
-	clickable.AutoButtonColor = true
-	clickable.Parent = parent
-	corner(clickable)
-	return clickable
 end
 
 local function stringField(data: { [string]: unknown }, key: string): string
@@ -209,7 +203,7 @@ function AdminController.start(): ()
 	local stateRemote = remote("State")
 
 	local state: State? = nil
-	local activeTab = "Players"
+	local activeTab = "Dashboard"
 	-- Form values survive re-renders (the server re-sends state after changes).
 	local texts: { [string]: string } = {
 		Level = "",
@@ -234,130 +228,63 @@ function AdminController.start(): ()
 	local targetUserId = localPlayer.UserId
 	local modUserId = 0
 
-	local gui = Instance.new("ScreenGui")
-	gui.Name = "Admin"
-	gui.ResetOnSpawn = false
-	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-	gui.DisplayOrder = 5
+	local window = PanelKit.window({
+		Name = "Admin",
+		Title = "Admin Panel",
+		Subtitle = "Every action is checked and logged by the server.",
+		Accent = ADMIN_COLOR,
+		DisplayOrder = 6,
+	}, localPlayer:WaitForChild("PlayerGui"))
+	local list = window.Content
 
-	local open = button("OpenAdmin", gui)
-	open.Text = "Admin"
-	open.BackgroundColor3 = ADMIN_COLOR
+	-- The HUD button (only for admins), in the same place as before.
+	local open = PanelKit.button(window.Gui, "Admin", ADMIN_COLOR)
+	open.Name = "OpenAdmin"
 	open.AnchorPoint = Vector2.new(1, 1)
 	open.Position = UDim2.new(1, -16, 1, -240)
 	open.Size = UDim2.fromOffset(140, MIN_TOUCH_SIZE + 4)
 	open.Visible = false
 
-	local panel = Instance.new("Frame")
-	panel.Name = "Panel"
-	panel.AnchorPoint = Vector2.new(0.5, 0.5)
-	panel.Position = UDim2.fromScale(0.5, 0.5)
-	panel.Size = UDim2.fromScale(0.65, 0.78)
-	panel.BackgroundColor3 = PANEL_COLOR
-	panel.Visible = false
-	panel.Parent = gui
-	corner(panel)
-	local sizeLimit = Instance.new("UISizeConstraint")
-	sizeLimit.MinSize = Vector2.new(320, 320)
-	sizeLimit.MaxSize = Vector2.new(640, 600)
-	sizeLimit.Parent = panel
+	-- Where the page helpers below add things: the page, or the open card.
+	local container: Instance = list
+	local collapsed: { [string]: boolean } = table.clone(START_COLLAPSED)
 
-	local title = label("Title", panel)
-	title.Position = UDim2.fromOffset(16, 10)
-	title.Size = UDim2.new(1, -90, 0, 34)
-	title.Text = "Admin"
-
-	local close = button("Close", panel)
-	close.Text = "X"
-	close.BackgroundColor3 = MUTED_COLOR
-	close.AnchorPoint = Vector2.new(1, 0)
-	close.Position = UDim2.new(1, -10, 0, 8)
-	close.Size = UDim2.fromOffset(MIN_TOUCH_SIZE, MIN_TOUCH_SIZE)
-
-	local tabBar = Instance.new("Frame")
-	tabBar.Name = "Tabs"
-	tabBar.BackgroundTransparency = 1
-	tabBar.Position = UDim2.fromOffset(10, 56)
-	tabBar.Size = UDim2.new(1, -20, 0, MIN_TOUCH_SIZE)
-	tabBar.Parent = panel
-	local tabLayout = Instance.new("UIListLayout")
-	tabLayout.FillDirection = Enum.FillDirection.Horizontal
-	tabLayout.Padding = UDim.new(0, 6)
-	tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	tabLayout.Parent = tabBar
-
-	local list = Instance.new("ScrollingFrame")
-	list.Name = "List"
-	list.BackgroundTransparency = 1
-	list.BorderSizePixel = 0
-	list.Position = UDim2.fromOffset(10, 108)
-	list.Size = UDim2.new(1, -20, 1, -118)
-	list.AutomaticCanvasSize = Enum.AutomaticSize.Y
-	list.CanvasSize = UDim2.new()
-	list.ScrollBarThickness = 6
-	list.Parent = panel
-	local layout = Instance.new("UIListLayout")
-	layout.Padding = UDim.new(0, 8)
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Parent = list
-
-	local order = 0
-	local function nextOrder(): number
-		order += 1
-		return order
+	local function note(text: string, _height: number?): TextLabel
+		return PanelKit.text(container, text, "Muted")
 	end
 
-	local function note(text: string, height: number): TextLabel
-		local line = label("Note", list)
-		line.LayoutOrder = nextOrder()
-		line.Size = UDim2.new(1, 0, 0, height)
-		line.TextScaled = false
-		line.TextSize = 16
-		line.TextWrapped = true
-		line.TextYAlignment = Enum.TextYAlignment.Top
-		line.TextTransparency = 0.15
-		line.Text = text
-		return line
-	end
-
+	-- Starts a new (collapsible) card; the rows after it go inside.
 	local function heading(text: string): ()
-		local line = label("Heading", list)
-		line.LayoutOrder = nextOrder()
-		line.Size = UDim2.new(1, 0, 0, 26)
-		line.TextColor3 = Color3.fromRGB(255, 220, 120)
-		line.Text = text
+		local key = activeTab .. "/" .. text
+		local section = PanelKit.section(list, text, true, not collapsed[key], function(expanded)
+			collapsed[key] = not expanded
+		end)
+		container = section.Body
 	end
 
 	local function row(): Frame
-		local frame = Instance.new("Frame")
-		frame.Name = "Row"
-		frame.LayoutOrder = nextOrder()
-		frame.BackgroundTransparency = 1
-		frame.Size = UDim2.new(1, 0, 0, MIN_TOUCH_SIZE)
-		frame.Parent = list
-		local rowLayout = Instance.new("UIListLayout")
-		rowLayout.FillDirection = Enum.FillDirection.Horizontal
-		rowLayout.Padding = UDim.new(0, 6)
-		rowLayout.SortOrder = Enum.SortOrder.LayoutOrder
-		rowLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-		rowLayout.Parent = frame
-		return frame
+		return PanelKit.row(container)
 	end
 
 	local function rowButton(parent: Frame, text: string, color: Color3, width: number): TextButton
-		local clickable = button("Button", parent)
-		clickable.LayoutOrder = #parent:GetChildren()
-		clickable.Text = text
-		clickable.BackgroundColor3 = color
-		clickable.Size = UDim2.new(width, -6, 1, 0)
+		local clickable = PanelKit.button(parent, text, color)
+		clickable.Size = UDim2.new(width, -8, 1, 0)
 		return clickable
 	end
 
 	local function rowLabel(parent: Frame, text: string, width: number): TextLabel
-		local line = label("Label", parent)
+		local line = Instance.new("TextLabel")
+		line.Name = "Label"
 		line.LayoutOrder = #parent:GetChildren()
-		line.Size = UDim2.new(width, -6, 0.8, 0)
+		line.BackgroundTransparency = 1
+		line.Size = UDim2.new(width, -8, 1, 0)
+		line.Font = PanelKit.FONT
+		line.TextSize = PanelKit.TEXT_SIZE
+		line.TextColor3 = TEXT_COLOR
+		line.TextWrapped = true
+		line.TextXAlignment = Enum.TextXAlignment.Left
 		line.Text = text
+		line.Parent = parent
 		return line
 	end
 
@@ -372,16 +299,22 @@ function AdminController.start(): ()
 		local box = Instance.new("TextBox")
 		box.Name = key
 		box.LayoutOrder = #parent:GetChildren()
-		box.Size = UDim2.new(width, -6, 1, 0)
-		box.BackgroundColor3 = ROW_COLOR
+		box.Size = UDim2.new(width, -8, 1, 0)
+		box.BackgroundColor3 = PanelKit.Colors.Field
 		box.TextColor3 = TEXT_COLOR
 		box.PlaceholderText = placeholder
-		box.Font = Enum.Font.FredokaOne
-		box.TextSize = 18
+		box.PlaceholderColor3 = PanelKit.Colors.Muted
+		box.Font = PanelKit.FONT
+		box.TextSize = PanelKit.TEXT_SIZE
+		box.TextXAlignment = Enum.TextXAlignment.Left
 		box.ClearTextOnFocus = false
 		box.Text = texts[key] or ""
 		box.Parent = parent
 		corner(box)
+		local inset = Instance.new("UIPadding")
+		inset.PaddingLeft = UDim.new(0, 10)
+		inset.PaddingRight = UDim.new(0, 10)
+		inset.Parent = box
 		box:GetPropertyChangedSignal("Text"):Connect(function()
 			local text = box.Text
 			if numeric then
@@ -410,6 +343,7 @@ function AdminController.start(): ()
 		local previous = rowButton(parent, "<", TAB_COLOR, 0)
 		previous.Size = UDim2.new(0, MIN_TOUCH_SIZE, 1, 0)
 		local shown = rowLabel(parent, if count > 0 then textFor(current) else "-", width)
+		shown.Size = UDim2.new(width, -(2 * MIN_TOUCH_SIZE + 8), 1, 0)
 		shown.TextXAlignment = Enum.TextXAlignment.Center
 		local following = rowButton(parent, ">", TAB_COLOR, 0)
 		following.Size = UDim2.new(0, MIN_TOUCH_SIZE, 1, 0)
@@ -451,6 +385,99 @@ function AdminController.start(): ()
 
 	local render: () -> ()
 
+	local function uptimeText(seconds: number): string
+		local minutes = math.floor(seconds / 60)
+		return string.format("%dh %02dm", minutes // 60, minutes % 60)
+	end
+
+	local function dashboardPage(current: State): ()
+		heading("Server")
+		local serverGrid = PanelKit.grid(container, 170, 74)
+		PanelKit.statTile(
+			serverGrid,
+			"Players",
+			string.format("%d / %d", #Players:GetPlayers(), Players.MaxPlayers)
+		)
+		PanelKit.statTile(serverGrid, "Uptime", uptimeText(Workspace.DistributedGameTime))
+		PanelKit.statTile(serverGrid, "Place version", tostring(game.PlaceVersion))
+		PanelKit.statTile(
+			serverGrid,
+			"Server",
+			if game.JobId == "" then "Studio" else string.sub(game.JobId, 1, 8)
+		)
+
+		heading("Game")
+		local gameGrid = PanelKit.grid(container, 170, 74)
+		PanelKit.statTile(
+			gameGrid,
+			"Custom bosses",
+			string.format("%d / %d", #current.CustomBosses, CustomBossConfig.MaxBosses)
+		)
+		local overrides = 0
+		for _ in current.DamageOverrides do
+			overrides += 1
+		end
+		PanelKit.statTile(gameGrid, "Admin damage on", tostring(overrides))
+		local rates = current.DropRates
+		if rates then
+			local lucky = DropRateRules.isLucky(rates, Workspace:GetServerTimeNow())
+			PanelKit.statTile(
+				gameGrid,
+				"Buff drops now",
+				if lucky
+					then string.format(
+						"Lucky %s-%s",
+						percentText(rates.LuckyMin),
+						percentText(rates.LuckyMax)
+					)
+					else string.format(
+						"%s-%s",
+						percentText(rates.NormalMin),
+						percentText(rates.NormalMax)
+					),
+				if lucky then PanelKit.Colors.Heading else nil
+			)
+		end
+
+		heading("Players in this server")
+		local players = Players:GetPlayers()
+		table.sort(players, function(a, b)
+			return a.DisplayName < b.DisplayName
+		end)
+		for _, player in players do
+			local playerRow = row()
+			local level = player:GetAttribute(Attributes.Level)
+			local stats = player:FindFirstChild("leaderstats")
+			local score = if stats then stats:FindFirstChild("Score") else nil
+			rowLabel(
+				playerRow,
+				string.format(
+					"%s (@%s)   Lv %s   Score %s",
+					player.DisplayName,
+					player.Name,
+					if typeof(level) == "number" then tostring(level) else "-",
+					if score and score:IsA("IntValue") then tostring(score.Value) else "-"
+				),
+				0.56
+			)
+			rowButton(playerRow, "Manage", TAB_ACTIVE_COLOR, 0.22).Activated:Connect(function()
+				targetUserId = player.UserId
+				activeTab = "Players"
+				render()
+			end)
+			local moderate = rowButton(playerRow, "Moderate", MUTED_COLOR, 0.22)
+			if player == localPlayer then
+				PanelKit.setDisabled(moderate, true)
+			else
+				moderate.Activated:Connect(function()
+					modUserId = player.UserId
+					activeTab = "Moderation"
+					render()
+				end)
+			end
+		end
+	end
+
 	local function playersPage(current: State): ()
 		local players = Players:GetPlayers()
 		table.sort(players, function(a, b)
@@ -475,6 +502,7 @@ function AdminController.start(): ()
 			if target then string.format("%s (@%s)", target.DisplayName, target.Name) else "Nobody",
 			0.8
 		)
+		shown.Size = UDim2.new(1, -(2 * MIN_TOUCH_SIZE + 16), 1, 0)
 		shown.TextXAlignment = Enum.TextXAlignment.Center
 		local following = rowButton(targetRow, ">", TAB_COLOR, 0)
 		following.Size = UDim2.new(0, MIN_TOUCH_SIZE, 1, 0)
@@ -748,6 +776,7 @@ function AdminController.start(): ()
 				else "No other players here",
 			0.8
 		)
+		shown.Size = UDim2.new(1, -(2 * MIN_TOUCH_SIZE + 16), 1, 0)
 		shown.TextXAlignment = Enum.TextXAlignment.Center
 		local following = rowButton(pickRow, ">", TAB_COLOR, 0)
 		following.Size = UDim2.new(0, MIN_TOUCH_SIZE, 1, 0)
@@ -808,46 +837,61 @@ function AdminController.start(): ()
 		end)
 	end
 
-	local tabButtons: { [string]: TextButton } = {}
+	local lastTab: string? = nil
 
-	function render(): ()
-		for _, child in list:GetChildren() do
-			if not child:IsA("UIListLayout") then
-				child:Destroy()
-			end
-		end
-		order = 0
+	local function canOpenNow(): boolean
 		local current = state
-		open.Visible = current ~= nil and current.IsAdmin
-		if current == nil or not current.IsAdmin then
-			panel.Visible = false
+		return current ~= nil and current.IsAdmin
+	end
+
+	-- Rebuilds the open page (only while the window is open). Keeps the scroll
+	-- position when the same page is redrawn after a server update.
+	function render(): ()
+		local current = state
+		local isAdmin = current ~= nil and current.IsAdmin
+		isAdminNow = isAdmin
+		open.Visible = isAdmin
+		if not isAdmin then
+			window:close()
 			return
 		end
-		for id, tab in tabButtons do
-			tab.BackgroundColor3 = if id == activeTab then TAB_ACTIVE_COLOR else TAB_COLOR
+		if not window:isOpen() then
+			return
 		end
-		if activeTab == "Players" then
-			playersPage(current)
+		local scroll = if lastTab == activeTab then list.CanvasPosition else Vector2.zero
+		window:clear()
+		container = list
+		window:selectTab(activeTab)
+		local page = current :: State
+		if activeTab == "Dashboard" then
+			dashboardPage(page)
+		elseif activeTab == "Players" then
+			playersPage(page)
 		elseif activeTab == "Bosses" then
-			bossesPage(current)
+			bossesPage(page)
 		elseif activeTab == "Drops" then
-			dropsPage(current)
+			dropsPage(page)
 		else
-			moderationPage(current)
+			moderationPage(page)
 		end
+		lastTab = activeTab
+		task.defer(function()
+			list.CanvasPosition = scroll
+		end)
 	end
 
-	for tabOrder, tab in TABS do
-		local tabButton = button(tab.Id, tabBar)
-		tabButton.LayoutOrder = tabOrder
-		tabButton.Text = tab.Label
-		tabButton.Size = UDim2.fromScale(0.24, 1)
-		tabButton.Activated:Connect(function()
-			activeTab = tab.Id
-			render()
-		end)
-		tabButtons[tab.Id] = tabButton
+	openPanel = function()
+		if canOpenNow() then
+			window:open()
+		end
 	end
+	window:setTabs(TABS, function(id: string)
+		activeTab = id
+		render()
+	end)
+	window:onOpen(function()
+		task.defer(render)
+	end)
 
 	stateRemote.OnClientEvent:Connect(function(payload: unknown)
 		local parsed = parseState(payload)
@@ -867,30 +911,40 @@ function AdminController.start(): ()
 			render()
 		end
 	end)
-	-- Player pickers follow who is in the server.
+	-- Player pickers and the dashboard follow who is in the server.
 	Players.PlayerAdded:Connect(function()
-		if panel.Visible then
-			render()
-		end
+		render()
 	end)
 	Players.PlayerRemoving:Connect(function()
-		if panel.Visible then
-			task.defer(render)
-		end
+		task.defer(render)
 	end)
 
+	local canOpen = canOpenNow
 	open.Activated:Connect(function()
-		panel.Visible = not panel.Visible
-		if panel.Visible then
-			render()
+		if canOpen() then
+			window:toggle()
 		end
 	end)
-	close.Activated:Connect(function()
-		panel.Visible = false
+	UserInputService.InputBegan:Connect(function(input: InputObject, processed: boolean)
+		if not processed and input.KeyCode == TOGGLE_KEY and canOpen() then
+			window:toggle()
+		end
 	end)
 
 	render()
-	gui.Parent = localPlayer:WaitForChild("PlayerGui")
+end
+
+-- Opens the panel (e.g. from the Player Panel). Display only: the server
+-- still checks admin rights on every action.
+function AdminController.open(): ()
+	if openPanel then
+		openPanel()
+	end
+end
+
+-- Whether the server said this player is an admin (display only).
+function AdminController.isAdmin(): boolean
+	return isAdminNow
 end
 
 return AdminController

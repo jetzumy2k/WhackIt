@@ -136,6 +136,34 @@ return function()
 			end
 			office:Destroy()
 		end)
+
+		it("leaves a clear walk from the spawn out through the lobby entrance", function()
+			local office = build()
+			local campus = ArenaConfig.Campus
+			local spawn = ArenaConfig.SpawnPosition
+			-- Sample the straight line from the spawn to just outside the front,
+			-- at knee, waist and head height.
+			for z = spawn.Z, ArenaConfig.BuildingSouthZ + 3, 0.5 do
+				for _, height in { 1, 3, 5 } do
+					for _, x in { -2, 0, 2 } do
+						local point = Vector3.new(x, height, z)
+						for _, p in parts(office) do
+							if p.CanCollide and contains(p, point) then
+								error(
+									string.format(
+										"%s blocks the way out at %s",
+										p.Name,
+										tostring(point)
+									)
+								)
+							end
+						end
+					end
+				end
+			end
+			expect(campus.EntranceHeight > 6).to.equal(true)
+			office:Destroy()
+		end)
 	end)
 	describe("OfficeBuilder upper floor", function()
 		it("builds stairs whose top step meets the upper floor", function()

@@ -19,6 +19,9 @@ local StoreConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChil
 
 local StoreController = {}
 
+-- Set once the panel exists (start); lets the Player Panel open it.
+local openPanel: (() -> ())? = nil
+
 local PANEL_COLOR = Color3.fromRGB(30, 30, 40)
 local ROW_COLOR = Color3.fromRGB(48, 48, 62)
 local TEXT_COLOR = Color3.fromRGB(255, 255, 255)
@@ -647,11 +650,22 @@ function StoreController.start(): ()
 	open.Activated:Connect(function()
 		panel.Visible = not panel.Visible
 	end)
+	openPanel = function()
+		panel.Visible = true
+	end
 	close.Activated:Connect(function()
 		panel.Visible = false
 	end)
 
 	gui.Parent = localPlayer:WaitForChild("PlayerGui")
+end
+
+-- Opens the Robux Store panel (e.g. from the Player Panel). Display only:
+-- purchases still go through Roblox's prompt and the server's checks.
+function StoreController.open(): ()
+	if openPanel then
+		openPanel()
+	end
 end
 
 return StoreController

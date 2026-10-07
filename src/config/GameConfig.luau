@@ -9,9 +9,11 @@ local GameConfig = table.freeze({
 	StressReliefPerDamage = 0.1, -- stress relieved per point of accepted damage
 	DefeatStressRelief = 5, -- bonus for each reward-qualifying player when a boss is defeated
 	-- Stress creeps back when a player stops landing hits (docs/GAMEPLAY_RULES.md).
-	StressIdleDelay = 120, -- seconds without an accepted hit before stress starts rising
-	StressRegenInterval = 5, -- seconds between rises once idle
-	StressRegenStep = 5, -- stress added per rise
+	-- Only a server-accepted boss hit restarts the grace period; walking, running,
+	-- menus or swings that miss never do. Hit at 0 s -> rises at 20, 25, 30 s...
+	StressIdleDelay = 15, -- grace: seconds after an accepted hit with no passive rise
+	StressRegenInterval = 5, -- seconds between rises (the first comes one interval after the grace)
+	StressRegenStep = 5, -- stress added per rise (clamped to MaxStress)
 	-- Mood (face) bands: Zen at 0, then up to each threshold (inclusive).
 	MoodRelaxedMax = 25,
 	MoodNeutralMax = 50,

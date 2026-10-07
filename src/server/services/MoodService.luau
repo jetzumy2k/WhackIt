@@ -21,6 +21,10 @@ local MoodService = {}
 local GLOW_NAME = "ZenGlow"
 local LEVEL_TAG_NAME = "LevelTag"
 local GLOW_COLOR = Color3.fromRGB(255, 225, 120)
+-- Soft on purpose: a warm halo and a few slow sparkles, not glitter spam.
+local GLOW_BRIGHTNESS = 0.9
+local GLOW_RANGE = 6
+local SPARKLE_RATE = 3 -- per second
 
 local watched: { [Player]: boolean } = {}
 
@@ -29,7 +33,8 @@ local function currentMood(player: Player): StressRules.Mood?
 	return if typeof(stress) == "number" then StressRules.moodFor(stress) else nil
 end
 
--- Light + sparkles on the hammer head, switched on only in Zen.
+-- Light + sparkles on the hammer head, switched on only in Zen. Created once
+-- per hammer (they go away with the Tool on respawn or leaving).
 local function setGlow(tool: Tool, on: boolean): ()
 	local head = tool:FindFirstChild("Head")
 	if head == nil or not head:IsA("BasePart") then
@@ -40,23 +45,34 @@ local function setGlow(tool: Tool, on: boolean): ()
 		local created = Instance.new("PointLight")
 		created.Name = GLOW_NAME
 		created.Color = GLOW_COLOR
-		created.Brightness = 3
-		created.Range = 10
+		created.Brightness = GLOW_BRIGHTNESS
+		created.Range = GLOW_RANGE
+		created.Shadows = false
 		created.Parent = head
 		light = created
 	end
 	local sparkles = head:FindFirstChild(GLOW_NAME .. "Sparkles")
 	if sparkles == nil then
-		local created = Instance.new("Sparkles")
+		local created = Instance.new("ParticleEmitter")
 		created.Name = GLOW_NAME .. "Sparkles"
-		created.SparkleColor = GLOW_COLOR
+		created.Rate = SPARKLE_RATE
+		created.Lifetime = NumberRange.new(0.6, 1)
+		created.Size = NumberSequence.new(0.18, 0)
+		created.Speed = NumberRange.new(0.3, 0.8)
+		created.SpreadAngle = Vector2.new(180, 180)
+		created.Acceleration = Vector3.new(0, 1, 0)
+		created.Color = ColorSequence.new(Color3.fromRGB(255, 250, 220), GLOW_COLOR)
+		created.Transparency = NumberSequence.new(0.2, 1)
+		created.LightEmission = 0.3
+		created.LightInfluence = 0
+		created.Enabled = false
 		created.Parent = head
 		sparkles = created
 	end
 	if light and light:IsA("PointLight") then
 		light.Enabled = on
 	end
-	if sparkles and sparkles:IsA("Sparkles") then
+	if sparkles and sparkles:IsA("ParticleEmitter") then
 		sparkles.Enabled = on
 	end
 end

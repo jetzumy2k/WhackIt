@@ -62,15 +62,26 @@ The server owns it (`StressService`); clients only display it.
 ```
 each accepted hit:   stress -= damage x StressReliefPerDamage
 qualifying defeat:   stress -= DefeatStressRelief
-idle:                after StressIdleDelay (120 s) without an accepted hit,
-                     stress += StressRegenStep (5) every StressRegenInterval (5 s)
+passive:             each accepted boss hit starts a StressIdleDelay (15 s) grace period;
+                     after it, stress += StressRegenStep (5) every StressRegenInterval (5 s)
+                     until the next accepted hit (hit at 0 s -> rises at 20, 25, 30 s...)
 always:              clamped to 0..MaxStress, rounded to hundredths
 ```
+
+**Passive stress (changed 2026-10-07; was 120 s of no hits):** only a hit the server has accepted
+and applied (`CombatService`, after cooldown, reach, unlock, hammer and boss checks) restarts the
+grace period (`StressService.resetStressTimer`). Walking, running, jumping, standing still, menus,
+the Store, respawning, and swings or clicks that miss never do; there is no movement-based idle
+check. Joining starts a grace period too. Each player has one deadline (`nextRiseAt`) and a single
+server loop checks all of them every 0.25 s, so there are no per-player threads, nothing per frame,
+and a hit just moves the deadline: an old schedule can never fire later. Rises stop at
+`MaxStress`; a server hitch never causes a burst of rises. The HUD's existing Stress bar eases to
+each new value.
 
 ### Mood: face and hammer glow (visible to everyone)
 | Stress | Mood | Face |
 |---|---|---|
-| 0 | Zen | happy closed eyes, big smile, blush; **hammer glows** (light + sparkles) |
+| 0 | Zen | happy closed eyes, big smile, blush; **hammer glows**: a soft warm light (brightness 0.9, range 6, no shadows) and ~3 slow golden sparkles a second (2026-10-07; was a bright light and Roblox's dense Sparkles object) |
 | up to 25 | Relaxed | smile |
 | up to 50 | Neutral | small friendly smile |
 | up to 75 | Stressed | worried brows (inner ends raised), small wobbly mouth |
@@ -136,6 +147,36 @@ of the corridor is the lobby (welcome sign, reception desk, couches, water coole
 player spawn. Offices are 34 studs apart, so one swing can only reach one boss. The base floor and
 spawn are in `default.project.json` (`Workspace.Arena`).
 
+### Outdoor campus (2026-10-07)
+The lobby's glass front has a 14-stud-wide, 10-stud-tall open entrance straight ahead of the spawn
+(sign above it inside: "OUTSIDE: Garden - Coffee - Stress-Relief Zone"). Outside is a walkable
+campus (`ArenaConfig.Campus`, parts from `Lib/CampusBuilder`, grounds painted into Terrain). The
+building, offices, stairs, elevator, leaderboard and spawn are unchanged.
+
+| Area | Where | What's there |
+|---|---|---|
+| Front Plaza | in front of the entrance | paving, benches facing the building, planters, lamp posts, signpost |
+| Walkways | entrance → zone; garden ↔ coffee corner; a loop around the building | concrete paths lined with lamp posts, trees and bushes; benches and trees behind the building |
+| Relaxation Garden | west | soft grass, a shallow walk-over pond with stones, benches facing it, flower beds, trees ("No meetings beyond this point") |
+| Coffee Corner & Break Area | east | brick patio, coffee kiosk ("free refills of patience"), picnic tables with umbrellas, a vending machine ("SNACKS for feelings") |
+| Stress-Relief Zone | south end of the main walkway | sand garden, bean bags, a giant pink stress ball, rocks ("Breathe in. Breathe out. Reply later.") |
+
+- **Clear paths:** every walkway and the entrance lane are kept free of props, and the spawn has an
+  open walk out of the lobby (both spec-checked). The paths inside (bosses, stairs, elevator,
+  leaderboard) are untouched.
+- **Boundary:** invisible walls (60 studs tall, can't be clicked or raycast) at x ±130, z -130 / +150,
+  with a low hedge just inside them. The street, the ring of trees and the skyline are scenery
+  outside the walls.
+- **No traps or falls:** the ground is solid Terrain everywhere inside the walls; the pond is a thin
+  surface you walk across (no deep water). `Workspace.FallenPartsDestroyHeight` is -60, so anyone
+  who somehow ends up under the map respawns at once instead of falling for a long time.
+- **Light on performance:** grounds and paths are Terrain materials (no parts). About 250 campus
+  parts, built from a dozen reusable templates (bench, picnic table, tree, bush, planter, flower bed,
+  lamp post, bin, bean bag, rock, vending machine, coffee kiosk, signpost) cloned into place, all
+  anchored, grouped in one folder per area under `Workspace.Outdoors.Campus`. No lights or particle
+  emitters (lamp globes just glow softly). Spec cap: 500 parts.
+- Admins can now also place custom bosses outdoors (they're placed on the ground under the admin).
+
 ## Progression (Phase 4, decided 2026-10-05)
 Rules in `src/shared/ProgressionRules.luau` (server enforces, client displays); values in `BossConfig`
 and `HammerConfig`.
@@ -174,15 +215,49 @@ Locked bosses are drawn greyed out with "LOCKED: beat <previous> xN"; swings at 
 show "Defeat <previous> N more times to unlock!".
 
 ### Hammer shop ("Hammers" button)
-| Hammer | Damage | Price |
-|---|---|---|
-| Squeaky Hammer | 10 | free (default) |
-| Bouncy Mallet | 14 | 150 coins |
-| Bubble-Wrap Hammer | 18 | 400 coins |
-| Rainbow Mega Mallet | 25 | 1000 coins |
+| Hammer | Damage | Price | Look (`Config/HammerStyleConfig`) |
+|---|---|---|---|
+| Squeaky Hammer | 10 | free (default) | foam toy: red head, white face caps, yellow shaft, pink grip |
+| Classic Office Hammer (2026-10-07) | 12 | 75 coins | wooden shaft, steel head with claw, black rubber grip, blue collar |
+| Bouncy Mallet | 14 | 150 coins | rubber mallet: blue head with dark blue caps, white shaft |
+| Bubble-Wrap Hammer | 18 | 400 coins | clear glassy head dotted with bubbles |
+| Neon Hammer (2026-10-07) | 21 | 650 coins | dark metal with cyan and pink neon strips; tiny cyan glow |
+| Rainbow Mega Mallet | 25 | 1000 coins | cartoon mega: oversized rainbow-striped head |
+| Golden Hammer (2026-10-07) | 27 | 1600 coins | polished gold with bands; a few soft glints |
+| Fire Hammer (2026-10-07) | 29 | 2500 coins | lava-rock head, glowing orange faces; small warm glow, a few rising embers |
+| Lightning Hammer (2026-10-07) | 30 | 3500 coins | white-blue head with yellow bolts; small blue glow, the odd spark |
+| Cosmic Hammer (2026-10-07) | 31 | 5000 coins | deep-space head with a glowing planet ring and stars; drifting star specks |
+| Stress Crusher (2026-10-07) | 32 | 8000 coins | heavy industrial head, diamond plate, hazard stripes, square steel shaft |
+| Mystery Hammer (Robux, docs/STORE.md) | 20-35 rolled | 199 R$ | gold head, purple bands and neon caps; soft purple glints |
+
+**Hammer vending machine (2026-10-07):** a blue-and-orange "HAMMER STORE" vending machine stands
+in the lobby beside the stairs (`ArenaConfig.StoreMachine`, `Lib/StoreMachineBuilder`,
+`StoreMachineService`). Walk up and press **E** ("Open Hammer Store") to open this same Hammers
+panel (`ShopController.open`); a soft click plays and its screen says "HAPPY WHACKING!". It is only
+another way in: the "Hammers" button still works, and buying still goes through `Shop.BuyHammer` and
+`ShopService` (coins, ownership and equip checked on the server). The prompt does nothing on the
+server. Behind its glass, three small display hammers (Squeaky, Golden, Cosmic, drawn like the real
+ones) sway gently and the thin neon strips pulse softly (one repeating tween each, set up once on
+the client). About 55 parts, no lights or particles; specs keep it clear of the stairs and their
+landing, the walk from the spawn, the entrance, the leaderboard and every lobby part.
 
 A bought hammer is equipped immediately; any owned hammer can be re-equipped. Pricier hammers always
-hit harder (spec-enforced).
+hit harder, and every coin hammer stays below the Mystery Hammer's best roll (both spec-enforced).
+
+### Hammer looks (2026-10-07)
+Looks are data (`Config/HammerStyleConfig`), built by `Shared/HammerModel` for the held Tool (server,
+`Lib/HammerTool`) and for a small still 3D preview in each shop row (client). Damage, prices and
+ownership are unchanged and still come from `HammerConfig` and the player's saved data, never the Tool.
+- Parts: an invisible `Handle` the hand grips, a `Shaft`, a few handle details (grip wrap, collar,
+  pommel) welded to it, and the `Head` with its details (bands, face caps...) joined to it by
+  `DetailWeld`s, so the swing's squash-and-stretch scales them with the head
+  (`Lib/SwingAnimator`). Each hammer's swing trail has its own colour.
+- Proportions and cost are capped and spec-checked: shaft 2.8-3.6 studs, head at most 2.4 studs,
+  at most 10 details, at most one `PointLight` (range <= 6, brightness <= 1, no shadows, never
+  changing) and one `ParticleEmitter` (<= 6 per second, short-lived, tiny). No Fire, Smoke or
+  Sparkles objects. The Zen glow (`MoodService`) is unchanged and comes on top.
+- A look id that doesn't exist falls back to a plain two-colour hammer, so a bad config can't leave
+  a player empty-handed.
 
 ## Player Level, leaderboard and the Senior floor (2026-10-05)
 ### Player Level
@@ -225,10 +300,31 @@ random 30-minute store boost in their Bag (docs/STORE.md "Bag and gifts"). They 
 unlocking office bosses.
 
 ### Global leaderboard
-A board on the lobby's west wall lists the all-time top 10 by lifetime score across all servers
-(`LeaderboardService`, OrderedDataStore `ScoreLeaderboard`). Scores are written from the server's saved
-data every 2 minutes (when changed) and on leave; the board refreshes every minute. Without DataStore
-access (Studio with API access off) it ranks the players in the current server and says so.
+The "Hall of Calm" on the lobby's west wall (18 x 12 studs, gold frame and plaque) lists the
+all-time top 10 across all servers (`LeaderboardService`). Without DataStore access (Studio with API
+access off) it ranks the players in the current server and says so.
+
+Redesigned 2026-10-07 (was a plain text list by score):
+- **Tabs** (click on the board): **Top Score** (lifetime Score, `ScoreLeaderboard`), **Top Level**
+  (by XP, `XpLeaderboard`) and **Top Coins** (current coins, `CoinsLeaderboard`). Each player picks
+  their own tab; it changes nothing for anyone else.
+- **Columns:** Rank, Player, Score, Level, Coins. The ranked column is gold. A value shows "-" when
+  it isn't known (an offline player outside that stat's top 10); players in your server always show
+  their live values.
+- **Top 3:** #1 has a gold row, gold outline and gold name; #2 and #3 have silver and bronze badges
+  and thin outlines.
+- **Your Rank** under the list: "#4 on the board", or "#2 in this server ... the board starts at
+  48,600 score".
+- **Updates:** values are written from the server's saved data every 2 minutes (each only when it
+  changed) and on leave; the stores are read every minute, and players joining or leaving re-send
+  the board from the cached pages (no extra DataStore calls). Rows that changed fade and slide in.
+  The board's rows are built once per client; updates only change text and colours.
+- **Server-authoritative:** the server merges the stores with live data (`Lib/LeaderboardRules`) and
+  sends one snapshot to every client (`Leaderboard.Snapshot`, server -> client only). There is no
+  remote from the client, so nobody can change a ranking. Players whose data is still loading are
+  left out until it loads.
+- **Existing rankings are kept:** `ScoreLeaderboard` is unchanged. The XP and Coins boards start
+  empty and fill as players play (each player's values are written within 2 minutes of joining).
 
 ### Sprint
 Hold **Shift** (keyboard), press the **left stick (L3)** (gamepad) or tap the **Sprint** button (touch)
@@ -240,13 +336,126 @@ Note: a player who turned on Roblox's own *Shift Lock* setting will toggle it wi
 (it's off by default).
 
 ### Swing feel
-The swing eases into a short anticipation pause at the top, the hammer head stretches on the
-downswing and squashes on impact, a white trail follows the fast part of the swing, and each confirmed
-hit throws a spark burst on the boss (`SwingPose.headScale` / `trailActive`, local visuals).
+One swing lasts exactly `HitCooldown` (0.45 s) and is pure client visuals (`Shared/SwingPose`,
+`Lib/SwingAnimator`); the server never uses it to decide a hit.
+| Beat | Share of the swing | What you see |
+|---|---|---|
+| Wind-up | 0-24 % | arm lifts, hammer cocked back over the head |
+| Anticipation | 24-34 % | a slow extra coil at the top |
+| Strike | 34-50 % | fast snap forward; head stretches, coloured trail; the hit request is sent at 50 % |
+| Impact | 50-66 % | head squashes, the hammer bounces back up a little off the boss, then settles (2026-10-07; was a follow-through past the boss) |
+| Return | 66-100 % | smooth swing back onto the shoulder |
+
+Each confirmed hit of yours adds a soft white flash on the boss, a few golden / white sparkles, a
+tiny impact ring, a small camera shake (0.08 s), a short "bonk" (built-in sound, higher pitched on
+crits; 2026-10-07) and the boss's hop.
+
+### Hit effects (2026-10-07, `Lib/HitEffects`, local visuals)
+| Hit | Sparkles | Floating motes | Ring |
+|---|---|---|---|
+| Yours | 6 (10 on a crit, warmer gold) | 2 pastel | bright |
+| Someone else's | 3 (7 on a crit) | none | faint |
+| Defeating hit | 14 | 8 pastel | as above |
+
+- **Pooled per boss:** the first hit builds one rig on the boss (an Attachment with two emitters, a
+  ring billboard, and one Highlight on the drawn monster). Every later hit only calls `Emit()` and
+  restarts two prebuilt tweens, so nothing is created per hit. Emitters are never `Enabled` (no
+  continuous emission) and particles live under a second.
+- **Cleanup:** the rig is parented to the boss, so it goes away with it (defeat, respawn, streaming
+  out). The pools use weak keys. Damage numbers are still removed by `Debris` after 0.7 s.
+- **Soft:** sparkles are small (0.35 studs) with low light emission; the flash is a light fill
+  (`FillTransparency` 0.55) for 0.1 s on the monster only, never full-screen; no lights are added.
+- **Far away:** hits more than 90 studs from your camera show no effects, so many bosses and
+  players stay cheap.
+- Was (until 2026-10-07): a new Highlight and a new 14-particle emitter on every hit (large, fast,
+  bright sparks).
+
+**Clicking (2026-10-07):** one swing per `HitCooldown`. A press in the last 0.12 s of a swing queues
+exactly one more swing for the moment the cooldown ends; every other press during a swing is ignored.
+Nothing is created per swing: each holder has one swing state that `play()` restarts, so swings can't
+stack. The posing runs from a single `PreRender` connection that exists only while someone holds a
+hammer, and at rest it does no work (the rest pose is set once; the Animator never overwrites it).
 
 ### Music
 `AudioController` loops `MusicConfig.Tracks` with fades and a "Music: On/Off" button. The list is
 empty until licensed tracks are added (see `docs/RELEASE.md` §4).
+
+## Boss personalities (2026-10-07)
+Bosses feel alive between whacks. All of this is drawn by each client
+(`Controllers/BossVisualController`, maths in `Shared/BossMotion`, values in
+`Config/BossPersonalityConfig`); the server's hitbox, health, rewards and shouts are unchanged, so
+none of it affects hit detection or can be abused.
+
+| Boss (and its Senior) | Personality | Idle | Fidget every 4-8 s |
+|---|---|---|---|
+| Deadline Boss | always in a hurry | quick bob, fast little steps | two quick foot-taps |
+| Meeting Master | stressed executive | paces, looks around a lot | nervous glance over the shoulder |
+| Reply-All Boss | overwhelmed by email | jittery | flinches at an incoming "ping" |
+| Production Bug | confused developer | looks both ways, wide sway | tilts its head: "huh?" |
+| Monday Monster | sleepy | slow bob | a big yawn |
+| The CEO | pompous | slow | puffs itself up |
+
+Admin-created bosses behave like the boss whose look they borrow.
+
+- **Looking around:** a boss faces you when you're within 30 studs on its floor; otherwise it looks
+  around (toward its door and back and forth).
+- **Moving slightly:** the drawn monster shuffles side to side by at most 0.8 studs; the hitbox
+  never moves.
+- **Noticing you:** walking within 14 studs (after being 24+ away) makes it hop in surprise, "ping",
+  and say a short line to you, e.g. "Hey! Is it done yet?", "I need coffee!", "Huh? Who's there?";
+  locked bosses say "Not so fast! Come back later." At most once every 12 s per boss.
+- **Hit reaction:** the existing lean-back hop plus a short dizzy wobble, and a cartoon "boing"
+  pitched to the boss's personality, at most every 0.7 s per boss however many players hit it.
+  Sometimes (40 %, at most every 3 s) your own hit gets a line: "Ouch!", "Okay, okay!", "Not again!",
+  "That's a feature!". Defeat plays the "boing" pitched down, with the existing spin.
+- **Lines** are short (<= 30 characters), written by us, never rude (spec-checked against the same
+  blocked words as the shouts), shown in the boss's speech bubble to you only, and never cover a
+  server shout.
+- **Sounds:** Roblox built-in files (`action_jump.mp3`, `electronicpingshort.wav`), so no uploads;
+  at most two `Sound`s per boss, created on first use under the boss and reused, removed with it.
+  Not played farther than 60 studs. To use real voice clips ("Hey!", "Ouch!"), upload them and put
+  their ids in `BossPersonalityConfig.Sounds`.
+- Bosses never attack or hurt players.
+
+## Player Panel (2026-10-07)
+A **Menu** button (top-left) or **M** opens the Player Panel (`PlayerPanelController`, built on
+`Lib/PanelKit` like the Admin Panel): a wide window with a sidebar (a top tab strip on narrow
+screens), cards, scrolling content, a quick scale-in/out animation and a close X.
+
+| Page | What's there |
+|---|---|
+| Profile | level, XP to the next level, score, coins, stress, Zen level (updated live, text only); active boosts with time left; your leaderboard line |
+| Hammers | equipped hammer and its damage; every hammer you own with **Equip** (the existing `Shop.EquipHammer`, server-checked); a link to the Hammer Shop; your Bag's item count and **Open Bag** |
+| Game | shortcuts to the Hammer Shop, the Robux Store, the Bag (the existing panels) and, for admins, the Admin Panel; where things are in the office |
+| Help | how to play, controls (computer, phone, controller), the music setting when there is music |
+
+It only shows what already exists and only displays server data; it has no remote of its own. The
+existing HUD buttons (Hammers, Store, Bag, Admin, Music) all still work.
+
+## Lobby lounge NPCs (2026-10-07)
+Four friendly office workers make the lounge by the leaderboard feel lived-in (`Config/NpcConfig`,
+built by `Lib/NpcBuilder` / `NpcService`, animated by `NpcController` on each client):
+
+| NPC | Where | Doing |
+|---|---|---|
+| Rita (Reception) | behind the reception desk, facing the lobby | looks around; waves and says hello when you walk up |
+| Ben (Accounting) | west couch, left | reads a book, looks up now and then, turns a page |
+| Mia (Design) | west couch, right, turned to Ben | sips coffee and chats with Ben |
+| Sam (IT) | by the water cooler | sips coffee, looks around |
+
+- **Look:** blocky cartoon staff in the same plain-parts style as the bosses: shirt and tie or a
+  name badge, smiling drawn faces, different skin, hair and shirt colours, and a prop (clipboard,
+  book, coffee mug).
+- **Talking:** walking within 10 studs gets a greeting (at most every 25 s per NPC); every 10-18 s
+  one NPC near you says a line, and Ben and Mia answer each other. Lines are short, friendly and
+  spec-checked ("Welcome to Stress Relief Dept.!", "Need a stress break?", "Nice score today!",
+  "I need more coffee!"). Bubbles are shown to you only.
+- **Never in the way:** no `Humanoid`, every part non-colliding, unclickable and untouchable, kept
+  out of the space in front of the leaderboard, the stairs, the vending machine, the spawn and the
+  entrance (spec-checked). They live in `Workspace.LobbyNpcs`, not `Workspace.Bosses`, so combat,
+  stress, XP, coins and the leaderboard never see them.
+- **Light:** about 13 parts each, built once by the server; each client runs a few repeating tweens
+  per NPC (started once) and one distance check every 0.5 s for all of them. No per-frame work.
 
 ## Boss shouts (2026-10-05)
 Every boss shouts lines about its fictional "job" (`BossShoutConfig`) in a speech bubble above its

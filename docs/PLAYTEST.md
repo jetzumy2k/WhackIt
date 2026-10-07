@@ -17,7 +17,7 @@ Record the date, build (commit) and result for each run in the PR.
 |---|---|---|
 | 1 | Spawn | Floor; an orange cartoon monster with angry eyes, a toothy mouth and a "DUE TODAY!" sign, bobbing and turning to face you, with name + HP bar `100 / 100`. You carry a red-and-yellow hammer resting on your right shoulder. HUD shows `Stress 100 / 100`, `Score: 0`, hint at the bottom; no hotbar |
 | 2 | Click while far from the boss | Your character swings the hammer (animation + swish sound), "Get closer to the boss!" appears above the hint, the boss doesn't react |
-| 3 | Walk up and click | A full swing: arm lifts with the hammer cocked back, then a fast strike with a swish that puts the hammer out in front on the boss, a little follow-through, and the hammer swings back onto your shoulder; the boss flashes white, leans back with a hop, yellow `-10` floats up, small camera shake, HP `90 / 100`, stress drops by 1 |
+| 3 | Walk up and click | A full swing: arm lifts with the hammer cocked back, then a fast strike with a swish that puts the hammer out in front on the boss, a small bounce off the boss, and the hammer swings back onto your shoulder; a short "bonk"; the boss flashes white, leans back with a hop, yellow `-10` floats up, small camera shake, HP `90 / 100`, stress drops by 1 |
 | 3b | Hammer orientation | At rest the hammer lies back over your shoulder; at the hit it points out in front, head on the boss; then it returns to the shoulder. **Report where the head ends up if any of these look wrong (e.g. pointing down, sideways, or into your body).** |
 | 4 | Click as fast as possible | Swings complete one after another (never cut off mid-swing); about 2 hits per second land |
 | 5 | Defeat the boss | HP bar shows `DEFEATED!`, the monster spins and shrinks away, Victory Card `+100 score -5 stress`, Score `100` in HUD and player list |
@@ -62,8 +62,8 @@ works but nothing is kept between Play sessions.
 | 24 | Swing at a locked boss | Swing plays, toast "Defeat Deadline Boss 1 more time to unlock!", no damage |
 | 25 | Defeat Deadline Boss | Victory Card `+100 score +10 coins -5 stress`; Coins in HUD and player list +10 |
 | 26 | Defeat it once | The Victory Card adds "NEW BOSS UNLOCKED: Meeting Master!"; Meeting Master turns colourful and can be hit |
-| 27 | Open Hammers with < 150 coins | Squeaky Hammer "Equipped"; others "Need 150/400/1000" (greyed) |
-| 28 | Earn 150 coins, Buy Bouncy Mallet | Coins −150, hammer in hand changes to the blue/white mallet, row shows "Equipped"; hits do 14 × boss multiplier |
+| 27 | Open Hammers with < 75 coins | Squeaky Hammer "Equipped"; others "Need 75/150/400/650/1000/1600/2500/3500/5000/8000" (greyed); each row has a 3D preview of its hammer |
+| 28 | Earn 150 coins, Buy Bouncy Mallet | Coins −150, hammer in hand changes to the blue rubber mallet, row shows "Equipped"; hits do 14 × boss multiplier |
 | 29 | Equip Squeaky Hammer again | Hammer swaps back; damage back to 10 × multiplier |
 | 30 | Stop and Play again (API access on) | Coins, bought hammers, equipped hammer and unlocked bosses are all kept |
 | 31 | Rapid double-click Buy | Bought once; coins deducted once |
@@ -76,7 +76,7 @@ works but nothing is kept between Play sessions.
 | 34 | Hit bosses until stress ≤ 75, ≤ 50, ≤ 25 | Face changes: worried with a small wobbly mouth → small smile → bigger smile |
 | 35 | Bring stress to 0 | "ZEN ACHIEVED! +100 coins Zen Level 1" card; happy closed-eyes face with blush; hammer glows and sparkles; HUD shows `Zen Lv 1`, coins +100 |
 | 36 | Keep hitting at 0 | Stays Zen, hammer keeps glowing; no second Zen reward |
-| 37 | Stop hitting for 2 minutes | Stress rises by 5 every 5 s; the glow stops as soon as stress is above 0; the face changes with the bands |
+| 37 | Stop hitting for 20 s | Stress rises by 5 at 20 s, then every 5 s; the glow stops as soon as stress is above 0; the face changes with the bands |
 | 38 | Let stress rise to only ~20, then bring it back to 0 | No Zen reward this time (not re-armed); let it reach 50+ and back to 0 → Zen pays again |
 | 39 | Two players, A deals ~70 %, B ~30 % and lands the last hit | Each Victory Card shows "your share" %; A's score/coins ≈ 70 % of the boss reward, B's ≈ 30 % + "LAST HIT BONUS!" |
 | 40 | A player deals under 10 % | Gets a small score/coin share but "Deal at least 10% of its HP to count the defeat."; no unlock progress |
@@ -97,7 +97,7 @@ works but nothing is kept between Play sessions.
 | 47 | Walk the stairs (east side of the lobby) | Smooth climb to the upper corridor with a glass railing over the lobby; five crowned Senior bosses, greyed with "LOCKED: reach Lv 10" |
 | 48 | Swing at a Senior boss below Level 10 | Toast "Reach Level 10 to fight this Senior boss!", no damage |
 | 49 | Reach Level 10 (or test with a temporarily lower `UpstairsMinLevel`) after defeating the ground boss once | Senior boss turns colourful; Victory Card can show "NEW BOSS UNLOCKED: Senior …" when the level-up happens |
-| 50 | Look around | Calm, darker rooms: slate walls and ceilings, warm dim lights, no glare; thin cyan (ground) and purple (upstairs) LED strips along the corridors; windows in office back walls show grass, trees and the skyline; the lobby's glass front faces a street with trees |
+| 50 | Look around | Calm, darker rooms: slate walls and ceilings, warm dim lights, no glare; thin cyan (ground) and purple (upstairs) LED strips along the corridors; windows in office back walls show grass, trees and the skyline; the lobby's glass front looks out onto the campus, with an open entrance in the middle |
 | 51 | Swing | Brief pause at the top, hammer head stretches then squashes, white trail, spark burst on the boss, stronger shake |
 
 ## Phase 7b: shouts, Executive Floor and the CEO
@@ -194,3 +194,141 @@ works but nothing is kept between Play sessions.
 | 116 | Same with an R6 avatar (Game Settings → Avatar → R6, or a test place) | Faces sit on the head and behave the same |
 | 117 | Avatar with an animated (dynamic) head | Drawn faces sit on top; the head's own face may show through a little (known, as before) |
 | 118 | Rapid swings for 30 s | No lag or growing instance count: one `ActionFace` per head (Explorer, client view) |
+
+## Hammer looks (2026-10-07)
+For testing, use a test save with plenty of coins (or temporarily raise a boss's `CoinReward` in Studio and revert it).
+| # | Check | Expected |
+|---|---|---|
+| 119 | Shop: scroll the list | 11 hammers (plus any Mystery Hammers), each with a recognisable 3D preview, head up |
+| 120 | Equip each hammer in turn | Each looks distinct, sits in the right hand with the head past the fist (not floating, not pointing back at the shoulder), rests on the shoulder when idle |
+| 121 | Swing each hammer at a boss | Head squashes and stretches with its bands / caps staying on it; trail in the hammer's colour; damage = that hammer's Damage × boss multiplier; cooldown unchanged |
+| 122 | Neon, Fire, Lightning, Cosmic, Golden, Mystery | Only a small glow and a few particles; no flicker, no light flooding the office |
+| 123 | Reset (Esc → Reset) with each of 2-3 hammers equipped | You respawn holding the same hammer, fully visible; still exactly one hammer (no duplicates in Backpack) |
+| 124 | First person (zoom all the way in) and third person | Hammer visible and in hand in both |
+| 125 | Second client watching | Sees your hammer's look, swing and trail; switching hammers updates for them |
+| 126 | 30 s of rapid swings with Fire / Cosmic, 2+ players | No FPS drop (Ctrl+Shift+F5 / MicroProfiler); Output has no errors or warnings |
+
+## Swing feel (2026-10-07)
+| # | Check | Expected |
+|---|---|---|
+| 127 | Single click at a boss | Wind-up, brief coil at the top, fast strike, small bounce off the boss, smooth return to the shoulder; "bonk" + small shake on the hit |
+| 128 | Click as fast as you can for 10 s | One swing after another, never restarting mid-swing or overlapping; damage numbers appear at most once per 0.45 s; server log has no cooldown rejections |
+| 129 | Click once just before a swing ends | The next swing starts right as the first one finishes (no lost click); clicking earlier in the swing does nothing |
+| 130 | Jump, walk and sprint while swinging | Swing plays the same; hammer stays in hand, head past the fist, not upside down; hits still register in reach |
+| 131 | Reset mid-swing, then swing again | New character rests the hammer on the shoulder and swings normally; no errors in Output |
+| 132 | Two clients hitting the same boss | Each sees the other's strike, bounce and return on confirmed hits; only your own hits make your camera shake and bonk |
+| 133 | R6 avatar (test place) | Same beats; the wrist takes the elbow's part |
+
+## Hit and glow effects (2026-10-07)
+| # | Check | Expected |
+|---|---|---|
+| 134 | Hit a boss | Soft white flash on the monster, a few small golden/white sparkles, a tiny ring that grows and fades; nothing covers the screen |
+| 135 | Crit, and the defeating hit | Crit: a few more, warmer sparkles. Defeat: a slightly bigger sparkle burst with pastel motes floating up; no explosion |
+| 136 | 30 s of rapid hits on one boss | Explorer (client): the boss has exactly one `HitFx` attachment and its monster one `HitFlash`; no growing count of effects; FPS steady |
+| 137 | 2-3 players hitting different bosses | Others' hits show a smaller burst and a faint ring; hits far away (other offices) show nothing |
+| 138 | Defeat a boss and wait for the respawn | Old boss's effects go away with it; the new boss gets its own rig on its first hit |
+| 139 | Reach Zen (0 stress) | Hammer has a soft warm glow and a few slow sparkles, not glitter; leaving Zen turns both off |
+| 140 | Output after all of the above | No errors or warnings |
+
+## Outdoor campus (2026-10-07)
+| # | Check | Expected |
+|---|---|---|
+| 141 | Spawn | Lobby as before; the entrance in the middle of the glass front is straight ahead, sign above it |
+| 142 | Walk out through the entrance | One small step down onto the plaza; nothing in the way |
+| 143 | Walk the main walkway to the Stress-Relief Zone, then the cross walk to the Garden and the Coffee Corner, then the loop around the building | Every path is clear; signs point the way; nothing to get stuck on |
+| 144 | Walk into the pond, bump into benches, tables, kiosk, trees | You walk across the pond; props block you like furniture but never trap you; no clipping into the ground |
+| 145 | Walk / sprint / jump into the edges of the grounds | Stopped by an invisible wall at the hedge on every side; can't reach the street |
+| 146 | Go back in: stairs (the "ladder") to the Senior floor, elevator to the CEO, the leaderboard on the lobby's west wall, the Store and Hammers buttons, every boss office | All work as before |
+| 147 | Two players outside and inside | Both see the same campus; hits, swings and faces work anywhere |
+| 148 | Performance outside (Ctrl+Shift+F5 / MicroProfiler), Output | Steady FPS; no errors or warnings |
+
+## Boss personalities (2026-10-07)
+| # | Check | Expected |
+|---|---|---|
+| 149 | Watch each of the 5 office bosses (and a Senior, the CEO) from the doorway | Each moves in its own style (hurry, pacing, jittery, head tilts, sleepy, pompous) and does its fidget every few seconds; stays on its spot |
+| 150 | Stand far away / on another floor | Bosses look around instead of staring at you |
+| 151 | Walk up to a boss | It hops in surprise, a "ping", and a short line in its bubble; walking away and back within 12 s doesn't repeat it |
+| 152 | Walk up to a locked boss | "Not so fast! Come back later." (or similar) |
+| 153 | Hit a boss repeatedly | Lean-back hop + dizzy wobble, a "boing" at most about every 0.7 s, sometimes "Ouch!"-style lines (not every hit); damage, HP, rewards unchanged |
+| 154 | Two players hitting the same boss | Still at most one "boing" every 0.7 s; each player sees their own lines only; server shouts still appear for both |
+| 155 | Defeat a boss, wait for the respawn | Lower "boing" with the spin; the new boss behaves normally |
+| 156 | Reset your character near a boss | It notices you again when you come back (after its cooldown) |
+| 157 | Output | No errors or warnings (in particular no "failed to load sound") |
+| 158 | Explorer (client) during play | Each boss body has at most two `Boss...` Sounds; no growing count |
+
+## Leaderboard (2026-10-07)
+| # | Check | Expected |
+|---|---|---|
+| 159 | One player, Studio (API access off) | "Hall of Calm" board on the lobby's west wall, readable from the spawn; you at #1 with a gold row; note "This server only (global board offline)"; one warning at most in Output about the global board |
+| 160 | Click Top Score / Top Level / Top Coins | Tab turns blue, the ranked column turns gold, rows re-sort; nothing changes for other players |
+| 161 | Defeat a boss, wait up to a minute | Your Score / Level / Coins update; changed rows fade and slide in; "YOU: #1 on the board" follows your values |
+| 162 | 2-3 players (local server test or published) | Top 3 get gold / silver / bronze; each sees their own "YOU" line |
+| 163 | A player joins, then leaves | They appear within a few seconds of their data loading, and drop off the server-only board after leaving |
+| 164 | Reset your character | Board stays as it was (no flicker, no duplicate) |
+| 165 | Published place: play, leave, rejoin a new server | Your all-time Score rank is kept; Top Level / Top Coins include you after up to 2 minutes of play |
+| 166 | Output (published) | No DataStore errors or warnings |
+
+## Hammer vending machine (2026-10-07)
+| # | Check | Expected |
+|---|---|---|
+| 167 | Spawn and look right (east) | "HAMMER STORE" machine beside the stairs: glass window with three hammers swaying gently, soft neon edges, screen "PRESS E for hammers", keypad, coin slot |
+| 168 | Walk to the stairs and up them past the machine | Nothing in the way; the machine doesn't touch the stairs or the landing |
+| 169 | Walk up to the machine | "Open Hammer Store" prompt (E) within ~8 studs |
+| 170 | Press E | The Hammers panel opens (the same one as the button); soft click; screen shows "HAPPY WHACKING!" for a moment |
+| 171 | Buy a hammer you can't afford | Button reads "Need N" and does nothing; coins unchanged |
+| 172 | Buy one you can afford | Coins go down once, the hammer is equipped in hand and listed as owned; same as buying from the button |
+| 173 | Rapid E presses, then rapid Buy clicks | Panel just stays open; bought once, coins deducted once |
+| 174 | Two players use the machine at once | Each opens their own panel; purchases are separate |
+| 175 | Reset your character, use the machine again | Works the same; the "Hammers" button still works too |
+| 176 | Stop and Play again (server restart) | Machine is there and works |
+| 177 | Output | No errors or warnings (in particular no "failed to load sound") |
+
+## Lobby lounge NPCs (2026-10-07)
+| # | Check | Expected |
+|---|---|---|
+| 178 | Spawn and look left (west) | Rita behind the reception desk, Ben and Mia on the west couch, Sam by the water cooler; all smiling, different colours; idle motion (looking around, reading, sipping) |
+| 179 | Walk up to Rita | She waves and says hello in a bubble; walking away and back within 25 s doesn't repeat it |
+| 180 | Stand near the couch for ~30 s | Now and then a line; Ben and Mia answer each other |
+| 181 | Walk through the lounge, into the NPCs, to the leaderboard, the stairs, the vending machine, out the entrance | Nothing blocks you (you pass through the NPCs); the board stays fully visible |
+| 182 | Swing your hammer at an NPC | Nothing happens (no hit, no stress, XP or coins) |
+| 183 | Two players | Each sees the NPCs animate and gets their own greetings |
+| 184 | Reset your character near an NPC | Greetings keep working after the respawn |
+| 185 | Performance and Output | Steady FPS; no errors or warnings |
+
+## Passive stress timer (2026-10-07)
+Watch the Stress bar (top). "Hit" means a hit that lands (damage number appears).
+| # | Check | Expected |
+|---|---|---|
+| 186 | Hit a boss, then wait 15 s | No passive rise during the 15 s |
+| 187 | Keep waiting to 20 s | Stress +5 once, at about 20 s |
+| 188 | Keep waiting to 35 s | +5 at about 25, 30 and 35 s |
+| 189 | After a hit, walk / sprint / jump around for 60 s | Stress keeps rising every 5 s after the grace; moving never resets it |
+| 190 | After a hit, stand still for 60 s | Same as 189 |
+| 191 | During the rises, hit a boss | Stress drops by the hit's relief; no rise for the next 15 s; then +5 every 5 s again |
+| 192 | Swing at nothing / out of reach / at a locked boss, click fast | No reset: the rises carry on on schedule |
+| 193 | Hit a boss several times in a row, then stop | One grace period from the LAST hit; rises every 5 s, never two at once |
+| 194 | Two players: A keeps hitting, B walks around | A's stress doesn't rise; B's does; neither affects the other |
+| 195 | Let stress reach 100 | Stays at "Stress 100 / 100", never above |
+| 196 | Reset your character during the rises | Stress keeps its value and the same schedule (no extra or faster rises) |
+| 197 | Open the Store / Hammers / Bag panels for 30 s | Stress still rises |
+| 198 | Leave and rejoin (published or API access on) | Saved stress loads as before; a new 15 s grace starts on join |
+| 199 | Output | No errors |
+
+## Admin Panel and Player Panel (2026-10-07)
+| # | Check | Expected |
+|---|---|---|
+| 200 | Press M, or click Menu (top-left) | Player Panel scales in quickly: header with title and X, sidebar Profile / Hammers / Game / Help, Profile selected |
+| 201 | Profile | Level, XP, Score, Coins, Stress, Zen tiles match the HUD; hit a boss with the panel open: values update, no flicker |
+| 202 | Hammers: Equip another hammer | The hammer in hand changes; the list shows it as "Equipped" (disabled); Shop button opens the Hammers panel |
+| 203 | Game: each shortcut | Player Panel closes and the Hammer Shop / Store / Bag opens; Admin Panel shortcut only for admins |
+| 204 | Help: open / fold "Controls" and "Settings" | Cards fold and unfold; text wraps, never cut off |
+| 205 | Press M again / click X | Panel scales out and hides |
+| 206 | Admin: click Admin or press F2 | Admin Panel opens on Dashboard: server tiles, game tiles, player list |
+| 207 | Dashboard: Manage / Moderate on a player | Opens Players / Moderation with that player selected |
+| 208 | Every Admin tab: run each action once (set level, damage, unlock, create / move / delete a custom boss, drop rates, ban in Studio) | Same results and toasts as before the redesign |
+| 209 | Scroll a long page, then trigger a server update (e.g. set damage) | Page redraws without jumping back to the top |
+| 210 | Non-admin account | No Admin button; F2 does nothing; firing an Admin remote from the console is rejected in the server log |
+| 211 | Resize the Studio window / Device emulator: 1920x1080, 1600x900, 1366x768, a small window, a phone (landscape) and a tablet | Windows fit on screen; on narrow screens the sidebar becomes a top tab strip; nothing overlaps or is cut off; everything reachable by scrolling; buttons stay at least 44 px tall |
+| 212 | Reset your character with a panel open | Panel stays usable; reopening works; no duplicate panels or buttons |
+| 213 | Two players | Each has their own panels; admin tools only for admins |
+| 214 | Output | No errors or infinite-yield warnings |

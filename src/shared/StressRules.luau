@@ -37,11 +37,21 @@ function StressRules.moodFor(stress: number): Mood
 	return "Frazzled"
 end
 
--- Whether stress should rise now: only after StressIdleDelay seconds without an
--- accepted hit, then once every StressRegenInterval seconds.
-function StressRules.shouldRegen(idleSeconds: number, secondsSinceLastRegen: number): boolean
-	return idleSeconds >= GameConfig.StressIdleDelay
-		and secondsSinceLastRegen >= GameConfig.StressRegenInterval
+-- Passive stress schedule (StressService). After an accepted hit at `hitAt`
+-- there's a StressIdleDelay grace period, then a rise every StressRegenInterval:
+-- hit at 0 s -> rises at 20, 25, 30 s... (with the defaults).
+function StressRules.firstRiseAt(hitAt: number): number
+	return hitAt + GameConfig.StressIdleDelay + GameConfig.StressRegenInterval
+end
+
+-- The rise after one due at `riseAt`. If the server fell behind (a hitch),
+-- it continues from `now` instead of firing a burst of missed rises.
+function StressRules.nextRiseAfter(riseAt: number, now: number): number
+	local nextAt = riseAt + GameConfig.StressRegenInterval
+	if nextAt <= now then
+		return now + GameConfig.StressRegenInterval
+	end
+	return nextAt
 end
 
 function StressRules.applyRegen(stress: number): number

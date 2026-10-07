@@ -20,6 +20,14 @@
       "Remotes": {
         "$className": "Folder",
 
+        "Leaderboard": {
+          "$className": "Folder",
+
+          "Snapshot": {
+            "$className": "RemoteEvent"
+          }
+        },
+
         "Combat": {
           "$className": "Folder",
 
@@ -199,6 +207,10 @@
     },
 
     "Workspace": {
+      "$properties": {
+        "FallenPartsDestroyHeight": -60
+      },
+
       "Arena": {
         "$className": "Folder",
 

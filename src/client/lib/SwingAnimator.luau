@@ -20,6 +20,7 @@ local RunService = game:GetService("RunService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("GameConfig"))
 local Attributes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Attributes"))
+local HammerModel = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("HammerModel"))
 local SwingPose = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SwingPose"))
 
 local SwingAnimator = {}
@@ -40,12 +41,25 @@ type Holder = {
 	SwingStartedAt: number?,
 	SwingStartProgress: number,
 	MissingSince: number?, -- when the shoulder joint was first found missing
+	-- The rest pose is on and nothing changed since: skip the frame. The
+	-- Animator never writes the offsets we set, so they stay put.
+	Settled: boolean,
 }
 
--- The held hammer's head: original size (for squash and stretch) and its trail.
+-- A head detail (Shared/HammerModel): squashed and stretched with the head.
+type HeadDetail = {
+	Part: BasePart,
+	Weld: Weld,
+	BaseSize: Vector3,
+	BaseC0: CFrame,
+}
+
+-- The held hammer's head: original size (for squash and stretch), its details
+-- and its trail.
 type HammerHead = {
 	Part: BasePart,
 	BaseSize: Vector3,
+	Details: { HeadDetail },
 	Trail: Trail,
 }
 
@@ -205,14 +219,31 @@ local function hammerHead(character: Model): HammerHead?
 			trail.Attachment0 = a0
 			trail.Attachment1 = a1
 			trail.Lifetime = TRAIL_SECONDS
-			trail.Color = ColorSequence.new(TRAIL_COLOR)
+			local trailColor = part:GetAttribute(HammerModel.TRAIL_COLOR_ATTRIBUTE)
+			trail.Color = ColorSequence.new(
+				if typeof(trailColor) == "Color3" then trailColor else TRAIL_COLOR
+			)
 			trail.Transparency = NumberSequence.new(0.35, 1)
-			trail.LightEmission = 0.6
+			trail.LightEmission = 0.3
 			trail.FaceCamera = true
 			trail.Enabled = false
 			trail.Parent = part
 
-			local head: HammerHead = { Part = part, BaseSize = part.Size, Trail = trail }
+			local details: { HeadDetail } = {}
+			for _, detail in part:GetChildren() do
+				local weld = detail:FindFirstChild(HammerModel.DETAIL_WELD)
+				if detail:IsA("BasePart") and weld and weld:IsA("Weld") then
+					table.insert(details, {
+						Part = detail,
+						Weld = weld,
+						BaseSize = detail.Size,
+						BaseC0 = weld.C0,
+					})
+				end
+			end
+
+			local head: HammerHead =
+				{ Part = part, BaseSize = part.Size, Details = details, Trail = trail }
 			heads[part] = head
 			part.Destroying:Connect(function()
 				heads[part] = nil
@@ -221,6 +252,15 @@ local function hammerHead(character: Model): HammerHead?
 		end
 	end
 	return nil
+end
+
+-- How much a detail's own `axis` stretches when the head stretches by
+-- `stretch` along its X, Y, Z (exact for details turned in 90-degree steps).
+local function stretchAlong(c0: CFrame, axis: Vector3, stretch: Vector3): number
+	local inHead = c0:VectorToWorldSpace(axis)
+	return math.abs(inHead.X) * stretch.X
+		+ math.abs(inHead.Y) * stretch.Y
+		+ math.abs(inHead.Z) * stretch.Z
 end
 
 local function applyHeadEffects(character: Model, progress: number): ()
@@ -233,6 +273,19 @@ local function applyHeadEffects(character: Model, progress: number): ()
 	local size = Vector3.new(base.X * scale.Length, base.Y * scale.Width, base.Z * scale.Width)
 	if head.Part.Size ~= size then
 		head.Part.Size = size
+		-- Details keep their place on the head: offsets and sizes scale along
+		-- the head's length (X) and width (Y, Z) like the head itself.
+		local stretch = Vector3.new(scale.Length, scale.Width, scale.Width)
+		for _, detail in head.Details do
+			local c0 = detail.BaseC0
+			detail.Part.Size = detail.BaseSize
+				* Vector3.new(
+					stretchAlong(c0, Vector3.xAxis, stretch),
+					stretchAlong(c0, Vector3.yAxis, stretch),
+					stretchAlong(c0, Vector3.zAxis, stretch)
+				)
+			detail.Weld.C0 = CFrame.new(c0.Position * stretch) * c0.Rotation
+		end
 	end
 	head.Trail.Enabled = SwingPose.trailActive(progress)
 end
@@ -268,7 +321,20 @@ local function step(): ()
 			holders[character] = nil
 			continue
 		end
+		local shoulder, elbow, waist, grip =
+			holder.Shoulder, holder.Elbow, holder.Waist, holder.Grip
 		refreshJoints(character, holder)
+		if
+			holder.Shoulder ~= shoulder
+			or holder.Elbow ~= elbow
+			or holder.Waist ~= waist
+			or holder.Grip ~= grip
+		then
+			holder.Settled = false -- a joint appeared or was replaced: pose it
+		end
+		if holder.Settled then
+			continue
+		end
 		if holder.Shoulder == nil then
 			holder.MissingSince = holder.MissingSince or now
 			local missingFor = now - (holder.MissingSince :: number)
@@ -301,6 +367,8 @@ local function step(): ()
 		end
 		apply(holder, SwingPose.at(progress))
 		applyHeadEffects(character, progress)
+		-- At rest with every joint found: nothing to do until the next swing.
+		holder.Settled = holder.SwingStartedAt == nil and holder.Grip ~= nil
 	end
 
 	if next(holders) == nil and connection then
@@ -323,6 +391,7 @@ function SwingAnimator.setHolding(character: Model, holding: boolean): ()
 				SwingStartedAt = nil,
 				SwingStartProgress = 0,
 				MissingSince = nil,
+				Settled = false,
 			}
 		end
 		if connection == nil then
@@ -342,8 +411,11 @@ function SwingAnimator.play(character: Model, startProgress: number?): ()
 	if holder == nil then
 		return
 	end
+	-- Restarts the one swing state this holder has; nothing is created, so
+	-- repeated calls can never stack animations.
 	holder.SwingStartedAt = os.clock()
 	holder.SwingStartProgress = math.clamp(startProgress or 0, 0, 1)
+	holder.Settled = false
 end
 
 -- Seconds from the start of a swing until it reaches `progress` (0..1), e.g.

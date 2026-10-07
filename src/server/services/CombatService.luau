@@ -189,7 +189,9 @@ local function onHammerHit(player: Player, rawBossInstanceId: unknown): ()
 	end
 
 	data.TotalHits += 1
-	StressService.noteActivity(player)
+	-- Only here, after the server applied the hit, does the passive-stress
+	-- grace period restart (never on clicks, swings or misses).
+	StressService.resetStressTimer(player)
 
 	StressService.relieve(player, StressRules.reliefForHit(result.Applied))
 

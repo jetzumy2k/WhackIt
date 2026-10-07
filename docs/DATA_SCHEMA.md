@@ -127,16 +127,26 @@ When Roblox sends a "Right to Erasure" request for a UserId:
 - To test real saving, turn it on. That reads and writes the **live** DataStore for your own account, so
   only do it on a test place or with your own test account.
 
-## Leaderboard store
+## Leaderboard stores
+| OrderedDataStore | Key / value | Since |
+|---|---|---|
+| `ScoreLeaderboard` (`DataConfig.LeaderboardStoreName`) | `<UserId>` → lifetime Score | Phase 7 |
+| `XpLeaderboard` (`DataConfig.XpLeaderboardStoreName`) | `<UserId>` → XP (the board shows it as Level) | 2026-10-07 |
+| `CoinsLeaderboard` (`DataConfig.CoinsLeaderboardStoreName`) | `<UserId>` → current coins | 2026-10-07 |
+
 | Setting | Value |
 |---|---|
-| OrderedDataStore | `ScoreLeaderboard` (`DataConfig.LeaderboardStoreName`) |
-| Key / value | `<UserId>` → lifetime Score (integer) |
-| Writes | from the server's saved data, every `LeaderboardWriteInterval` (120 s) if changed, and on leave |
-| Reads | top `LeaderboardSize` (10), every `LeaderboardReadInterval` (60 s) per server |
+| Writes | from the server's saved data, every `LeaderboardWriteInterval` (120 s), each store only if its value changed, and on leave |
+| Reads | top `LeaderboardSize` (10) of each store, every `LeaderboardReadInterval` (60 s) per server: 3 sorted reads a minute |
 
-For a right-to-erasure request also remove the player's leaderboard entry (Command Bar, API access on):
+These are copies for ranking only; the player's saved data (`PlayerData`) stays the source of truth,
+and no saved data format changed. The two new stores start empty (no migration needed).
+
+For a right-to-erasure request also remove the player's leaderboard entries (Command Bar, API access on):
 ```lua
-print(game:GetService("DataStoreService"):GetOrderedDataStore("ScoreLeaderboard"):RemoveAsync("123456"))
+local DSS = game:GetService("DataStoreService")
+for _, name in { "ScoreLeaderboard", "XpLeaderboard", "CoinsLeaderboard" } do
+	print(name, DSS:GetOrderedDataStore(name):RemoveAsync("123456"))
+end
 ```
-Player Level is derived from Score and is not stored.
+Player Level is derived from XP and is not stored in `PlayerData`.

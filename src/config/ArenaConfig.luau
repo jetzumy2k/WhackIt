@@ -14,6 +14,8 @@
 	  z -52 .. -20  offices (doors face the corridor, +Z)
 	  z -20 ..   0  corridor
 	  z   0 ..  34  lobby, spawn at Z = +20 (default.project.json)
+	  z  34 .. 150  outdoor campus through the lobby entrance (Campus below),
+	                walled in at x +-130, z -130 .. 150
 
 	Office centres on a floor are 34 studs apart and floors 15 studs apart,
 	more than GameConfig.HitReach plus its lag grace, so a swing can only ever
@@ -200,6 +202,52 @@ local ArenaConfig = table.freeze({
 
 	-- Lobby spawn (matches Workspace.Arena.SpawnLocation in default.project.json).
 	SpawnPosition = Vector3.new(0, 0.5, 20),
+
+	-- Hammer vending machine (Lib/StoreMachineBuilder, 2026-10-07): beside the
+	-- stairs' open (west) side, facing into the lobby (-X). Clear of the
+	-- landing in front of the bottom step, the walk from the spawn to it and
+	-- the leaderboard on the far wall (specs).
+	StoreMachine = table.freeze({
+		Position = Vector3.new(26, 0, 16), -- centre of its footprint on the floor
+		Yaw = 90, -- degrees; its front faces -X
+	}),
+
+	-- Outdoor campus (2026-10-07, Lib/CampusBuilder + Lib/OutdoorBuilder): reached
+	-- through an entrance in the middle of the lobby's glass front. Ground is at
+	-- Y = -1 (one step down from the building floor). Rectangles are XZ boxes
+	-- { MinX, MaxX, MinZ, MaxZ }; walkways are kept free of every prop (specs).
+	Campus = table.freeze({
+		EntranceWidth = 14,
+		EntranceHeight = 10,
+		GroundY = -1,
+		-- Invisible walls keep players on the grounds; a low hedge marks them.
+		Boundary = table.freeze({ MinX = -130, MaxX = 130, MinZ = -130, MaxZ = 150 }),
+		BoundaryHeight = 60,
+		-- Decorative road just outside the south boundary.
+		StreetNorthZ = 160,
+		StreetSouthZ = 176,
+		-- Paved plaza in front of the entrance.
+		Plaza = table.freeze({ MinX = -44, MaxX = 44, MinZ = 34, MaxZ = 52 }),
+		Walkways = table.freeze({
+			-- Entrance straight south to the Stress-Relief Zone.
+			table.freeze({ MinX = -5, MaxX = 5, MinZ = 52, MaxZ = 112 }),
+			-- Cross walk from the Garden to the Coffee Corner.
+			table.freeze({ MinX = -48, MaxX = 48, MinZ = 84, MaxZ = 92 }),
+			-- Loop around the building (south legs meet the plaza).
+			table.freeze({ MinX = -100, MaxX = 100, MinZ = -66, MaxZ = -60 }),
+			table.freeze({ MinX = -100, MaxX = -94, MinZ = -66, MaxZ = 46 }),
+			table.freeze({ MinX = 94, MaxX = 100, MinZ = -66, MaxZ = 46 }),
+			table.freeze({ MinX = -100, MaxX = -44, MinZ = 40, MaxZ = 46 }),
+			table.freeze({ MinX = 44, MaxX = 100, MinZ = 40, MaxZ = 46 }),
+			-- Garden and Coffee Corner down to the cross walk's ends and the loop.
+			table.freeze({ MinX = -100, MaxX = -94, MinZ = 46, MaxZ = 88 }),
+			table.freeze({ MinX = 94, MaxX = 100, MinZ = 46, MaxZ = 88 }),
+		}),
+		-- Round areas: centre (Y = ground) and radius.
+		Garden = table.freeze({ Center = Vector3.new(-70, -1, 88), Radius = 24 }),
+		CoffeeCorner = table.freeze({ Center = Vector3.new(70, -1, 88), Radius = 22 }),
+		StressReliefZone = table.freeze({ Center = Vector3.new(0, -1, 126), Radius = 16 }),
+	}),
 
 	PlaceholderBossSize = Vector3.new(6, 8, 6),
 	PlaceholderBossColor = Color3.fromRGB(255, 120, 60),

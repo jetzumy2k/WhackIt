@@ -171,6 +171,14 @@ re-sent when custom bosses, drop rates or damage overrides change. Display only.
 | When | on data load, after every reward, purchase and equip request |
 | Client handling | display only; parsed defensively (`ProgressController`) |
 
+## `Leaderboard.Snapshot`: server -> all clients (2026-10-07)
+| | |
+|---|---|
+| Purpose | The leaderboard board's contents (docs/GAMEPLAY_RULES.md "Global leaderboard") |
+| Payload | `{ Global, Note, Tabs = { Score, Xp, Coins }, Online }`; each list holds rows `{ UserId, Name, Score?, Xp?, Coins? }` (top 10 per tab; `Online` = players in this server with loaded data) |
+| When | every `LeaderboardReadInterval` (60 s); to a joining player at once (last snapshot); to everyone ~2 s after joins, leaves and data loads |
+| Client handling | display only; parsed defensively (`LeaderboardController`). There is no client -> server leaderboard remote. |
+
 ---
 
 ## Replicated state (server-written attributes)

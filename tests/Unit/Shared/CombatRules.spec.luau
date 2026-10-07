@@ -16,6 +16,7 @@ local function hammerWith(damage: number): HammerConfig.HammerDefinition
 		Price = 0,
 		HeadColor = Color3.new(1, 1, 1),
 		HandleColor = Color3.new(1, 1, 1),
+		Style = "squeaky",
 	}
 end
 

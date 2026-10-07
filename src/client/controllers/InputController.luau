@@ -6,10 +6,15 @@
 	ignoring input already used by GUI. Tool.Activated is also listened to as a
 	backup; the cooldown means one press never swings twice.
 
-	Each swing is a full wind-up / strike / follow-through (Lib/SwingAnimator)
+	Each swing is a full wind-up / strike / impact / return (Lib/SwingAnimator)
 	that starts immediately, even for a miss. The hit request is sent at the
 	moment the hammer lands, so the boss reacts in time with the strike. Only the
 	target boss id is sent; the server decides everything else.
+
+	One swing per HitCooldown. A press in the last BUFFER_SECONDS of a swing
+	queues exactly one more swing for the moment the cooldown ends (so quick
+	clicking feels responsive); any other press during a swing is ignored, so
+	swings never stack or restart.
 ]]
 
 local Players = game:GetService("Players")
@@ -18,6 +23,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local BossConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("BossConfig"))
 local CombatRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CombatRules"))
+local GameConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("GameConfig"))
 local SwingPose = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SwingPose"))
 local GameplayController = require(script.Parent.GameplayController)
 local ProgressController = require(script.Parent.ProgressController)
@@ -43,6 +49,9 @@ local TOO_FAR_HINT = "Get closer to the boss!"
 local localPlayer = Players.LocalPlayer
 local requestHammerHit: RemoteEvent
 local lastSwingAt: number? = nil
+-- A press this close to the end of a swing is kept for the next one.
+local BUFFER_SECONDS = 0.12
+local swingQueued = false
 -- The whoosh plays as the hammer starts coming down, not on the click.
 local WHOOSH_PROGRESS = 0.38
 local hookedTools: { [Tool]: boolean } = {}
@@ -132,8 +141,17 @@ local function swing(): ()
 
 	local now = os.clock()
 	-- One swing per cooldown; the swing lasts exactly one cooldown, so presses
-	-- during a swing are ignored instead of cutting it short.
+	-- during a swing never cut it short or start a second one.
 	if not CombatRules.isOffCooldown(now, lastSwingAt, 0) then
+		local remaining = GameConfig.HitCooldown - (now - (lastSwingAt :: number))
+		if remaining <= BUFFER_SECONDS and not swingQueued then
+			swingQueued = true
+			-- A hair past the end, so the cooldown check above passes.
+			task.delay(remaining + 0.005, function()
+				swingQueued = false
+				swing()
+			end)
+		end
 		return
 	end
 	lastSwingAt = now

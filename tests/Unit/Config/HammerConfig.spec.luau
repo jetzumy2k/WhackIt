@@ -5,6 +5,8 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
+local HammerStyleConfig = require(ReplicatedStorage.Config.HammerStyleConfig)
+local StoreConfig = require(ReplicatedStorage.Config.StoreConfig)
 local Checks = require(ServerScriptService.Tests.Helpers.Checks)
 
 return function()
@@ -27,6 +29,19 @@ return function()
 				expect(Checks.isNonEmptyString(hammer.DisplayName)).to.equal(true)
 				expect(Checks.isNonEmptyString(hammer.Description)).to.equal(true)
 				expect(Checks.isPositiveFinite(hammer.Damage)).to.equal(true)
+			end
+		end)
+
+		it("gives every hammer a look that exists", function()
+			for _, hammer in HammerConfig.List do
+				expect(HammerStyleConfig.ById[hammer.Style]).never.to.equal(nil)
+			end
+			expect(HammerStyleConfig.ById[StoreConfig.Mystery.Style]).never.to.equal(nil)
+		end)
+
+		it("keeps every coin hammer below the Mystery Hammer's best roll", function()
+			for _, hammer in HammerConfig.List do
+				expect(hammer.Damage < StoreConfig.Mystery.DamageMax).to.equal(true)
 			end
 		end)
 

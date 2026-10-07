@@ -8,6 +8,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterGui = game:GetService("StarterGui")
+local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 local UserInputService = game:GetService("UserInputService")
 
@@ -30,6 +31,8 @@ local TOAST_COLOR = Color3.fromRGB(255, 230, 80)
 local TOAST_SECONDS = 2.5
 local SAVED_SECONDS = 2
 local SHOUT_SECONDS = 4.5
+-- A boss's short line to this player (BossVisualController) shows this long.
+local LOCAL_LINE_SECONDS = 2
 -- Boss name/HP/shout label: size in studs, and how far away it still shows
 -- (an office is 30 studs across, so this covers the room and the corridor).
 local BOSS_BAR_STUDS = Vector2.new(9, 4.2)
@@ -110,10 +113,23 @@ local function buildHud(): (ScreenGui, Frame)
 	stressConstraint.MaxSize = Vector2.new(480, 36)
 	stressConstraint.Parent = stressBar
 
+	-- The fill eases to each new value (hits and passive rises) instead of
+	-- jumping; one short tween per change, replacing the previous one.
+	local stressTween: Tween? = nil
 	local function refreshStress(): ()
 		local stress = localPlayer:GetAttribute(Attributes.Stress)
 		local value = if typeof(stress) == "number" then stress else GameConfig.StartingStress
-		setFill(stressFill, value, GameConfig.MaxStress)
+		local ratio = math.clamp(value / GameConfig.MaxStress, 0, 1)
+		if stressTween then
+			stressTween:Cancel()
+		end
+		local tween = TweenService:Create(
+			stressFill,
+			TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+			{ Size = UDim2.fromScale(ratio, 1) }
+		)
+		stressTween = tween
+		tween:Play()
 		stressLabel.Text = string.format("Stress %d / %d", math.ceil(value), GameConfig.MaxStress)
 	end
 	localPlayer:GetAttributeChangedSignal(Attributes.Stress):Connect(refreshStress)
@@ -297,6 +313,9 @@ local function buildHud(): (ScreenGui, Frame)
 	return gui, card
 end
 
+-- Boss model -> shows a local line in its speech bubble (weak keys).
+local localLineShowers: { [Model]: (text: string) -> () } = setmetatable({}, { __mode = "k" }) :: any
+
 local attachBossBar: (model: Model, billboardParent: Instance) -> ()
 function attachBossBar(model: Model, billboardParent: Instance): ()
 	local body = model.PrimaryPart
@@ -342,23 +361,37 @@ function attachBossBar(model: Model, billboardParent: Instance): ()
 	bubblePadding.PaddingRight = UDim.new(0, 8)
 	bubblePadding.Parent = bubble
 
-	local shownSeq = 0
+	-- Server shouts (everyone sees them) win over local lines (just this
+	-- player): a local line never covers a shout that is still showing.
+	local shown = 0
+	local shoutShowing = false
+	local function showLine(text: string, seconds: number, isShout: boolean): ()
+		bubble.Text = text
+		bubble.Visible = true
+		shoutShowing = isShout
+		shown += 1
+		local token = shown
+		task.delay(seconds, function()
+			if shown == token then
+				bubble.Visible = false
+				shoutShowing = false
+			end
+		end)
+	end
 	local function showShout(): ()
 		local text = model:GetAttribute(Attributes.ShoutText)
 		local seq = model:GetAttribute(Attributes.ShoutSeq)
 		if typeof(text) ~= "string" or typeof(seq) ~= "number" then
 			return
 		end
-		bubble.Text = text
-		bubble.Visible = true
-		shownSeq = seq
-		task.delay(SHOUT_SECONDS, function()
-			if shownSeq == seq then
-				bubble.Visible = false
-			end
-		end)
+		showLine(text, SHOUT_SECONDS, true)
 	end
 	model:GetAttributeChangedSignal(Attributes.ShoutSeq):Connect(showShout)
+	localLineShowers[model] = function(text: string)
+		if not shoutShowing then
+			showLine(text, LOCAL_LINE_SECONDS, false)
+		end
+	end
 
 	local nameLabel = makeLabel("Name", billboard)
 	nameLabel.Position = UDim2.fromScale(0, 0.52)
@@ -523,6 +556,15 @@ local function showVictoryCard(card: Frame, payload: unknown): ()
 end
 
 -- Shows a short tip; a newer tip replaces the current one. No-op before the HUD exists.
+-- Shows a boss's short line to this player only, in its speech bubble
+-- (BossVisualController). Skipped while the boss is shouting.
+function UIController.showBossLine(model: Model, text: string): ()
+	local show = localLineShowers[model]
+	if show then
+		show(text)
+	end
+end
+
 function UIController.showToast(text: string): ()
 	local toast = toastLabel
 	if toast == nil then

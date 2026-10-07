@@ -15,6 +15,9 @@ local StoreConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChil
 
 local BagController = {}
 
+-- Set once the panel exists (start); lets the Player Panel open it.
+local openPanel: (() -> ())? = nil
+
 local PANEL_COLOR = Color3.fromRGB(30, 30, 40)
 local ROW_COLOR = Color3.fromRGB(48, 48, 62)
 local TEXT_COLOR = Color3.fromRGB(255, 255, 255)
@@ -193,8 +196,20 @@ function BagController.start(): ()
 	close.Activated:Connect(function()
 		panel.Visible = false
 	end)
+	openPanel = function()
+		panel.Visible = true
+		render()
+	end
 
 	gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+end
+
+-- Opens the Bag panel (e.g. from the Player Panel). Using an item still
+-- goes through Bag.Use and the server's checks.
+function BagController.open(): ()
+	if openPanel then
+		openPanel()
+	end
 end
 
 return BagController

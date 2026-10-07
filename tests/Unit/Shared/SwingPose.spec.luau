@@ -48,6 +48,14 @@ return function()
 			end
 		end)
 
+		it("bounces back a little after impact, still out in front", function()
+			local impact = SwingPose.hammerAngle(SwingPose.at(SwingPose.IMPACT))
+			local bounce = SwingPose.hammerAngle(SwingPose.at(SwingPose.BOUNCE))
+			expect(bounce > impact).to.equal(true)
+			expect(bounce - impact < 25).to.equal(true) -- small, not a second swing
+			expect(bounce < 135).to.equal(true)
+		end)
+
 		it("raises the arm before striking", function()
 			local highest, highestAt = -math.huge, 0
 			for step = 0, 100 do

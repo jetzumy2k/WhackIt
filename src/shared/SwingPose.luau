@@ -15,7 +15,13 @@
 	~90 is straight out in front, ~180 straight up, >180 tipped back over the shoulder.
 
 	The swing starts and ends at REST (hammer carried on the shoulder); the
-	hammer is out in front only around IMPACT.
+	hammer is out in front only around IMPACT. Beats, as fractions of one
+	swing (GameConfig.HitCooldown, 0.45 s):
+	  0    -> 0.24  wind-up        arm lifts, hammer cocked back
+	  0.24 -> 0.34  anticipation   a slow extra coil at the top
+	  0.34 -> 0.5   strike         fast snap forward to IMPACT
+	  0.5  -> 0.66  impact         small bounce off the boss, then settle
+	  0.66 -> 1     return         smooth swing back onto the shoulder
 ]]
 
 export type Pose = {
@@ -38,6 +44,8 @@ local SwingPose = {}
 
 -- The hammer meets the boss here; the hit request is sent at this moment.
 SwingPose.IMPACT = 0.5
+-- Top of the small bounce off the boss just after impact.
+SwingPose.BOUNCE = 0.56
 
 local function easeOutQuad(alpha: number): number
 	return 1 - (1 - alpha) * (1 - alpha)
@@ -90,13 +98,19 @@ local KEYFRAMES: { Keyframe } = {
 		Pose = { Shoulder = 75, Elbow = 5, Grip = 0, WaistPitch = -12, WaistYaw = 10 },
 		Ease = easeInQuad,
 	},
-	-- Follow-through: a little past the target.
+	-- Impact: the hammer bounces back up a little off the boss (cartoon "boing")...
 	{
-		At = 0.62,
-		Pose = { Shoulder = 60, Elbow = 10, Grip = -5, WaistPitch = -15, WaistYaw = 12 },
+		At = SwingPose.BOUNCE,
+		Pose = { Shoulder = 86, Elbow = 8, Grip = 6, WaistPitch = -10, WaistYaw = 9 },
 		Ease = easeOutQuad,
 	},
-	-- Return: the hammer swings back up onto the shoulder.
+	-- ...and settles, still out in front, for a beat before the return.
+	{
+		At = 0.66,
+		Pose = { Shoulder = 78, Elbow = 10, Grip = 0, WaistPitch = -8, WaistYaw = 8 },
+		Ease = easeInOutSine,
+	},
+	-- Return: the hammer swings smoothly back up onto the shoulder.
 	{ At = 1, Pose = SwingPose.REST, Ease = easeInOutSine },
 }
 

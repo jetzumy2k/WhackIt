@@ -6,8 +6,12 @@ local DataConfig = table.freeze({
 	StoreName = "PlayerData",
 	KeyPrefix = "Player_", -- full key: Player_<UserId>
 
-	-- Global leaderboard (OrderedDataStore keyed by UserId, value = lifetime Score).
+	-- Global leaderboard (OrderedDataStores keyed by UserId): lifetime Score,
+	-- and since 2026-10-07 XP (shown as Level) and current Coins for the
+	-- board's Top Level / Top Coins tabs. All three are written from saved data.
 	LeaderboardStoreName = "ScoreLeaderboard",
+	XpLeaderboardStoreName = "XpLeaderboard",
+	CoinsLeaderboardStoreName = "CoinsLeaderboard",
 	LeaderboardSize = 10,
 	LeaderboardReadInterval = 60, -- seconds between refreshes of the board
 	LeaderboardWriteInterval = 120, -- seconds between saving a player's score to it

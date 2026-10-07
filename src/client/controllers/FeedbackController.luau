@@ -1,31 +1,37 @@
 --!strict
--- Hit feedback: flash, floating damage numbers, camera shake for the hitter and
--- a brief happy face on whoever landed the hit (Lib/CharacterExpression).
+-- Hit feedback: a soft flash, sparkles and impact ring (Lib/HitEffects, pooled
+-- per boss), floating damage numbers, camera shake and a "bonk" for the hitter,
+-- and a brief happy face on whoever landed the hit (Lib/CharacterExpression).
 -- Purely local visuals driven by Combat.CombatFeedback. The boss's own hit and
 -- defeat animations live in BossVisualController.
 
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 
 local GameplayController = require(script.Parent.GameplayController)
+local BossVisualController = require(script.Parent.BossVisualController)
 local CharacterExpression = require(script.Parent.Parent.Lib.CharacterExpression)
+local HitEffects = require(script.Parent.Parent.Lib.HitEffects)
 local SwingAnimator = require(script.Parent.Parent.Lib.SwingAnimator)
 
 local FeedbackController = {}
 
-local FLASH_SECONDS = 0.12
 local DAMAGE_NUMBER_SECONDS = 0.7
 local DAMAGE_NUMBER_RISE = 3
 local DAMAGE_NUMBER_MAX_DISTANCE = 60 -- studs; matches the boss HP label
 local SHAKE_SECONDS = 0.08
 local SHAKE_STRENGTH = 0.6
-local BURST_PARTICLES = 14
-local BURST_SECONDS = 1
 -- Other players' swings are shown from the start of the downswing: their hit is
 -- only known once confirmed, so replaying the wind-up would land late.
 local REMOTE_SWING_START = 0.42
+-- A short cartoon "bonk" on your own confirmed hits (built-in sound, no asset).
+local BONK_SOUND_ID = "rbxasset://sounds/action_jump_land.mp3"
+local BONK_VOLUME = 0.55
+local BONK_PITCH = 1.35
+local BONK_CRIT_PITCH = 1.6
 -- How long the hitter beams after a landed hit, and after the defeating one.
 local HAPPY_SECONDS = 0.7
 local HAPPY_DEFEAT_SECONDS = 1.5
@@ -65,16 +71,6 @@ local function parse(payload: unknown): Feedback?
 		Defeated = defeated,
 		Crit = data.Crit == true,
 	}
-end
-
-local function flash(model: Model): ()
-	local highlight = Instance.new("Highlight")
-	highlight.FillColor = Color3.new(1, 1, 1)
-	highlight.FillTransparency = 0.3
-	highlight.OutlineTransparency = 1
-	highlight.DepthMode = Enum.HighlightDepthMode.Occluded
-	highlight.Parent = model
-	Debris:AddItem(highlight, FLASH_SECONDS)
 end
 
 local function showDamageNumber(
@@ -124,24 +120,23 @@ local function showDamageNumber(
 	Debris:AddItem(billboard, DAMAGE_NUMBER_SECONDS)
 end
 
--- A short burst of sparks where the hammer meets the boss (Roblox's default
--- particle texture, so no uploaded assets).
-local function impactBurst(body: BasePart): ()
-	local attachment = Instance.new("Attachment")
-	attachment.Name = "ImpactBurst"
-	attachment.Position = Vector3.new(0, body.Size.Y / 4, 0)
-	attachment.Parent = body
-	local emitter = Instance.new("ParticleEmitter")
-	emitter.Enabled = false
-	emitter.Color = ColorSequence.new(Color3.fromRGB(255, 240, 150))
-	emitter.LightEmission = 0.8
-	emitter.Size = NumberSequence.new(0.9, 0)
-	emitter.Lifetime = NumberRange.new(0.3, 0.6)
-	emitter.Speed = NumberRange.new(12, 20)
-	emitter.SpreadAngle = Vector2.new(180, 180)
-	emitter.Parent = attachment
-	emitter:Emit(BURST_PARTICLES)
-	Debris:AddItem(attachment, BURST_SECONDS)
+-- One local Sound, reused: a new hit restarts it, so hits never pile up sounds.
+local bonkSound: Sound? = nil
+local function playBonk(crit: boolean): ()
+	local sound = bonkSound
+	if sound == nil then
+		local created = Instance.new("Sound")
+		created.Name = "HammerBonk"
+		created.SoundId = BONK_SOUND_ID
+		created.Volume = BONK_VOLUME
+		created.Parent = SoundService
+		bonkSound = created
+		sound = created
+	end
+	local bonk = sound :: Sound
+	bonk.PlaybackSpeed = if crit then BONK_CRIT_PITCH else BONK_PITCH
+	bonk.TimePosition = 0
+	bonk:Play()
 end
 
 local function shakeCamera(): ()
@@ -182,14 +177,17 @@ function FeedbackController.start(): ()
 		-- Flash the drawn monster, not the boss Model: that also holds the
 		-- invisible hitbox, which a Highlight would reveal as a white box.
 		local visual = model:FindFirstChild("Visual")
-		if visual and visual:IsA("Model") then
-			flash(visual)
-		end
+		HitEffects.play(body, if visual and visual:IsA("Model") then visual else nil, {
+			Own = isOwnHit,
+			Crit = feedback.Crit,
+			Defeated = feedback.Defeated,
+		})
 		showDamageNumber(body, feedback.Damage, isOwnHit, feedback.Crit, effects)
-		impactBurst(body)
+		BossVisualController.onConfirmedHit(model, isOwnHit, feedback.Defeated)
 		local hitter = Players:GetPlayerByUserId(feedback.HitterUserId)
 		if isOwnHit then
 			shakeCamera()
+			playBonk(feedback.Crit)
 		elseif hitter and hitter.Character then
 			SwingAnimator.play(hitter.Character, REMOTE_SWING_START)
 		end

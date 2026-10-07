@@ -1,8 +1,9 @@
 --!strict
 --[[
-	Outdoor surroundings of the office building: grass Terrain, a street with
-	sidewalk in front of the lobby, trees around the building and a city skyline
-	in the distance (seen through the office windows and the lobby glass).
+	Outdoor surroundings of the office building: grass Terrain, the walkable
+	campus (Lib/CampusBuilder, ArenaConfig.Campus), a street just outside the
+	campus boundary, a ring of trees beyond it and a city skyline in the
+	distance (seen through the office windows and the lobby glass).
 
 	Deterministic (fixed random seed) so every server looks the same. Distant
 	skyline blocks don't collide or cast shadows; players never reach them.
@@ -10,12 +11,17 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local ServerScriptService = game:GetService("ServerScriptService")
+
 local ArenaConfig = require(ReplicatedStorage.Config.ArenaConfig)
+local CampusBuilder = require(ServerScriptService.Lib.CampusBuilder)
 
 local OutdoorBuilder = {}
 
 local GROUND_SIZE = 720 -- studs across the grass area
-local STREET = { NorthZ = 48, SouthZ = 64 } -- the road runs east-west in front of the lobby
+-- The road runs east-west just south of the campus boundary.
+local STREET =
+	{ NorthZ = ArenaConfig.Campus.StreetNorthZ, SouthZ = ArenaConfig.Campus.StreetSouthZ }
 local SKYLINE = { InnerRadius = 190, OuterRadius = 300, Count = 46, Seed = 4242 }
 local TREE_SEED = 777
 
@@ -53,10 +59,10 @@ local function fillGround(terrain: Terrain): ()
 		Vector3.new(GROUND_SIZE, 4, streetDepth),
 		Enum.Material.Asphalt
 	)
-	-- Sidewalk between the lobby front and the street.
+	-- Sidewalk along the street's north side (outside the boundary hedge).
 	terrain:FillBlock(
-		CFrame.new(0, -2.8, (ArenaConfig.BuildingSouthZ + STREET.NorthZ) / 2 + 1),
-		Vector3.new(GROUND_SIZE, 4, STREET.NorthZ - ArenaConfig.BuildingSouthZ - 2),
+		CFrame.new(0, -2.8, STREET.NorthZ - 3),
+		Vector3.new(GROUND_SIZE, 4, 6),
 		Enum.Material.Concrete
 	)
 end
@@ -98,26 +104,35 @@ local function tree(parent: Instance, position: Vector3, height: number): ()
 	crown.Shape = Enum.PartType.Ball
 end
 
+local function insideCampus(position: Vector3, margin: number): boolean
+	local box = ArenaConfig.Campus.Boundary
+	return position.X > box.MinX - margin
+		and position.X < box.MaxX + margin
+		and position.Z > box.MinZ - margin
+		and position.Z < box.MaxZ + margin
+end
+
 local function trees(parent: Instance): ()
 	local random = Random.new(TREE_SEED)
 	local half = ArenaConfig.BuildingHalfWidth
-	-- Along the sidewalk in front of the lobby, both sides of the entrance.
+	-- Along the plaza's south edge, outside the plaza and the loop walkway.
 	for x = -half + 6, half - 6, 18 do
-		if math.abs(x) > 20 then
+		if math.abs(x) > 50 then
 			tree(
 				parent,
-				Vector3.new(x, -1, ArenaConfig.BuildingSouthZ + 8),
+				Vector3.new(x, -1, ArenaConfig.Campus.Plaza.MaxZ - 2),
 				random:NextNumber(9, 12)
 			)
 		end
 	end
-	-- A loose ring of trees behind and beside the building.
-	for _ = 1, 40 do
+	-- A loose ring of trees beyond the campus boundary (it plants its own inside).
+	for _ = 1, 48 do
 		local angle = random:NextNumber(0, math.pi * 2)
-		local radius = random:NextNumber(110, 170)
+		local radius = random:NextNumber(150, 220)
 		local position = Vector3.new(math.cos(angle) * radius, -1, math.sin(angle) * radius - 10)
-		-- Keep the street clear.
-		if position.Z < STREET.NorthZ - 4 or position.Z > STREET.SouthZ + 4 then
+		-- Keep the campus and the street clear.
+		local onStreet = position.Z > STREET.NorthZ - 8 and position.Z < STREET.SouthZ + 4
+		if not insideCampus(position, 6) and not onStreet then
 			tree(parent, position, random:NextNumber(10, 16))
 		end
 	end
@@ -155,9 +170,11 @@ function OutdoorBuilder.build(parent: Instance, terrain: Terrain): Folder
 	local folder = Instance.new("Folder")
 	folder.Name = "Outdoors"
 	fillGround(terrain)
+	CampusBuilder.paint(terrain)
 	streetMarkings(folder)
 	trees(folder)
 	skyline(folder)
+	CampusBuilder.build(folder)
 	folder.Parent = parent
 	return folder
 end

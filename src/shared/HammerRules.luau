@@ -25,6 +25,7 @@ export type HammerStats = {
 	CritDamage: number, -- extra crit damage as a fraction (0.08 = +8 %)
 	HeadColor: Color3,
 	HandleColor: Color3,
+	Style: string, -- Config/HammerStyleConfig look
 }
 
 local HammerRules = {}
@@ -86,6 +87,7 @@ function HammerRules.resolve(
 			CritDamage = roll.CritDamagePercent / 100,
 			HeadColor = mystery.HeadColor,
 			HandleColor = mystery.HandleColor,
+			Style = mystery.Style,
 		}
 	end
 	local hammer = HammerConfig.ById[hammerId]
@@ -100,6 +102,7 @@ function HammerRules.resolve(
 		CritDamage = 0,
 		HeadColor = hammer.HeadColor,
 		HandleColor = hammer.HandleColor,
+		Style = hammer.Style,
 	}
 end
 

@@ -4,35 +4,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BossConfig = require(ReplicatedStorage.Config.BossConfig)
 local BossShoutConfig = require(ReplicatedStorage.Config.BossShoutConfig)
+local Checks = require(game:GetService("ServerScriptService").Tests.Helpers.Checks)
 
 local MAX_LINE_LENGTH = 60
 
--- Words that must never appear in a boss line (whole words, any case). The
--- game is for all ages; bosses can be grumpy but never vulgar.
-local BLOCKED_WORDS = {
-	"damn",
-	"hell",
-	"crap",
-	"stupid",
-	"idiot",
-	"dumb",
-	"shut up",
-	"hate",
-	"kill",
-	"die",
-	"loser",
-	"moron",
-	"sucks",
-}
-
 local function containsBlocked(line: string): string?
-	local lower = " " .. string.lower(line):gsub("[^%a ]", " ") .. " "
-	for _, word in BLOCKED_WORDS do
-		if string.find(lower, " " .. word .. " ", 1, true) then
-			return word
-		end
-	end
-	return nil
+	return Checks.blockedWord(line)
 end
 
 return function()

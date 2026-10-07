@@ -467,14 +467,36 @@ local function buildCommonAreas(parent: Instance): ()
 		end
 	end
 
-	-- Lobby front: a glass wall between solid bands, facing the street.
-	part(
-		area,
-		"LobbyFrontLow",
-		Vector3.new(LOBBY.HalfWidth * 2, 2, WALL_THICKNESS),
-		Vector3.new(0, 1, southZ),
-		WALL_COLOR
-	)
+	-- Lobby front: a glass wall between solid bands, facing the campus, with
+	-- an open entrance in the middle (ArenaConfig.Campus) straight ahead of the
+	-- spawn. Glass on both sides, a glass transom above the opening.
+	local entrance = ArenaConfig.Campus.EntranceWidth
+	local entranceHeight = ArenaConfig.Campus.EntranceHeight
+	local sideWidth = LOBBY.HalfWidth - entrance / 2
+	for _, side in { -1, 1 } do
+		local sideX = side * (entrance / 2 + sideWidth / 2)
+		part(
+			area,
+			"LobbyFrontLow",
+			Vector3.new(sideWidth, 2, WALL_THICKNESS),
+			Vector3.new(sideX, 1, southZ),
+			WALL_COLOR
+		)
+		glass(
+			area,
+			"LobbyFrontGlass",
+			Vector3.new(sideWidth, roofY - 6, 0.4),
+			Vector3.new(sideX, 2 + (roofY - 6) / 2, southZ)
+		)
+		part(
+			area,
+			"EntranceFrame",
+			Vector3.new(0.8, entranceHeight, WALL_THICKNESS + 0.2),
+			Vector3.new(side * (entrance / 2 + 0.4), entranceHeight / 2, southZ),
+			METAL,
+			Enum.Material.Metal
+		)
+	end
 	part(
 		area,
 		"LobbyFrontHigh",
@@ -482,11 +504,26 @@ local function buildCommonAreas(parent: Instance): ()
 		Vector3.new(0, roofY - 2, southZ),
 		WALL_COLOR
 	)
+	local transomHeight = roofY - 4 - entranceHeight
 	glass(
 		area,
-		"LobbyFrontGlass",
-		Vector3.new(LOBBY.HalfWidth * 2, roofY - 6, 0.4),
-		Vector3.new(0, 2 + (roofY - 6) / 2, southZ)
+		"EntranceTransom",
+		Vector3.new(entrance, transomHeight, 0.4),
+		Vector3.new(0, entranceHeight + transomHeight / 2, southZ)
+	)
+	-- Inside, over the opening, facing the lobby (-Z).
+	local outside = part(
+		area,
+		"EntranceSign",
+		Vector3.new(entrance, 2, 0.4),
+		Vector3.new(0, entranceHeight + 1.2, southZ - 0.6),
+		Color3.fromRGB(60, 70, 110)
+	)
+	sign(
+		outside,
+		Enum.NormalId.Front,
+		"OUTSIDE: Garden - Coffee - Stress-Relief Zone",
+		Color3.fromRGB(255, 220, 120)
 	)
 
 	buildStairs(area)

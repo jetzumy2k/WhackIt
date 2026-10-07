@@ -1,7 +1,16 @@
 # Admin panel
 
-Added 2026-10-06. Admins get a purple **Admin** button above the Store button (tabs: Players, Bosses, Drops,
-Moderation). Store opening hours
+Added 2026-10-06. Admins get a purple **Admin** button above the Store button, or press **F2**. The panel
+(redesigned 2026-10-07, `Lib/PanelKit`) is a wide window with a sidebar (a tab strip on top on
+narrow screens and phones): **Dashboard, Players, Bosses, Drop Rates, Moderation**. Each page is a
+set of cards; some long ones start folded (click a card's title to open or fold it). Pages scroll
+instead of shrinking their text, and keep their scroll position when the server sends an update.
+Close with X or F2. Admins can also open it from the Player Panel's Game page.
+
+**Dashboard** (read only): server players / max, uptime, place version and server id; custom
+bosses in use, how many players have admin damage, the current buff drop chance (Lucky or normal);
+and everyone in the server with their level and score, each with **Manage** (opens Players with
+them selected) and **Moderate** (opens Moderation with them selected). Store opening hours
 stay in the Store panel's Admin tab (docs/STORE.md).
 
 **Who is an admin** (`Lib/AdminAuth`, one rule for the whole game): the experience owner (or the
