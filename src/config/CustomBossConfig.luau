@@ -36,6 +36,13 @@ local CustomBossConfig = table.freeze({
 
 	-- Each reward-qualifying player gets one random 30-minute store boost.
 	BuffDropSeconds = 30 * 60,
+
+	-- What happens after a defeat. "Continuous" respawns after
+	-- GameConfig.BossRespawnDelay like an office boss; "Once" is beaten once,
+	-- in any server, and then stays gone (the admin can delete it to free the slot).
+	RespawnModes = table.freeze({ "Continuous", "Once" }),
+	-- Saved bosses from before respawn modes existed keep respawning.
+	DefaultRespawnMode = "Continuous",
 })
 
 return CustomBossConfig

@@ -101,4 +101,19 @@ return function()
 			)
 		end)
 	end)
+
+	describe("RewardRules.dropsBuff", function()
+		it("drops from an office boss only when the roll is below the chance", function()
+			local office = boss(100, 10, 10)
+			expect(RewardRules.dropsBuff(office, 0.29, 0.3)).to.equal(true)
+			expect(RewardRules.dropsBuff(office, 0.3, 0.3)).to.equal(false)
+			expect(RewardRules.dropsBuff(office, 0, 0)).to.equal(false)
+		end)
+
+		it("always drops from a custom boss", function()
+			local custom = table.clone(boss(100, 10, 10)) :: any
+			custom.Custom = true
+			expect(RewardRules.dropsBuff(custom, 0.999999, 0)).to.equal(true)
+		end)
+	end)
 end

@@ -111,6 +111,10 @@
             "$className": "RemoteEvent"
           },
 
+          "SetDropRates": {
+            "$className": "RemoteEvent"
+          },
+
           "Moderate": {
             "$className": "RemoteEvent"
           },

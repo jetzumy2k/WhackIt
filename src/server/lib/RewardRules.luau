@@ -7,7 +7,9 @@
 	    (at least 1 score and 1 coin);
 	  * coins get the player's Zen Level bonus;
 	  * only players with at least MinRewardDamageShare "qualify": their defeat
-	    counts toward unlocks and they get the stress bonus.
+	    counts toward unlocks and they get the stress bonus;
+	  * qualifying players may get a store boost: always from a custom boss,
+	    otherwise with the current drop chance (Shared/DropRateRules).
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -58,6 +60,19 @@ function RewardRules.defeatReward(
 		Qualifies = share + 1e-9 >= GameConfig.MinRewardDamageShare,
 		LastHit = isLastHitter,
 	}
+end
+
+-- Whether a qualifying player gets a buff drop, for a roll in [0, 1) and the
+-- office boss drop chance in effect.
+function RewardRules.dropsBuff(
+	boss: BossConfig.BossDefinition,
+	roll: number,
+	chance: number
+): boolean
+	if boss.Custom then
+		return true
+	end
+	return roll < chance
 end
 
 return RewardRules

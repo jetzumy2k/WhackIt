@@ -13,6 +13,9 @@ local CustomBossConfig = require(ReplicatedStorage.Config.CustomBossConfig)
 local StoreConfig = require(ReplicatedStorage.Config.StoreConfig)
 local Validate = require(script.Parent.Validate)
 
+-- "Continuous" respawns after every defeat; "Once" is gone after its first.
+export type RespawnMode = "Continuous" | "Once"
+
 -- What the admin asks for. The position is never sent: the server uses where
 -- the admin is standing.
 export type Spec = {
@@ -21,6 +24,7 @@ export type Spec = {
 	MaxHealth: number,
 	ScoreReward: number,
 	CoinReward: number,
+	RespawnMode: RespawnMode,
 }
 
 -- One saved custom boss (DataStore), shared by every server.
@@ -35,6 +39,8 @@ export type Record = {
 	Y: number, -- centre of the boss body
 	Z: number,
 	CreatedBy: number,
+	RespawnMode: RespawnMode,
+	Defeated: boolean, -- a "Once" boss that has been beaten (in any server)
 }
 
 -- A random store boost dropped by a custom boss; Key is the store product
@@ -53,6 +59,15 @@ end
 
 function CustomBossRules.isLookId(value: string): boolean
 	return table.find(CustomBossConfig.LookIds, value) ~= nil
+end
+
+function CustomBossRules.parseRespawnMode(raw: unknown): RespawnMode?
+	if raw == "Continuous" then
+		return "Continuous"
+	elseif raw == "Once" then
+		return "Once"
+	end
+	return nil
 end
 
 -- Trims spaces and collapses runs of whitespace, so "  Bob   Boss " -> "Bob Boss".
@@ -105,14 +120,20 @@ function CustomBossRules.parseSpec(raw: unknown): (Spec?, string?)
 		return nil, string.format("Coin reward must be 0 to %d.", CustomBossConfig.MaxCoinReward)
 	end
 
-	return {
+	local respawnMode = CustomBossRules.parseRespawnMode(data.RespawnMode)
+	if respawnMode == nil then
+		return nil, "Pick a respawn option."
+	end
+
+	local spec: Spec = {
 		Name = name,
 		LookId = lookId,
 		MaxHealth = health,
 		ScoreReward = score,
 		CoinReward = coins,
-	},
-		nil
+		RespawnMode = respawnMode :: RespawnMode,
+	}
+	return spec, nil
 end
 
 -- Validates one saved record (the DataStore is not trusted either).
@@ -133,12 +154,25 @@ function CustomBossRules.parseRecord(raw: unknown): Record?
 		MaxHealth = data.MaxHealth,
 		ScoreReward = data.ScoreReward,
 		CoinReward = data.CoinReward,
+		-- Records saved before respawn modes existed have neither field.
+		RespawnMode = if data.RespawnMode == nil
+			then CustomBossConfig.DefaultRespawnMode
+			else data.RespawnMode,
 	})
+	local defeated = if data.Defeated == nil then false else Validate.boolean(data.Defeated)
 	local x = Validate.number(data.X, -MAX_COORDINATE, MAX_COORDINATE)
 	local y = Validate.number(data.Y, -MAX_COORDINATE, MAX_COORDINATE)
 	local z = Validate.number(data.Z, -MAX_COORDINATE, MAX_COORDINATE)
 	local createdBy = Validate.integer(data.CreatedBy, 0, 2 ^ 53)
-	if name == nil or spec == nil or x == nil or y == nil or z == nil or createdBy == nil then
+	if
+		name == nil
+		or spec == nil
+		or x == nil
+		or y == nil
+		or z == nil
+		or createdBy == nil
+		or defeated == nil
+	then
 		return nil
 	end
 	return {
@@ -152,6 +186,9 @@ function CustomBossRules.parseRecord(raw: unknown): Record?
 		Y = y,
 		Z = z,
 		CreatedBy = createdBy,
+		RespawnMode = spec.RespawnMode,
+		-- Only a "Once" boss can be spent.
+		Defeated = defeated and spec.RespawnMode == "Once",
 	}
 end
 

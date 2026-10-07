@@ -1,6 +1,7 @@
 # Admin panel
 
-Added 2026-10-06. Admins get a purple **Admin** button above the Store button. Store opening hours
+Added 2026-10-06. Admins get a purple **Admin** button above the Store button (tabs: Players, Bosses, Drops,
+Moderation). Store opening hours
 stay in the Store panel's Admin tab (docs/STORE.md).
 
 **Who is an admin** (`Lib/AdminAuth`, one rule for the whole game): the experience owner (or the
@@ -27,15 +28,22 @@ public figures, protected groups or real-world conflicts. Names go through Roblo
 and a filtered (changed) name is refused.
 
 - **Create boss here:** name (1 to 30 characters), look (the model, colours and shouts of one of the
-  10 office bosses), HP (10 to 1,000,000), score reward (0 to 10,000) and coin reward (0 to 2,000).
+  10 office bosses), **respawn** (see below), HP (10 to 1,000,000), score reward (0 to 10,000) and
+  coin reward (0 to 2,000).
   The boss appears **where you stand**: the server finds the floor under your character. It must be
   at least 14 studs from every other boss, so one swing can't reach two.
 - **Move here** moves it to where you now stand. **Delete** removes it (click twice to confirm).
 - Up to 20 custom bosses. They're saved in DataStore `CustomBosses` and show up in **every server**
   within a few seconds (MessagingService), or within 5 minutes if a message is missed.
-- In the game they're open to everyone, take normal damage, respawn 5 s after defeat like the office
-  bosses, and share score and coins by damage like any boss. They don't count toward unlocking office
-  bosses.
+- **Respawn** (added 2026-10-07):
+  - **Respawns** (`Continuous`): back at full HP 5 s after every defeat, like the office bosses.
+  - **One time** (`Once`): the first defeat in **any** server ends it. It's saved as defeated, no
+    server spawns it again, and the list shows it as "defeated". A server that was already fighting
+    it when another server won may still finish that fight (and reward it). A defeated boss still
+    uses one of the 20 slots until you **Delete** it.
+  - Bosses saved before this option existed keep respawning.
+- In the game they're open to everyone, take normal damage, and share score and coins by damage like
+  any boss. They don't count toward unlocking office bosses.
 - **Buff drop:** every player who dealt at least 10 % of its HP gets one random 30-minute store
   boost **in their Bag**, picked evenly from the boost strengths the store sells (each XP / Damage /
   Crit Damage strength with a Developer Product id; all of them if none is on sale yet). They use it
@@ -44,6 +52,23 @@ and a filtered (changed) name is refused.
 
 Note: high score or coin rewards on an easy custom boss let players farm Score, which also feeds the
 global leaderboard. Keep rewards in line with the office bosses (docs/GAMEPLAY_RULES.md).
+
+## Drops tab: office boss buff drops
+Added 2026-10-07. Sets the chance that beating an **office boss** drops a random 30-minute store boost
+into each qualifying player's Bag (custom bosses always drop one). Chances are probabilities from 0 to 1
+(0.30 = 30 %); each roll uses a random chance between Min and Max of the range in effect.
+
+| Field | Default | Meaning |
+|---|---|---|
+| Normal Min / Max | 0.0005 / 0.10 | chance range most of the time |
+| Lucky Min / Max | 0.10 / 0.30 | chance range during the Lucky window |
+| Every (minutes) | 120 | how often the Lucky window starts, counted in UTC from midnight (10 to 1440) |
+| Lasts (minutes) | 10 | how long it stays on (1 to Every - 1) |
+
+The tab shows whether the Lucky window is on now and how long until it changes. **Save for all
+servers** stores the values in DataStore `DropRates` and every server picks them up within seconds
+(or within 5 minutes if a message is missed). **Reset to defaults** (click twice) goes back to
+`src/config/DropRateConfig.luau`. In Studio without API access, saving fails with a toast.
 
 ## Moderation tab
 Bans use Roblox's own ban system (`Players:BanAsync`), so they:

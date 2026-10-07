@@ -6,9 +6,11 @@
 	defeat count toward unlocking the next boss.
 
 	XP is the score earned times GameConfig.XpRewardMultiplier and any XP boost.
-	Admin-created (custom) bosses don't count toward unlocks; instead each
-	qualifying player gets a random 30-minute store boost in their Bag
-	(Shared/CustomBossRules, Shared/BagRules).
+	Admin-created (custom) bosses don't count toward unlocks.
+	Each qualifying player may get a random 30-minute store boost in their Bag
+	(Shared/CustomBossRules, Shared/BagRules): always from a custom boss, and
+	from an office boss with a chance picked at random in the range in effect
+	(DropRateService: Normal, or Lucky during the Lucky window).
 	Players who hit this boss life with admin-set damage get nothing.
 
 	Idempotent: BossState.markRewarded lets each player be rewarded at most once
@@ -23,6 +25,7 @@ local BossState = require(ServerScriptService.Lib.BossState)
 local BuffService = require(script.Parent.BuffService)
 local CustomBossConfig = require(ReplicatedStorage.Config.CustomBossConfig)
 local CustomBossRules = require(ReplicatedStorage.Shared.CustomBossRules)
+local DropRateService = require(script.Parent.DropRateService)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
 local PlayerDataService = require(script.Parent.PlayerDataService)
@@ -43,7 +46,7 @@ export type Grant = {
 	LastHit: boolean,
 	StressRelieved: number,
 	UnlockedBossIds: { string }, -- bosses this defeat newly unlocked
-	BuffDrop: CustomBossRules.Drop?, -- custom bosses: the boost this player got
+	BuffDrop: CustomBossRules.Drop?, -- the store boost this player got, if any
 }
 
 local KIND_TEXT: { [string]: string } = { Xp = "XP", Damage = "Damage", CritDamage = "Crit Damage" }
@@ -112,13 +115,15 @@ function RewardService.grantDefeat(player: Player, state: BossState.BossState): 
 	local buffDrop: CustomBossRules.Drop? = nil
 	if reward.Qualifies then
 		data.TotalBossesDefeated += 1
-		if definition.Custom then
+		if not definition.Custom then
+			data.BossDefeats[definition.Id] = (data.BossDefeats[definition.Id] or 0) + 1
+		end
+		local chance = DropRateService.chance(dropRandom:NextNumber())
+		if RewardRules.dropsBuff(definition, dropRandom:NextNumber(), chance) then
 			buffDrop = CustomBossRules.pickDrop(DROP_OPTIONS, dropRandom:NextNumber())
 			if buffDrop then
 				BagRules.add(data.Bag, buffDrop.Key, 1)
 			end
-		else
-			data.BossDefeats[definition.Id] = (data.BossDefeats[definition.Id] or 0) + 1
 		end
 		-- Last, so a Zen moment it may trigger sees the updated coins.
 		stressRelieved = StressService.relieve(player, GameConfig.DefeatStressRelief)

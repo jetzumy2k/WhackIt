@@ -13,6 +13,7 @@ local function validSpec(): { [string]: unknown }
 		MaxHealth = 500,
 		ScoreReward = 300,
 		CoinReward = 50,
+		RespawnMode = "Continuous",
 	}
 end
 
@@ -84,6 +85,20 @@ return function()
 			expect((CustomBossRules.parseSpec(look))).to.equal(nil)
 		end)
 
+		it("accepts both respawn modes and rejects anything else", function()
+			local once = validSpec()
+			once.RespawnMode = "Once"
+			expect(((CustomBossRules.parseSpec(once)) :: CustomBossRules.Spec).RespawnMode).to.equal(
+				"Once"
+			)
+			local bads: { unknown } = { nil, "Forever", 1, true }
+			for _, bad in bads do
+				local spec = validSpec()
+				spec.RespawnMode = bad
+				expect((CustomBossRules.parseSpec(spec))).to.equal(nil)
+			end
+		end)
+
 		it("rejects out-of-range, fractional and non-finite numbers", function()
 			local bads: { unknown } =
 				{ 0, CustomBossConfig.MaxHealth + 1, 12.5, 0 / 0, math.huge, "500" }
@@ -106,6 +121,35 @@ return function()
 			local record = CustomBossRules.parseRecord(validRecord("custom_1_1000"))
 			expect(record).never.to.equal(nil)
 			expect((record :: CustomBossRules.Record).Z).to.equal(-20)
+		end)
+
+		it("reads records saved before respawn modes as continuous, not defeated", function()
+			local old = validRecord("custom_1_1000")
+			old.RespawnMode = nil
+			local record = CustomBossRules.parseRecord(old) :: CustomBossRules.Record
+			expect(record).never.to.equal(nil)
+			expect(record.RespawnMode).to.equal(CustomBossConfig.DefaultRespawnMode)
+			expect(record.Defeated).to.equal(false)
+		end)
+
+		it("keeps Defeated only on one-time bosses and rejects a bad flag", function()
+			local once = validRecord("custom_1_1000")
+			once.RespawnMode = "Once"
+			once.Defeated = true
+			expect((CustomBossRules.parseRecord(once) :: CustomBossRules.Record).Defeated).to.equal(
+				true
+			)
+			local continuous = validRecord("custom_1_1000")
+			continuous.Defeated = true
+			expect((CustomBossRules.parseRecord(continuous) :: CustomBossRules.Record).Defeated).to.equal(
+				false
+			)
+			local bad = validRecord("custom_1_1000")
+			bad.Defeated = "yes"
+			expect(CustomBossRules.parseRecord(bad)).to.equal(nil)
+			local badMode = validRecord("custom_1_1000")
+			badMode.RespawnMode = "Forever"
+			expect(CustomBossRules.parseRecord(badMode)).to.equal(nil)
 		end)
 
 		it("rejects records with a non-custom id or a bad position", function()

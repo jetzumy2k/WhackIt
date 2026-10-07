@@ -7,16 +7,22 @@
 	Tabs:
 	  Players     set level, set damage, unlock / lock bosses for anyone here
 	  Bosses      create a custom boss where you stand; move or delete them
+	  Drops       office boss buff drop chances and the Lucky window (all servers)
 	  Moderation  ban, suspend or unban by player or username
 	Store opening hours stay in the Store panel's Admin tab.
 ]]
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local BossConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("BossConfig"))
 local CustomBossConfig =
 	require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("CustomBossConfig"))
+local DropRateConfig =
+	require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("DropRateConfig"))
+local DropRateRules =
+	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("DropRateRules"))
 
 local AdminController = {}
 
@@ -32,10 +38,12 @@ local MUTED_COLOR = Color3.fromRGB(90, 90, 100)
 local MIN_TOUCH_SIZE = 44
 local CONFIRM_SECONDS = 3
 local ALL_BOSSES = "*"
+local RESPAWN_TEXT: { [string]: string } = { Continuous = "Respawns", Once = "One time" }
 
 local TABS = {
 	{ Id = "Players", Label = "Players" },
 	{ Id = "Bosses", Label = "Bosses" },
+	{ Id = "Drops", Label = "Drops" },
 	{ Id = "Moderation", Label = "Moderation" },
 }
 
@@ -46,6 +54,8 @@ type CustomBoss = {
 	MaxHealth: number,
 	ScoreReward: number,
 	CoinReward: number,
+	RespawnMode: string,
+	Defeated: boolean,
 }
 
 type Choice = { Key: string, Text: string }
@@ -53,6 +63,7 @@ type Choice = { Key: string, Text: string }
 type State = {
 	IsAdmin: boolean,
 	CustomBosses: { CustomBoss },
+	DropRates: DropRateRules.Settings?,
 	DamageOverrides: { [string]: number },
 	MaxSetLevel: number,
 	MaxSetDamage: number,
@@ -109,6 +120,7 @@ local function parseState(payload: unknown): State?
 	local state: State = {
 		IsAdmin = data.IsAdmin == true,
 		CustomBosses = {},
+		DropRates = (DropRateRules.parse(data.DropRates)),
 		DamageOverrides = {},
 		MaxSetLevel = numberField(data, "MaxSetLevel"),
 		MaxSetDamage = numberField(data, "MaxSetDamage"),
@@ -126,6 +138,8 @@ local function parseState(payload: unknown): State?
 					MaxHealth = numberField(boss, "MaxHealth"),
 					ScoreReward = numberField(boss, "ScoreReward"),
 					CoinReward = numberField(boss, "CoinReward"),
+					RespawnMode = stringField(boss, "RespawnMode"),
+					Defeated = boss.Defeated == true,
 				})
 			end
 		end
@@ -159,6 +173,20 @@ local function parseState(payload: unknown): State?
 	return state
 end
 
+-- Drop rate form fields, in the order of DropRateRules.Settings.
+local DROP_FIELDS = {
+	"NormalMin",
+	"NormalMax",
+	"LuckyMin",
+	"LuckyMax",
+	"LuckyEveryMinutes",
+	"LuckyLastsMinutes",
+}
+
+local function percentText(chance: number): string
+	return string.format("%g%%", chance * 100)
+end
+
 local function bossName(bossId: string): string
 	local boss = BossConfig.ById[bossId]
 	return if boss then boss.DisplayName else bossId
@@ -177,6 +205,7 @@ function AdminController.start(): ()
 	local createBossRemote = remote("CreateBoss")
 	local editBossRemote = remote("EditBoss")
 	local moderateRemote = remote("Moderate")
+	local setDropRatesRemote = remote("SetDropRates")
 	local stateRemote = remote("State")
 
 	local state: State? = nil
@@ -195,9 +224,13 @@ function AdminController.start(): ()
 	local picks: { [string]: number } = {
 		UnlockIndex = 1,
 		LookIndex = 1,
+		RespawnIndex = 1,
 		DurationIndex = 1,
 		ReasonIndex = 1,
 	}
+	-- Drop rate texts as last sent by the server: a field the admin hasn't
+	-- edited follows the server, an edited one keeps the admin's text.
+	local serverDropTexts: { [string]: string } = {}
 	local targetUserId = localPlayer.UserId
 	local modUserId = 0
 
@@ -527,10 +560,10 @@ function AdminController.start(): ()
 	local function bossesPage(current: State): ()
 		note(
 			string.format(
-				"Fictional everyday annoyances only: no real people or groups. The boss appears where you stand, in every server. Each player who deals 10%% of its HP gets a random %d-minute store boost.",
+				"Fictional everyday annoyances only: no real people or groups. The boss appears where you stand, in every server. Each player who deals 10%% of its HP gets a random %d-minute store boost. A one-time boss is gone for good after its first defeat.",
 				CustomBossConfig.BuffDropSeconds // 60
 			),
-			60
+			76
 		)
 		heading("New boss")
 		local nameRow = row()
@@ -547,6 +580,11 @@ function AdminController.start(): ()
 		cycler(lookRow, "LookIndex", #CustomBossConfig.LookIds, function(index)
 			return bossName(CustomBossConfig.LookIds[index])
 		end, 0.55, render)
+		local respawnRow = row()
+		rowLabel(respawnRow, "Respawn", 0.25)
+		cycler(respawnRow, "RespawnIndex", #CustomBossConfig.RespawnModes, function(index)
+			return RESPAWN_TEXT[CustomBossConfig.RespawnModes[index]] or "-"
+		end, 0.55, render)
 		local statsRow = row()
 		rowLabel(statsRow, "HP", 0.1)
 		rowBox(statsRow, "Health", "HP", 0.23, true)
@@ -562,6 +600,7 @@ function AdminController.start(): ()
 				MaxHealth = tonumber(texts.Health) or 0,
 				ScoreReward = tonumber(texts.Score) or 0,
 				CoinReward = tonumber(texts.Coins) or 0,
+				RespawnMode = CustomBossConfig.RespawnModes[picks.RespawnIndex],
 			})
 		end)
 
@@ -579,7 +618,15 @@ function AdminController.start(): ()
 			local bossRow = row()
 			rowLabel(
 				bossRow,
-				string.format("%s  (%d HP, %s)", boss.Name, boss.MaxHealth, bossName(boss.LookId)),
+				string.format(
+					"%s  (%d HP, %s, %s)",
+					boss.Name,
+					boss.MaxHealth,
+					bossName(boss.LookId),
+					if boss.Defeated
+						then "defeated"
+						else string.lower(RESPAWN_TEXT[boss.RespawnMode] or "respawns")
+				),
 				0.56
 			)
 			rowButton(bossRow, "Move here", TAB_ACTIVE_COLOR, 0.22).Activated:Connect(function()
@@ -589,6 +636,82 @@ function AdminController.start(): ()
 				editBossRemote:FireServer("Delete", boss.Id)
 			end)
 		end
+	end
+
+	local function dropsPage(current: State): ()
+		local default = DropRateConfig.Default
+		note(
+			string.format(
+				"Office bosses only (custom bosses always drop). Chances are 0 to 1: 0.30 = 30%%. Each qualifying player's roll uses a random chance between Min and Max. The Lucky range applies for 'Lasts' minutes at the start of every 'Every' minutes (UTC), in every server. Defaults: normal %s to %s, lucky %s to %s for %d min every %d min.",
+				percentText(default.NormalMin),
+				percentText(default.NormalMax),
+				percentText(default.LuckyMin),
+				percentText(default.LuckyMax),
+				default.LuckyLastsMinutes,
+				default.LuckyEveryMinutes
+			),
+			96
+		)
+		local rates = current.DropRates
+		if rates then
+			local lucky = DropRateRules.isLucky(rates, Workspace:GetServerTimeNow())
+			local minutes = math.ceil(
+				DropRateRules.secondsUntilChange(rates, Workspace:GetServerTimeNow()) / 60
+			)
+			note(
+				if lucky
+					then string.format(
+						"Lucky window is ON now (%s to %s), ends in about %d min.",
+						percentText(rates.LuckyMin),
+						percentText(rates.LuckyMax),
+						minutes
+					)
+					else string.format(
+						"Normal chance now (%s to %s). Next Lucky window in about %d min.",
+						percentText(rates.NormalMin),
+						percentText(rates.NormalMax),
+						minutes
+					),
+				40
+			)
+		else
+			note("Waiting for the server's drop rates...", 24)
+		end
+
+		heading("Normal chance (most of the time)")
+		local normalRow = row()
+		rowLabel(normalRow, "Min", 0.15)
+		rowBox(normalRow, "NormalMin", "e.g. 0.0005", 0.35, false)
+		rowLabel(normalRow, "Max", 0.15)
+		rowBox(normalRow, "NormalMax", "e.g. 0.10", 0.35, false)
+		heading("Lucky chance (during the Lucky window)")
+		local luckyRow = row()
+		rowLabel(luckyRow, "Min", 0.15)
+		rowBox(luckyRow, "LuckyMin", "e.g. 0.10", 0.35, false)
+		rowLabel(luckyRow, "Max", 0.15)
+		rowBox(luckyRow, "LuckyMax", "e.g. 0.30", 0.35, false)
+		heading("Lucky window (minutes)")
+		local windowRow = row()
+		rowLabel(windowRow, "Every", 0.15)
+		rowBox(windowRow, "LuckyEveryMinutes", "e.g. 120", 0.35, true)
+		rowLabel(windowRow, "Lasts", 0.15)
+		rowBox(windowRow, "LuckyLastsMinutes", "e.g. 10", 0.35, true)
+
+		local saveRow = row()
+		rowButton(saveRow, "Save for all servers", GOOD_COLOR, 0.5).Activated:Connect(function()
+			local payload: { [string]: number? } = {}
+			for _, key in DROP_FIELDS do
+				payload[key] = tonumber(texts[key])
+			end
+			setDropRatesRemote:FireServer(payload)
+		end)
+		confirmButton(rowButton(saveRow, "Reset to defaults", DANGER_COLOR, 0.5), function()
+			-- Let every field follow the defaults the server sends back.
+			for _, key in DROP_FIELDS do
+				texts[key] = nil
+			end
+			setDropRatesRemote:FireServer("Reset")
+		end)
 	end
 
 	local function moderationPage(current: State): ()
@@ -707,6 +830,8 @@ function AdminController.start(): ()
 			playersPage(current)
 		elseif activeTab == "Bosses" then
 			bossesPage(current)
+		elseif activeTab == "Drops" then
+			dropsPage(current)
 		else
 			moderationPage(current)
 		end
@@ -716,7 +841,7 @@ function AdminController.start(): ()
 		local tabButton = button(tab.Id, tabBar)
 		tabButton.LayoutOrder = tabOrder
 		tabButton.Text = tab.Label
-		tabButton.Size = UDim2.fromScale(0.3, 1)
+		tabButton.Size = UDim2.fromScale(0.24, 1)
 		tabButton.Activated:Connect(function()
 			activeTab = tab.Id
 			render()
@@ -728,6 +853,17 @@ function AdminController.start(): ()
 		local parsed = parseState(payload)
 		if parsed then
 			state = parsed
+			local rates = parsed.DropRates
+			if rates then
+				local values = rates :: { [string]: number }
+				for _, key in DROP_FIELDS do
+					local text = string.format("%g", values[key])
+					if texts[key] == nil or texts[key] == serverDropTexts[key] then
+						texts[key] = text
+					end
+					serverDropTexts[key] = text
+				end
+			end
 			render()
 		end
 	end)

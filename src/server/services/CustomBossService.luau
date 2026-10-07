@@ -7,6 +7,9 @@
 
 	Saved data is validated on every load (Shared/CustomBossRules.parseList).
 	If loading fails, the bosses already spawned stay as they are.
+
+	A "Once" boss defeated in this server is saved as Defeated, so no server
+	spawns it again. Servers already fighting it may finish that fight.
 	AdminService does the permission and input checks before calling in here.
 ]]
 
@@ -27,9 +30,15 @@ local bossStore: DataStore? = nil
 local changedCallbacks: { () -> () } = {}
 local idRandom = Random.new()
 
+-- Saving a "Once" defeat is retried, since losing it would bring the boss back.
+local DEFEAT_SAVE_ATTEMPTS = 3
+local DEFEAT_SAVE_RETRY_SECONDS = 5
+
+-- Defeated is left out on purpose: a fight in progress isn't cut short when
+-- another server beats the same "Once" boss.
 local function signature(record: CustomBossRules.Record): string
 	return string.format(
-		"%s|%s|%d|%d|%d|%.2f|%.2f|%.2f",
+		"%s|%s|%d|%d|%d|%.2f|%.2f|%.2f|%s",
 		record.Name,
 		record.LookId,
 		record.MaxHealth,
@@ -37,7 +46,8 @@ local function signature(record: CustomBossRules.Record): string
 		record.CoinReward,
 		record.X,
 		record.Y,
-		record.Z
+		record.Z,
+		record.RespawnMode
 	)
 end
 
@@ -55,6 +65,8 @@ local function apply(list: { CustomBossRules.Record }): ()
 				FloorY = record.Y - size.Y / 2,
 			}),
 			Signature = signature(record),
+			Respawns = record.RespawnMode == "Continuous",
+			Spent = record.Defeated,
 		})
 	end
 	BossService.setCustomBosses(wanted)
@@ -185,6 +197,8 @@ function CustomBossService.create(
 			Y = position.Y,
 			Z = position.Z,
 			CreatedBy = creatorUserId,
+			RespawnMode = spec.RespawnMode,
+			Defeated = false,
 		})
 		return list, nil
 	end)
@@ -216,7 +230,37 @@ function CustomBossService.remove(bossId: string): (boolean, string)
 	end)
 end
 
+-- Records that a "Once" boss was beaten, for every server. Yields.
+local function markDefeated(bossId: string): ()
+	for attempt = 1, DEFEAT_SAVE_ATTEMPTS do
+		local ok, message = mutate(function(list)
+			local index = findIndex(list, bossId)
+			if index == nil then
+				return nil, "already deleted"
+			end
+			local record = list[index]
+			if record.Defeated or record.RespawnMode ~= "Once" then
+				return nil, "nothing to mark"
+			end
+			record.Defeated = true
+			return list, nil
+		end)
+		if ok then
+			print(string.format("[CustomBoss] one-time boss %s defeated", bossId))
+			return
+		elseif message == "already deleted" or message == "nothing to mark" then
+			return
+		end
+		if attempt < DEFEAT_SAVE_ATTEMPTS then
+			task.wait(DEFEAT_SAVE_RETRY_SECONDS * attempt)
+		end
+	end
+	-- This server still won't respawn it (BossService keeps it spent).
+	warn("[CustomBoss] couldn't save that one-time boss " .. bossId .. " was defeated")
+end
+
 function CustomBossService.init(): ()
+	BossService.onOnceBossDefeated(markDefeated)
 	local ok, store = pcall(function()
 		return DataStoreService:GetDataStore(AdminConfig.CustomBossStoreName)
 	end)

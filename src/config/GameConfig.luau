@@ -69,6 +69,7 @@ local GameConfig = table.freeze({
 	MinRewardDamageShare = 0.1,
 	LastHitBonusShare = 0.05, -- extra fraction of the boss's reward for the defeating hit
 	BossRespawnDelay = 5, -- seconds from defeat until a fresh boss appears
+	-- Office boss buff drop chances: Config/DropRateConfig.
 
 	-- Boss shouts (speech bubbles, BossShoutConfig)
 	ShoutIdleMin = 8, -- seconds between a boss's idle shouts, at least...

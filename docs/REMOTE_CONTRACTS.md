@@ -51,7 +51,7 @@ so clients can't read them.
 | | |
 |---|---|
 | Purpose | Victory Card for each player who damaged the defeated boss. |
-| Payload | `Types.BossDefeated`: `{ BossInstanceId, BossId, Rewarded, ScoreAwarded, CoinsAwarded, StressRelieved, UnlockedBossIds, SharePercent, LastHit, BossName, BuffDropText?, AdminDamage }`. `BuffDropText` is set when a custom boss dropped a store boost for this player; `AdminDamage` means the player hit this boss with admin-set damage and got nothing. `Rewarded` means the player qualified (≥ 10 %); every contributor gets score/coins |
+| Payload | `Types.BossDefeated`: `{ BossInstanceId, BossId, Rewarded, ScoreAwarded, CoinsAwarded, StressRelieved, UnlockedBossIds, SharePercent, LastHit, BossName, BuffDropText?, AdminDamage }`. `BuffDropText` is set when the boss dropped a store boost for this player (custom bosses always, office bosses by the current drop rates, `DropRateService`); `AdminDamage` means the player hit this boss with admin-set damage and got nothing. `Rewarded` means the player qualified (≥ 10 %); every contributor gets score/coins |
 | Recipients | every contributor still in the server, once per defeat |
 | Rewards | granted by `RewardService` **before** sending, only to players whose contribution ≥ `MinRewardDamageShare × MaxHealth`: `ScoreReward`, `CoinReward`, `DefeatStressRelief`, and +1 to that boss's defeat count (which can unlock the next boss, listed in `UnlockedBossIds`). Granted at most once per player per boss life (`BossState.markRewarded`). Non-qualifiers get `Rewarded = false`. |
 | Client handling | display only |
@@ -154,13 +154,14 @@ accepted action prints an `[Admin]` line.
 | `SetLevel` | `userId: number, level: number` | integer level 1..`AdminConfig.MaxSetLevel` (500); target in this server with loaded data | `Xp = LevelRules.scoreForLevel(level)` (saved); Level attribute + `Profile.Sync` |
 | `SetDamage` | `userId: number, damage: number` | integer 0..`MaxSetDamage` (1,000,000); target in this server | `BuffService` damage override for this session (0 clears). Hits use exactly that damage, never crit, and mark the boss life `AdminBoosted` for that player, who then gets **no** reward for it |
 | `SetUnlock` | `userId: number, bossId: string or "*", unlocked: boolean` | known `BossConfig` id or `"*"`; target in this server | edits `AdminUnlocks` (saved); `"*"` + false clears them all. Earned unlocks are never removed |
-| `CreateBoss` | `{ Name, LookId, MaxHealth, ScoreReward, CoinReward }` | `CustomBossRules.parseSpec` (name 1-30 chars, look from `CustomBossConfig.LookIds`, integer bounds); name passes `TextService` filtering unchanged; **position is where the admin's character stands** (raycast to the floor), at least `MinSpacing` (14 studs) from every boss; at most 20 custom bosses | saved with `UpdateAsync` to DataStore `CustomBosses`, spawned here, other servers told via MessagingService `CustomBosses` |
+| `CreateBoss` | `{ Name, LookId, MaxHealth, ScoreReward, CoinReward, RespawnMode }` | `CustomBossRules.parseSpec` (name 1-30 chars, look from `CustomBossConfig.LookIds`, integer bounds, `RespawnMode` exactly `"Continuous"` or `"Once"`); name passes `TextService` filtering unchanged; **position is where the admin's character stands** (raycast to the floor), at least `MinSpacing` (14 studs) from every boss; at most 20 custom bosses | saved with `UpdateAsync` to DataStore `CustomBosses`, spawned here, other servers told via MessagingService `CustomBosses` |
 | `EditBoss` | `action: "Move" or "Delete", bossId: string` | custom boss id; Move uses the admin's position with the same spacing check | saved and synced like `CreateBoss` |
+| `SetDropRates` | `{ NormalMin, NormalMax, LuckyMin, LuckyMax, LuckyEveryMinutes, LuckyLastsMinutes }` or `"Reset"` | `DropRateRules.parse`: chances are finite numbers 0..1 with min <= max per range; Every is an integer 10..1440 minutes; Lasts an integer 1..Every-1 | saved with `SetAsync` to DataStore `DropRates` (`"Reset"` removes the key, so `DropRateConfig.Default` applies); other servers told via MessagingService `DropRates` |
 | `Moderate` | `{ Action: "Ban" or "Unban", UserId?, Username?, Duration?, Reason?, Note? }` | target by UserId or a valid username (`GetUserIdFromNameAsync`); not yourself; Ban: not an admin/owner, `Duration` and `Reason` must be keys of `AdminConfig.BanDurations` / `BanReasons` (players only ever see the fixed reason text), `Note` up to 200 chars (private) | `Players:BanAsync` / `UnbanAsync` with `ApplyToUniverse = true` (alts included); fails with a toast in Studio |
 
 `Admin.State` (server -> one client): `{ IsAdmin }` for everyone on join; admins also get
-`{ CustomBosses, DamageOverrides, MaxSetLevel, MaxSetDamage, BanDurations, BanReasons }`, re-sent
-when custom bosses or damage overrides change. Display only.
+`{ CustomBosses, DropRates, DamageOverrides, MaxSetLevel, MaxSetDamage, BanDurations, BanReasons }`,
+re-sent when custom bosses, drop rates or damage overrides change. Display only.
 
 ## `Profile.Sync`: server -> one client
 | | |

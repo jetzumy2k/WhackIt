@@ -168,3 +168,16 @@ works but nothing is kept between Play sessions.
 | 98 | Same, but B is in another server | B gets it within a few seconds (or at most 5 minutes) |
 | 99 | Gift, cancel the prompt, then Buy the same boost | The bought boost goes to your own Bag, not to the friend |
 | 100 | Fire `Remotes.Store.RequestGift` from the console with a non-friend's UserId, or with `mystery_hammer` | Rejected in the server log; no prompt |
+
+## Respawn modes and boss buff drops (2026-10-07)
+| # | Check | Expected |
+|---|---|---|
+| 101 | Admin panel, Bosses tab | New "Respawn" picker: Respawns / One time; existing custom bosses listed as "respawns" |
+| 102 | Create a "One time" boss and defeat it | Rewards and buff drop as usual; it does **not** come back after 5 s; list shows "defeated"; server log `[CustomBoss] one-time boss ... defeated` |
+| 103 | Stop and start the playtest (API access on) | The defeated one-time boss does not spawn; Delete removes it and frees the slot |
+| 104 | Two servers, one-time boss: defeat it in server A while B is mid-fight | B can finish its fight; then it's gone in B too, and new servers never spawn it |
+| 105 | Admin > Drops: set Normal Min and Max to 1, Save; defeat an office boss with 10 %+ | Victory Card "BONUS DROP ..."; boost in the Bag. Then Reset to defaults (click twice): fields go back to 0.0005 / 0.1 / 0.1 / 0.3 / 120 / 10 |
+| 106 | Admin > Drops status line | "Normal chance now ... Next Lucky window in about N min" or "Lucky window is ON now ..." matching the UTC clock (on for the first 10 min of every even UTC hour) |
+| 107 | Drops: Min above Max, a chance of 1.5, or Lasts >= Every; Save | Toast explaining the problem; nothing saved |
+| 108 | Two servers: Save new rates in A | B's Drops tab shows them within seconds |
+| 109 | Non-admin: fire `Remotes.Admin.SetDropRates` from the console | Server log `[Remote] rejected Admin.SetDropRates ... not an admin`; nothing changes |
