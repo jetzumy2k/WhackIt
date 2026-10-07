@@ -72,8 +72,8 @@ works but nothing is kept between Play sessions.
 ## Phase 4b: mood, Zen and reward split
 | # | Check | Expected |
 |---|---|---|
-| 33 | Spawn at 100 stress | Your character has a frowning face with angry brows and a sweat drop |
-| 34 | Hit bosses until stress ≤ 75, ≤ 50, ≤ 25 | Face changes: frown without sweat → flat mouth → smile |
+| 33 | Spawn at 100 stress | Your character has a flustered face: worried brows (not angry), a little "o" mouth and a sweat drop |
+| 34 | Hit bosses until stress ≤ 75, ≤ 50, ≤ 25 | Face changes: worried with a small wobbly mouth → small smile → bigger smile |
 | 35 | Bring stress to 0 | "ZEN ACHIEVED! +100 coins Zen Level 1" card; happy closed-eyes face with blush; hammer glows and sparkles; HUD shows `Zen Lv 1`, coins +100 |
 | 36 | Keep hitting at 0 | Stays Zen, hammer keeps glowing; no second Zen reward |
 | 37 | Stop hitting for 2 minutes | Stress rises by 5 every 5 s; the glow stops as soon as stress is above 0; the face changes with the bands |
@@ -181,3 +181,16 @@ works but nothing is kept between Play sessions.
 | 107 | Drops: Min above Max, a chance of 1.5, or Lasts >= Every; Save | Toast explaining the problem; nothing saved |
 | 108 | Two servers: Save new rates in A | B's Drops tab shows them within seconds |
 | 109 | Non-admin: fire `Remotes.Admin.SetDropRates` from the console | Server log `[Remote] rejected Admin.SetDropRates ... not an admin`; nothing changes |
+
+## Character expressions (2026-10-07)
+| # | Check | Expected |
+|---|---|---|
+| 110 | Spawn (R15 avatar), look at your face (zoom out, rotate camera) | Mood face as in 33; eyes have a small white shine; no angry brows at any stress |
+| 111 | Swing at nothing | Determined face (level brows, grin) for the swing, then the mood face again; the hammer swings as before |
+| 112 | Hit a boss | Determined while swinging, then Happy (^ ^ eyes, open smile, blush) for ~0.7 s, then the mood face; damage numbers, shake and rewards unchanged |
+| 113 | Land the defeating hit | Happy for ~1.5 s; Victory Card as before |
+| 114 | Second client watching you hit | Sees your Happy face on each landed hit; your mood face otherwise |
+| 115 | Reset (Esc → Reset), then swing and hit again | New character: mood face appears, Determined / Happy work again; Output has no errors |
+| 116 | Same with an R6 avatar (Game Settings → Avatar → R6, or a test place) | Faces sit on the head and behave the same |
+| 117 | Avatar with an animated (dynamic) head | Drawn faces sit on top; the head's own face may show through a little (known, as before) |
+| 118 | Rapid swings for 30 s | No lag or growing instance count: one `ActionFace` per head (Explorer, client view) |
