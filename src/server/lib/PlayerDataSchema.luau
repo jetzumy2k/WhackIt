@@ -17,6 +17,8 @@ local BossConfig = require(ReplicatedStorage.Config.BossConfig)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
 local HammerRules = require(ReplicatedStorage.Shared.HammerRules)
+local LevelRewardRules = require(ReplicatedStorage.Shared.LevelRewardRules)
+local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
 local PetConfig = require(ReplicatedStorage.Config.PetConfig)
 local PetRules = require(ReplicatedStorage.Shared.PetRules)
 local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
@@ -58,6 +60,9 @@ export type PlayerData = {
 	Incubation: PetRules.Incubation?, -- the egg incubating now, with what will hatch
 	-- v9 (docs/UI.md "Settings")
 	Settings: SettingsRules.Settings, -- on/off player settings (Config/SettingsConfig)
+	-- v10 (docs/GAMEPLAY_RULES.md "Level rewards")
+	LevelRewardsClaimed: number, -- highest level whose level-up coins were paid
+	Cosmetics: LevelRewardRules.Cosmetics, -- picked trail and Zen glow ("" = default)
 }
 
 export type PendingGift = {
@@ -73,7 +78,7 @@ export type Migration = (data: RawData) -> ()
 
 local PlayerDataSchema = {}
 
-PlayerDataSchema.CURRENT_VERSION = 9
+PlayerDataSchema.CURRENT_VERSION = 10
 
 -- Upper bound for counters; far beyond legitimate play, small enough to stay
 -- an exact integer and to keep leaderboard values sane.
@@ -151,6 +156,18 @@ PlayerDataSchema.MIGRATIONS = table.freeze({
 		-- (sanitize() fills them in).
 		data.Settings = {}
 	end,
+	[10] = function(data: RawData)
+		-- v9 -> v10: the steeper level curve and level rewards (2026-10-09).
+		-- Nobody loses a level: XP is raised to the new curve's threshold for
+		-- the level the old curve gave (capped at MaxLevel). Levels already
+		-- reached count as rewarded, so the change pays no back-dated coins.
+		local xp = data.Xp
+		local oldXp = if typeof(xp) == "number" and xp == xp and xp > 0 then xp else 0
+		local keptLevel = math.min(LevelRules.legacyLevelFor(oldXp), LevelRules.MAX_LEVEL)
+		data.Xp = math.max(oldXp, LevelRules.scoreForLevel(keptLevel))
+		data.LevelRewardsClaimed = keptLevel
+		data.Cosmetics = {}
+	end,
 }) :: { [number]: Migration }
 
 -- Most recent purchase ids remembered for duplicate-receipt protection. Roblox
@@ -187,6 +204,8 @@ function PlayerDataSchema.template(): PlayerData
 		EquippedPetId = "",
 		Incubation = nil,
 		Settings = SettingsRules.defaults(),
+		LevelRewardsClaimed = 1,
+		Cosmetics = { Trail = "", Glow = "" },
 	}
 end
 
@@ -437,6 +456,11 @@ function PlayerDataSchema.sanitize(data: RawData): ()
 
 	-- Known settings default when missing or broken; unknown ones are kept.
 	data.Settings = SettingsRules.sanitize(data.Settings)
+
+	-- Level rewards: at most MaxLevel claimed; picks must be known ids.
+	data.LevelRewardsClaimed =
+		math.clamp(counter(data.LevelRewardsClaimed, 1), 1, LevelRules.MAX_LEVEL)
+	data.Cosmetics = LevelRewardRules.sanitizeCosmetics(data.Cosmetics)
 
 	-- Must be a hammer the player actually owns.
 	local hammerId = data.EquippedHammerId

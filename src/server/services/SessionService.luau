@@ -10,8 +10,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local Attributes = require(ReplicatedStorage.Shared.Attributes)
+local LevelRewardRules = require(ReplicatedStorage.Shared.LevelRewardRules)
 local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
 local PlayerDataService = require(script.Parent.PlayerDataService)
+
+local LevelUpRemote = ReplicatedStorage.Remotes.Level.LevelUp
 
 export type Session = {
 	Player: Player,
@@ -66,23 +69,38 @@ function SessionService.addScore(player: Player, amount: number): ()
 end
 
 -- Adds XP (which drives Player Level) and refreshes the Level attribute.
+-- Reaching a level for the first time pays its coins (docs/GAMEPLAY_RULES.md
+-- "Level rewards"): every level above LevelRewardsClaimed, once, saved in the
+-- same step, so rejoining or levelling down and up again never pays twice.
 function SessionService.addXp(player: Player, amount: number): ()
 	local data = PlayerDataService.get(player)
 	if sessions[player] == nil or data == nil or amount <= 0 then
 		return
 	end
 	data.Xp += math.floor(amount + 0.5)
-	player:SetAttribute(Attributes.Level, LevelRules.levelFor(data.Xp))
+	local level = LevelRules.levelFor(data.Xp)
+	local claimed = data.LevelRewardsClaimed
+	if level > claimed then
+		local coins = LevelRewardRules.coinsBetween(claimed, level)
+		data.LevelRewardsClaimed = level
+		SessionService.addCoins(player, coins)
+		LevelUpRemote:FireClient(player, { FromLevel = claimed, ToLevel = level, Coins = coins })
+	end
+	player:SetAttribute(Attributes.Level, level)
 end
 
 -- Replaces XP outright (admin Set Level) and refreshes the Level attribute.
+-- Levels an admin sets count as rewarded without paying coins, so setting
+-- someone to Level 100 doesn't hand out every level's coins.
 function SessionService.setXp(player: Player, xp: number): ()
 	local data = PlayerDataService.get(player)
 	if sessions[player] == nil or data == nil or xp < 0 or xp ~= xp then
 		return
 	end
 	data.Xp = math.floor(xp)
-	player:SetAttribute(Attributes.Level, LevelRules.levelFor(data.Xp))
+	local level = LevelRules.levelFor(data.Xp)
+	data.LevelRewardsClaimed = math.max(data.LevelRewardsClaimed, level)
+	player:SetAttribute(Attributes.Level, level)
 end
 
 function SessionService.addCoins(player: Player, amount: number): ()

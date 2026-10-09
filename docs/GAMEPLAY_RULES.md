@@ -17,7 +17,7 @@ raw    = (hammer.Damage + levelDamage + flatBonus) × (1 + damageBoost) × boss.
 crit?  = serverRoll < critChance            -- rolled by the server only
 damage = max(MinHitDamage, round(raw × (1 + critDamage if crit)))
 ```
-- `levelDamage`: the Player Level bonus, +3 per level above 1 (see "Level bonuses" below)
+- `levelDamage`: the Player Level bonus, +3 per level up to Level 10, then +1 per level (see "Level bonuses" below)
 - `flatBonus`: +`ZenBuffFlatDamage` (10) during the Zen buff, otherwise 0
 - `damageBoost`: Damage store boost (0.03 / 0.05 / 0.10) **plus** a Mystery Hammer's bonus damage
   (0.15-0.25) **plus** the equipped pet's Damage buff (docs/PETS.md); they add up (e.g. +5 % boost
@@ -245,6 +245,9 @@ show "Defeat <previous> N more times to unlock!".
 | Stress Crusher (2026-10-07) | 32 | 8000 coins | heavy industrial head, diamond plate, hazard stripes, square steel shaft |
 | Mystery Hammer (Robux, docs/STORE.md) | 35 base, +15-25 % damage and +5-10 % crit damage rolled once | 199 R$ | gold head, purple bands and neon caps; soft purple glints |
 
+**Level requirements (2026-10-09):** Fire Hammer Lv 15, Lightning Hammer Lv 20, Cosmic Hammer Lv 30,
+Stress Crusher Lv 40, on top of the price (see "Level rewards"). Owned hammers are never taken away.
+
 **Hammer vending machine (2026-10-07):** a blue-and-orange "HAMMER STORE" vending machine stands
 in the lobby beside the stairs (`ArenaConfig.StoreMachine`, `Lib/StoreMachineBuilder`,
 `StoreMachineService`). Walk up and press **E** ("Open Hammer Store") to open this same Hammers
@@ -277,22 +280,39 @@ ownership are unchanged and still come from `HammerConfig` and the player's save
   a player empty-handed.
 
 ## Player Level, leaderboard and the Senior floor (2026-10-05)
-### Player Level
-`level = floor(sqrt(Xp / LevelScoreFactor)) + 1` (`Shared/LevelRules`, factor 600). **XP** per defeat
-is the score earned x `XpRewardMultiplier` (1.2, i.e. +20 %, since 2026-10-06) x any XP store boost. Score itself is never boosted, so the
-leaderboard stays fair. Level is derived from XP, never stored, and shown in the HUD and as "Lv N"
-above every head. Existing players start with XP equal to their score (schema v4).
+### Player Level (reworked 2026-10-09)
+Level comes from saved XP (`Shared/LevelRules`), never stored. **XP** per defeat is the score earned
+x `XpRewardMultiplier` (1.2) x any XP store boost and XP event. Score itself is never boosted, so the
+leaderboard stays fair.
 
-| Level | XP |
-|---|---|
-| 1 | 0 |
-| 2 | 600 |
-| 5 | 9,600 |
-| 10 | 48,600 |
+**The curve.** Going from level L to L + 1 costs `600 x (2L - 1)` XP, the original square curve; from
+Level 10 on (`LevelCurveStartsAt`) that cost is also multiplied by `1 + 0.2 x (L - 9)`
+(`LevelCurveGrowth`), so later levels are real goals. **Levels stop at 100** (`MaxLevel`); XP keeps
+counting and still ranks the Top Level board. Below Level 10 nothing changed.
 
-### Level bonuses (2026-10-08)
+| Level | Total XP | Ideal solo farming* |
+|---|---|---|
+| 2 | 600 | |
+| 5 | 9,600 | |
+| 10 | 48,600 (unchanged) | ~25 min |
+| 20 | 421,200 | ~1.3 h |
+| 30 | ~1.6 M | ~4 h |
+| 50 | 8,427,000 | ~18 h |
+| 75 | ~30 M | ~56 h |
+| 100 | 73,530,000 | ~127 h |
+
+\* A model: one player always on the best boss for XP, a hit every 0.45 s, 5 s respawns, sensible hammer
+upgrades. Real play (walking, sharing bosses, breaks) is roughly 2-3x slower; XP boosts, events and
+group play are faster. Before 2026-10-09 Level 100 took ~9 hours in the same model and there was no cap
+(admins could set up to 500).
+
+**Nobody lost a level** when the curve got steeper: schema v10 raised every existing player's XP to the
+new curve's threshold for the level they had (docs/DATA_SCHEMA.md), and those levels count as already
+rewarded.
+
+### Level bonuses (2026-10-08, rebalanced 2026-10-09)
 Every level above 1 makes the character permanently stronger (`GameConfig.LevelDamagePerLevel`,
-`LevelCritChancePerLevel`, `Shared/LevelRules`):
+`LevelDamageSlowsAt`, `LevelDamagePerLevelAfter`, `LevelCritChancePerLevel`, `Shared/LevelRules`):
 
 | Level | Base damage bonus | Crit chance |
 |---|---|---|
@@ -300,24 +320,61 @@ Every level above 1 makes the character permanently stronger (`GameConfig.LevelD
 | 2 | +3 | 5.05 % |
 | 5 | +12 | 5.20 % |
 | 10 | +27 | 5.45 % |
-| 50 | +147 | 7.45 % |
+| 11 | +28 | 5.50 % |
+| 50 | +67 (was +147) | 7.45 % |
+| 100 (max) | +117 (was +297) | 9.95 % |
 
-- **Base damage:** the hammer has no base damage of its own, so the bonus is added to the
-  equipped hammer's damage before every percent bonus. With a Squeaky Hammer at Level 10 that's
-  10 + 27 = 37 per normal hit on a ×1 boss. The hammers themselves are unchanged, including the
-  Mystery Hammer's fixed 35 (35 + 27, then its +15-25 %).
-- **Crit:** the chance a hit crits, +0.0005 per level (0.05 percentage points, not 5 %). Crit
-  *damage* bonuses (Mystery Hammer, Crit Damage boosts, pets) are separate and still add up.
-- **Never stored, never awarded twice.** The bonus is worked out from the Player Level, and the
-  level from the saved XP, every time a hit is calculated (`BuffService.statsFor`). Leaving,
-  rejoining, respawning or equipping can't add it again. A jump of several levels from one reward
-  gives every level's share at once. If an admin lowers a level, the bonus follows it down.
+- **Base damage:** +3 per level up to Level 10, then **+1 per level** (2026-10-09; was +3 all the way).
+  At Level 50 the old bonus was 147, nearly five times the best coin hammer (32), so hammers stopped
+  mattering. Now hammers, boosts and pets stay worth having. The bonus is added to the equipped
+  hammer's damage before every percent bonus: Squeaky Hammer at Level 10 is 10 + 27 = 37 per normal hit
+  on a x1 boss.
+- **Crit:** the chance a hit crits, +0.0005 per level (0.05 percentage points, not 5 %). Crit *damage*
+  bonuses (Mystery Hammer, Crit Damage boosts, pets) are separate and still add up.
+- **Never stored, never awarded twice.** Worked out from the level (from saved XP) every time a hit is
+  calculated (`BuffService.statsFor`). A jump of several levels gives every level's share at once. If an
+  admin lowers a level, the bonus follows it down. Nothing grows past Level 100.
 - **Boosts, pets and events stay separate:** they add on top and stop when they end. XP boosts and
   XP events only change how much XP is earned, never the level directly.
-- There is no maximum level (the admin panel can set up to 500).
-- **UI:** the Player Panel's Profile shows Base damage (hammer + level bonus) and Crit chance. A
-  "🎉 LEVEL UP! / Level 10 → Level 13 / +9 Base Damage +0.15% Crit" card shows on level-up, one card
-  for levels gained close together (`LevelUpController`).
+- **UI:** the Player Panel's Profile shows Base damage (hammer + level bonus), Crit chance, your title
+  and a level bar. A "🎉 LEVEL UP!" card shows the gains, coins and unlocks, one card for levels gained
+  close together (`LevelUpController`).
+
+### Level rewards (2026-10-09)
+Levels have a purpose (`Config/LevelRewardConfig`, `Shared/LevelRewardRules`, Player Panel → 🏅 Levels):
+
+- **Coins every level:** reaching level L pays `20 x L` coins (Level 10 pays 200, Level 50 pays 1,000;
+  about 100k over the whole climb). Paid by the server when XP crosses the level
+  (`SessionService.addXp`), once: `LevelRewardsClaimed` remembers the highest level paid, so rejoining
+  or dropping and regaining a level never pays twice. Levels an admin sets (Set Level) count as rewarded
+  without coins. Admin **XP** rewards are earned XP and do pay.
+- **Something every 5 levels:**
+
+| Level | Unlock | Level | Unlock |
+|---|---|---|---|
+| 5 | title Junior Associate | 55 | Galaxy Trail |
+| 10 | title Associate, the Senior floor | 60 | title Director |
+| 15 | Mint Trail, Fire Hammer in the shop | 65 | Aurora Glow |
+| 20 | title Senior Associate, Lightning Hammer | 70 | Lava Trail |
+| 25 | Ocean Glow | 75 | title Vice President |
+| 30 | title Team Lead, Cosmic Hammer | 80 | Violet Glow |
+| 35 | Sunset Trail | 85 | Ice Trail |
+| 40 | title Manager, Stress Crusher | 90 | Sunburst Glow |
+| 45 | Rose Glow | 95 | Prism Trail |
+| 50 | title Senior Manager | 100 | title **Chief Calm Officer**, golden name tag 👑 |
+
+- **Titles** follow the level on their own: the head tag reads "Lv 23 · Senior Associate" (MoodService),
+  gold with a crown at Level 100. Level 1 is "Intern".
+- **Looks:** an unlocked **hammer trail** replaces the hammer's own swing-trail colour; an unlocked
+  **Zen glow** colours the light and sparkles of your hammer in Zen (gold by default). Pick them on the
+  🏅 Levels page (`Level.SetCosmetic`, checked by the server); everyone sees them. If an admin lowers
+  your level below a pick, the default look shows until you're back.
+- **Hammer level requirements:** Fire Hammer Lv 15, Lightning Lv 20, Cosmic Lv 30, Stress Crusher
+  Lv 40 (`HammerConfig.MinLevel`), checked by the server (`ProgressionRules.checkPurchase`); the shop
+  shows "🔒 Lv 30". Hammers you already own stay yours and can always be equipped.
+- **Career (major update):** these titles *are* the career ranks; there is no separate career level
+  (docs/MAJOR_GAME_UPDATE.md §21.4). Quests, pickleball and co-op will give XP.
+- **Later (docs/OFFICES.md, Phase 2a):** office themes and level-reward furniture join the track.
 
 ### XP bar
 A thin blue bar along the bottom edge of the screen shows progress to the next level
@@ -492,7 +549,8 @@ screens), cards, scrolling content, a quick scale-in/out animation and a close X
 
 | Page | What's there |
 |---|---|
-| Profile | level, XP to the next level, score, coins, stress, Zen level (updated live, text only); active boosts with time left; your leaderboard line |
+| Profile | level and title, XP to the next level, score, coins, stress, Zen level (updated live, text only); active boosts with time left; your leaderboard line |
+| 🏅 Levels (2026-10-09) | your title and next reward, trail and Zen glow pickers, the whole reward track |
 | Hammers | equipped hammer and its damage; every hammer you own with **Equip** (the existing `Shop.EquipHammer`, server-checked); a link to the Hammer Shop; your Bag's item count and **Open Bag** |
 | Game | shortcuts to the Hammer Shop, the Robux Store, the Bag (the existing panels) and, for admins, the Admin Panel; where things are in the office |
 | Settings (2026-10-09) | saved on/off switches (Reduced motion) and the music switch when there is music (docs/UI.md "Settings") |

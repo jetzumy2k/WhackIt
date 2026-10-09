@@ -184,7 +184,13 @@ local function refreshRow(row: Row): ()
 	local percent = EventController.discountPercent(hammer.Id)
 	row.Price = EventRules.discountedPrice(hammer.Price, percent)
 	local sale = if percent > 0 then string.format(" (-%d%%)", percent) else ""
-	if coins >= row.Price then
+	local level = if snapshot then snapshot.Level else 1
+	if hammer.MinLevel and level < hammer.MinLevel then
+		-- The server checks the level too (ProgressionRules.checkPurchase).
+		row.Button.Text = string.format("🔒 Lv %d", hammer.MinLevel)
+		row.Button.BackgroundColor3 = DISABLED_COLOR
+		row.Button.Active = false
+	elseif coins >= row.Price then
 		row.Button.Text = string.format("Buy %d%s", row.Price, sale)
 		row.Button.BackgroundColor3 = BUY_COLOR
 		row.Button.Active = true

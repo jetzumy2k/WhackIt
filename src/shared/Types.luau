@@ -75,6 +75,8 @@ export type ProfileSnapshot = {
 	Incubation: IncubationView?,
 	-- On/off player settings (Config/SettingsConfig, Shared/SettingsRules).
 	Settings: { [string]: boolean },
+	-- Level reward looks the player picked ("" = default; docs/GAMEPLAY_RULES.md).
+	Cosmetics: { Trail: string, Glow: string },
 }
 
 export type OwnedPet = {

@@ -141,6 +141,27 @@ return function()
 			)
 		end)
 
+		it("needs the Player Level for hammers with a MinLevel", function()
+			local gated: HammerConfig.HammerDefinition? = nil
+			for _, hammer in HammerConfig.List do
+				if hammer.MinLevel and gated == nil then
+					gated = hammer
+				end
+			end
+			assert(gated and gated.MinLevel, "no hammer with a level requirement")
+			local need = gated.MinLevel :: number
+			expect(ProgressionRules.checkPurchase(gated.Id, 1e6, {}, nil, need - 1)).to.equal(
+				"LevelTooLow"
+			)
+			expect(ProgressionRules.checkPurchase(gated.Id, 1e6, {}, nil, need)).to.equal("Ok")
+			-- No level given counts as Level 1.
+			expect(ProgressionRules.checkPurchase(gated.Id, 1e6, {})).to.equal("LevelTooLow")
+			-- Owning it already is reported first.
+			expect(ProgressionRules.checkPurchase(gated.Id, 1e6, { [gated.Id] = true }, nil, 1)).to.equal(
+				"AlreadyOwned"
+			)
+		end)
+
 		it("refuses unknown hammers", function()
 			expect(ProgressionRules.checkPurchase("free_win_hammer", 1e6, {})).to.equal(
 				"UnknownHammer"

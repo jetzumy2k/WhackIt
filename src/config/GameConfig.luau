@@ -45,13 +45,23 @@ local GameConfig = table.freeze({
 	StartingScore = 0,
 	StartingCoins = 0,
 
-	-- Player Level (Shared/LevelRules): level = floor(sqrt(xp / factor)) + 1
+	-- Player Level (Shared/LevelRules, docs/GAMEPLAY_RULES.md "Player Level").
+	-- Going from level L to L + 1 costs LevelScoreFactor x (2L - 1) XP, the old
+	-- square curve; from LevelCurveStartsAt on, that cost is also multiplied by
+	-- 1 + LevelCurveGrowth x (L - LevelCurveStartsAt + 1), so later levels are
+	-- real goals (2026-10-09). Levels stop at MaxLevel; XP keeps counting.
 	LevelScoreFactor = 600,
-	-- Character progression (2026-10-08, docs/GAMEPLAY_RULES.md "Level bonuses"):
-	-- every level above 1 adds this much base damage to every hit (on top of
-	-- the hammer's damage) and this much crit CHANCE (0.0005 = 0.05
-	-- percentage points). Derived from the level, never stored.
+	LevelCurveStartsAt = 10,
+	LevelCurveGrowth = 0.2,
+	MaxLevel = 100,
+	-- Character progression (docs/GAMEPLAY_RULES.md "Level bonuses"): every
+	-- level above 1 adds LevelDamagePerLevel base damage up to
+	-- LevelDamageSlowsAt, then LevelDamagePerLevelAfter per level (so hammers
+	-- stay worth buying), plus LevelCritChancePerLevel crit CHANCE (0.0005 =
+	-- 0.05 percentage points). Derived from the level, never stored.
 	LevelDamagePerLevel = 3,
+	LevelDamageSlowsAt = 10,
+	LevelDamagePerLevelAfter = 1,
 	LevelCritChancePerLevel = 0.0005,
 	-- Senior bosses upstairs need at least this Player Level.
 	UpstairsMinLevel = 10,

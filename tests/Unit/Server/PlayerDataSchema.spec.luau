@@ -666,4 +666,62 @@ return function()
 			end
 		end)
 	end)
+
+	describe("PlayerDataSchema v10 (level curve and rewards)", function()
+		local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
+
+		local function migrateFromV9(xp: number): PlayerDataSchema.RawData
+			local data = validData()
+			data.SchemaVersion = 9
+			data.Xp = xp
+			expect((PlayerDataSchema.prepare(data))).to.equal(true)
+			return data
+		end
+
+		it("never lowers a level: XP is raised to the new curve's threshold", function()
+			-- Old curve: Lv 50 at 600 x 49^2 = 1,440,600 XP.
+			local data = migrateFromV9(1440600)
+			expect(LevelRules.levelFor(data.Xp :: number)).to.equal(50)
+			expect(data.Xp).to.equal(LevelRules.scoreForLevel(50))
+			expect(data.LevelRewardsClaimed).to.equal(50)
+		end)
+
+		it("leaves players at Level 10 or below exactly as they were", function()
+			local data = migrateFromV9(50000) -- Lv 10 on both curves
+			expect(data.Xp).to.equal(50000)
+			expect(data.LevelRewardsClaimed).to.equal(10)
+		end)
+
+		it("keeps extra XP above the threshold and caps at the max level", function()
+			local data = migrateFromV9(1e12) -- far past Lv 100 on the old curve
+			expect(data.Xp).to.equal(1e12)
+			expect(LevelRules.levelFor(data.Xp :: number)).to.equal(LevelRules.MAX_LEVEL)
+			expect(data.LevelRewardsClaimed).to.equal(LevelRules.MAX_LEVEL)
+		end)
+
+		it("pays no back-dated coins and starts with the default looks", function()
+			local data = migrateFromV9(1440600)
+			expect(data.Coins).to.equal(250)
+			local looks = data.Cosmetics :: { Trail: string, Glow: string }
+			expect(looks.Trail).to.equal("")
+			expect(looks.Glow).to.equal("")
+		end)
+
+		it("starts new players at Level 1 with nothing claimed", function()
+			local template = PlayerDataSchema.template()
+			expect(template.LevelRewardsClaimed).to.equal(1)
+			expect(template.Cosmetics.Trail).to.equal("")
+		end)
+
+		it("repairs broken reward fields", function()
+			local data = validData()
+			data.LevelRewardsClaimed = 9999
+			data.Cosmetics = { Trail = "disco", Glow = "ocean" }
+			PlayerDataSchema.prepare(data)
+			expect(data.LevelRewardsClaimed).to.equal(LevelRules.MAX_LEVEL)
+			local looks = data.Cosmetics :: { Trail: string, Glow: string }
+			expect(looks.Trail).to.equal("")
+			expect(looks.Glow).to.equal("ocean")
+		end)
+	end)
 end

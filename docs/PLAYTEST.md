@@ -528,3 +528,27 @@ Specs first: `Client/UiTokens`, `Client/GamepadNav`, `Client/PanelKit`, `Shared/
 | 348 | Mouse and touch players | Never see a selection highlight |
 | 349 | Command bar / exploit: `Remotes.Settings.Set:FireServer("ReducedMotion", "yes")`, `("Coins", true)`, 20 times in a row | Rejected and logged (at most once per 5 s); nothing saved; rate limit holds |
 | 350 | Output | No errors from PanelKit, GamepadNav, SettingsController, SettingsService, PlayerPanelController |
+
+## Levelling rework (2026-10-09, docs/GAMEPLAY_RULES.md "Player Level", "Level rewards")
+Specs first: `Shared/LevelRules`, `Shared/LevelRewardRules`, `Config/LevelRewardConfig`,
+`Shared/ProgressionRules`, `Server/PlayerDataSchema` (v10). Admin → Players → Set level helps reach
+levels quickly (it pays no coins, by design).
+
+| # | Check | Expected |
+|---|---|---|
+| 351 | New player: head tag; Player Panel → Profile | "Lv 1 · Intern"; Level tile "Lv 1 · Intern" with a level bar |
+| 352 | Earn your way past Lv 2 (beat the Deadline Boss a few times) | Card "🎉 LEVEL UP! Level 1 → Level 2 / +3 Base Damage +0.05% Crit +40 coins / Next at Lv 5: Title: Junior Associate"; coins go up by 40 |
+| 353 | Reach Lv 5 by earning XP | Card says "Unlocked: Title: Junior Associate"; head tag updates |
+| 354 | Admin Set level 9, then earn to Lv 10 | Only Lv 10's coins (200) are paid; card: "Unlocked: Title: Associate, The Senior floor upstairs" |
+| 355 | Admin Set level 14, then earn to 15; Player Panel → 🏅 Levels | Card lists "Mint Trail, Fire Hammer in the Hammer Shop"; Levels page: next reward, Mint Trail selectable, others "🔒 Lv …"; the reward track shows ✓ up to 15 |
+| 356 | Pick Mint Trail; swing | The swing trail is mint; another player sees it too |
+| 357 | Admin Set level 25, pick Ocean Glow, reach Zen | The hammer's Zen light and sparkles are blue; Default puts the gold back |
+| 358 | Admin Set level 10 (below your picks) | Trail and glow show the default look; set level 25 again: your picks come back |
+| 359 | Hammer Shop at Lv 14 | Fire Hammer shows "🔒 Lv 15", can't be bought; at Lv 15 it shows "Buy 2500" |
+| 360 | Exploit: `Remotes.Shop.BuyHammer:FireServer("stress_crusher")` at Lv 20 with 8,000+ coins | Nothing bought, no coins taken |
+| 361 | Exploit: `Remotes.Level.SetCosmetic:FireServer("Trail", "prism")` at Lv 20; `("Hat", "x")`; 20 calls in a row | Prism refused (still default); bad kind rejected and logged; rate limit holds |
+| 362 | Admin Set level 100 | Head tag "👑 Lv 100 · Chief Calm Officer" in gold; XP bar "Lv 100 MAX LEVEL n XP" and full; Levels page "Max level reached"; no coins paid |
+| 363 | At Lv 100, beat bosses | XP keeps counting (Top Level board), level stays 100, no level-up card |
+| 364 | Admin panel → Set level field | Says 1 to 100; 101 is refused |
+| 365 | Data (API access on, test place): a v9 profile at old Lv 50 (XP 1,440,600) joins | Still Lv 50 (XP raised to 8,427,000), coins unchanged, no level-up card; a Lv 8 profile keeps its XP exactly |
+| 366 | Output | No errors from SessionService, LevelRewardService, MoodService, HammerService, LevelUpController, PlayerPanelController |

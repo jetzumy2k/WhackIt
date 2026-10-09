@@ -153,6 +153,12 @@ on the Executive Floor without access.
 | Effect | `Settings[key] = value`, saved with the profile. Settings are cosmetic: none changes damage, rewards or access |
 | Response | `Profile.Sync` |
 
+## Level (docs/GAMEPLAY_RULES.md "Level rewards", 2026-10-09)
+| Remote | Direction | Payload | Server checks / handling |
+|---|---|---|---|
+| `Level.SetCosmetic` | client -> server | `kind: "Trail" \| "Glow", id: string` (`""` = default); `maxArgs` 2, `RemoteLimits.Settings` | `LevelRewardRules.parseChoice`: known kind and `""` or a known id (else rejected); the player's level unlocks it (else ignored, a UI race). Saves `Cosmetics`, sets `TrailStyle` / `GlowStyle` (re-equips the hammer for a new trail); `Profile.Sync` |
+| `Level.LevelUp` | server -> one client | `{ FromLevel, ToLevel, Coins }` | sent when XP reaches levels never rewarded before and their coins are paid (`SessionService.addXp`); display only (the level-up card) |
+
 ## `Store.RequestPurchase`: client -> server
 | | |
 |---|---|
@@ -224,7 +230,7 @@ change. Display only.
 | | |
 |---|---|
 | Purpose | The player's own progression for the UI (HUD, shop, locked bosses) |
-| Payload | `Types.ProfileSnapshot`: `{ Coins, OwnedHammerIds, EquippedHammerId, BossDefeats, UnlockedBossIds, ZenLevel, Level, Xp, Buffs, MysteryHammers, AdminUnlocks, Bag, Pets, EquippedPetId, Incubation, Settings }` |
+| Payload | `Types.ProfileSnapshot`: `{ Coins, OwnedHammerIds, EquippedHammerId, BossDefeats, UnlockedBossIds, ZenLevel, Level, Xp, Buffs, MysteryHammers, AdminUnlocks, Bag, Pets, EquippedPetId, Incubation, Settings, Cosmetics }` |
 | When | on data load, after every reward, purchase, equip and `Settings.Set` request |
 | Client handling | display only; parsed defensively (`ProgressController`) |
 
@@ -247,6 +253,7 @@ Names live in `Shared/Attributes`. Only the server writes them; clients read the
 | Custom boss `Model` (admin-created) | `BossName`, `BossLook` | display name (already text-filtered) and the office boss whose look it borrows |
 | Event boss `Model` (docs/EVENTS.md) | `BossName`, `BossLook`, `EventBoss` | as a custom boss, plus `EventBoss = true` |
 | `Player` | `PetSpecies`, `PetRarity` | the equipped pet (unset = none); every client draws it (docs/PETS.md) |
+| `Player` | `TrailStyle`, `GlowStyle` | the level-reward trail and Zen glow in use (`""` = default; only unlocked picks); the hammer trail and the Zen glow use them |
 | `Player` | `AdminBypass` | an admin's boss-access bypass is on (display only: their doors and labels; the server checks its own flag) |
 | Incubator `Model` (`Workspace.PetCenter.Incubators`) | `IncubatorIndex`, `OwnerUserId`, `OwnerName`, `EggRarity`, `EndsAt`, `HatchedSpecies` | the egg on show and its end time (unix seconds); `HatchedSpecies` while it hatches |
 | World egg `Model` (`Workspace.PetCenter.WorldEggs`) | `WorldEggRarity` | its rarity |

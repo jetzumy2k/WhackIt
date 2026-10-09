@@ -65,6 +65,15 @@ the table below, kept small on purpose:
 **Gate:** existing panels look the same (screenshots before and after on 3 form factors). Every
 panel can be driven with a gamepad. Reduced motion removes the shake and panel tweens. Settings survive a rejoin.
 
+## 3b. Levelling rework (owner request 2026-10-09, before 2a)
+
+**Status (2026-10-10):** ✅ complete on branch `feat/levelling-rework`; `scripts/check.ps1` passes;
+Studio specs **594 passed, 0 failed**; playtest (`docs/PLAYTEST.md` "Levelling rework", 351–366)
+reported passed by the owner (2026-10-10). Decisions in
+`docs/MAJOR_GAME_UPDATE.md` §21.4. **Phase 2a is parked** (a git stash on `feat/phase2a-offices`,
+unverified) until this is finished; when it resumes, its schema version becomes **v11** (this work took
+v10), and its office rewards join the level reward track.
+
 ## 4. Phase 2a: furniture, personal offices, Office Directory
 
 ### 4.1 Rules (`Shared/FurnitureRules`, pure, spec-covered)
@@ -159,7 +168,7 @@ from `BallFlight`, paddle swing animation (SwingAnimator-style joint offsets), a
 script (fake swings, swings out of reach, racing accepts, leaving mid-match).
 
 ## 6. Later phases (planned in detail when reached)
-- **2b Quests and career:** `QuestConfig` / `QuestRules` (objectives counted from events the server
+- **2b Quests (career = level titles since 2026-10-09, §21.4):** `QuestConfig` / `QuestRules` (objectives counted from events the server
   already sees: defeats, Zen, matches, furniture placed, coffee deliveries), reset windows in UTC,
   claims stored as ids. Career points come from quests/matches/co-op, ranks unlock furniture
   and titles only.

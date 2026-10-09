@@ -121,6 +121,7 @@ function ProgressService.snapshot(
 			}
 			else nil,
 		Settings = table.clone(data.Settings),
+		Cosmetics = table.clone(data.Cosmetics),
 	}
 end
 

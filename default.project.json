@@ -200,6 +200,18 @@
           }
         },
 
+        "Level": {
+          "$className": "Folder",
+
+          "LevelUp": {
+            "$className": "RemoteEvent"
+          },
+
+          "SetCosmetic": {
+            "$className": "RemoteEvent"
+          }
+        },
+
         "Settings": {
           "$className": "Folder",
 

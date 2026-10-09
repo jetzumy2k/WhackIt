@@ -31,7 +31,12 @@ export type UnlockStatus = {
 	LevelNeeded: number, -- Player Level required, or 0 when already met
 }
 
-export type PurchaseCheck = "Ok" | "UnknownHammer" | "AlreadyOwned" | "NotEnoughCoins"
+export type PurchaseCheck =
+	"Ok"
+	| "UnknownHammer"
+	| "AlreadyOwned"
+	| "LevelTooLow"
+	| "NotEnoughCoins"
 
 local ProgressionRules = {}
 
@@ -105,11 +110,14 @@ end
 
 -- `price` is what the server charges right now (a Hammer Shop sale event
 -- may lower it, Shared/EventRules); the hammer's normal price when omitted.
+-- `level` is the buyer's Player Level, for hammers with a MinLevel (Level 1
+-- when omitted).
 function ProgressionRules.checkPurchase(
 	hammerId: string,
 	coins: number,
 	owned: OwnedHammers,
-	price: number?
+	price: number?,
+	level: number?
 ): PurchaseCheck
 	local hammer = HammerConfig.ById[hammerId]
 	if hammer == nil then
@@ -117,6 +125,9 @@ function ProgressionRules.checkPurchase(
 	end
 	if ProgressionRules.ownsHammer(hammerId, owned) then
 		return "AlreadyOwned"
+	end
+	if hammer.MinLevel and (level or 1) < hammer.MinLevel then
+		return "LevelTooLow"
 	end
 	if coins < (price or hammer.Price) then
 		return "NotEnoughCoins"

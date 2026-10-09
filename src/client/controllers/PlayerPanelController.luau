@@ -9,6 +9,9 @@
 
 	  Profile    level and XP, score, coins, stress, Zen level, active boosts,
 	             your leaderboard line
+	  Levels     your title, the next level reward, the whole reward track, and
+	             the trail / Zen glow looks your level unlocked (pick ->
+	             Level.SetCosmetic, checked by the server)
 	  Hammers    equipped hammer, every hammer you own (Equip -> the existing
 	             Shop.EquipHammer remote), the Bag
 	  Events     events running now (EventController) with live countdowns
@@ -32,6 +35,10 @@ local Attributes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild
 local EventRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("EventRules"))
 local GameConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("GameConfig"))
 local HammerConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("HammerConfig"))
+local LevelRewardConfig =
+	require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("LevelRewardConfig"))
+local LevelRewardRules =
+	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("LevelRewardRules"))
 local LevelRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("LevelRules"))
 local PetConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("PetConfig"))
 local PetRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PetRules"))
@@ -60,6 +67,7 @@ local TOGGLE_KEY = Enum.KeyCode.M
 local GAMEPAD_TOGGLE_KEY = Enum.KeyCode.ButtonY
 local TABS = {
 	{ Id = "Profile", Label = "Profile" },
+	{ Id = "Levels", Label = "🏅 Levels" },
 	{ Id = "Hammers", Label = "Hammers" },
 	{ Id = "Pets", Label = "🐾 Pets" },
 	{ Id = "Events", Label = "Events" },
@@ -166,15 +174,24 @@ function PlayerPanelController.start(): ()
 			local level = snapshot.Level
 			local floor = LevelRules.scoreForLevel(level)
 			local nextAt = LevelRules.scoreForLevel(level + 1)
-			set("Level", "Lv " .. level)
+			local max = LevelRules.isMax(level)
+			set("Level", string.format("Lv %d · %s", level, LevelRewardRules.titleFor(level)))
 			set(
 				"XP",
-				string.format("%s / %s", thousands(snapshot.Xp - floor), thousands(nextAt - floor))
+				if max
+					then "MAX LEVEL"
+					else string.format(
+						"%s / %s",
+						thousands(snapshot.Xp - floor),
+						thousands(nextAt - floor)
+					)
 			)
 			if levelBar then
 				levelBar.set(
-					(snapshot.Xp - floor) / math.max(1, nextAt - floor),
-					string.format("Lv %d  →  Lv %d", level, level + 1)
+					if max then 1 else (snapshot.Xp - floor) / math.max(1, nextAt - floor),
+					if max
+						then "👑 Max level"
+						else string.format("Lv %d  →  Lv %d", level, level + 1)
 				)
 			end
 			set("Zen", "Zen Lv " .. snapshot.ZenLevel)
@@ -197,10 +214,12 @@ function PlayerPanelController.start(): ()
 			set("Crit", string.format("%.2f%%", (GameConfig.BaseCritChance + levelCrit) * 100))
 			if levelText then
 				levelText.Text = string.format(
-					"Level bonus (permanent): +%d base damage, +%.2f%% crit chance. +%d damage and +%.2f%% crit every level.",
+					"Level bonus (permanent): +%d base damage, +%.2f%% crit chance. Each level adds +%d damage up to Lv %d, then +%d, and +%.2f%% crit. Rewards: 🏅 Levels page.",
 					levelDamage,
 					levelCrit * 100,
 					GameConfig.LevelDamagePerLevel,
+					GameConfig.LevelDamageSlowsAt,
+					GameConfig.LevelDamagePerLevelAfter,
 					GameConfig.LevelCritChancePerLevel * 100
 				)
 			end
@@ -270,6 +289,104 @@ function PlayerPanelController.start(): ()
 			"Muted"
 		)
 		refreshProfile()
+	end
+
+	local function levelsPage(): ()
+		local snapshot = ProgressController.get()
+		if snapshot == nil then
+			PanelKit.notice(content, "Loading", "Your level is still loading...")
+			return
+		end
+		local level = snapshot.Level
+		local you = PanelKit.section(
+			content,
+			string.format("Lv %d · %s", level, LevelRewardRules.titleFor(level)),
+			false,
+			true
+		)
+		local nextLevel, nextLines = LevelRewardRules.nextMilestone(level)
+		PanelKit.text(
+			you.Body,
+			if nextLevel
+				then string.format("Next at Lv %d: %s", nextLevel, table.concat(nextLines, ", "))
+				else "👑 Max level reached: every reward is yours.",
+			"Heading"
+		)
+		PanelKit.text(
+			you.Body,
+			string.format(
+				"Every level up pays %d × the new level in coins (Lv 50 pays %s). Levels stop at %d; XP keeps counting on the Top Level board.",
+				LevelRewardConfig.CoinsPerLevel,
+				thousands(LevelRewardConfig.CoinsPerLevel * 50),
+				LevelRules.MAX_LEVEL
+			),
+			"Muted"
+		)
+
+		-- Looks: Default plus every trail / glow; locked ones show their level.
+		local looks = PanelKit.section(content, "Your looks", false, true)
+		local cosmeticRemote = ReplicatedStorage:WaitForChild("Remotes")
+			:WaitForChild("Level")
+			:WaitForChild("SetCosmetic") :: RemoteEvent
+		local function picker(
+			kind: string,
+			heading: string,
+			list: { LevelRewardConfig.Cosmetic },
+			chosen: string
+		): ()
+			PanelKit.text(looks.Body, heading, "Heading")
+			local grid = PanelKit.grid(looks.Body, 150, 46)
+			local function option(id: string, name: string, color: Color3?, unlockAt: number): ()
+				local unlocked = level >= unlockAt
+				local selected = chosen == id
+				local button = PanelKit.button(
+					grid,
+					if unlocked
+						then (if selected then "✓ " else "") .. name
+						else "🔒 Lv " .. unlockAt,
+					if selected
+						then ACCENT
+						else color and color:Lerp(Color3.new(0, 0, 0), 0.45) or C.Neutral
+				)
+				PanelKit.setTextSize(button, PanelKit.SMALL_SIZE)
+				if not unlocked then
+					PanelKit.setDisabled(button, true)
+				elseif not selected then
+					button.Activated:Connect(function()
+						-- The server checks the level again.
+						cosmeticRemote:FireServer(kind, id)
+					end)
+				end
+			end
+			option("", "Default", nil, 1)
+			for _, item in list do
+				option(item.Id, item.Name, item.Color, item.Level)
+			end
+		end
+		picker("Trail", "Hammer trail", LevelRewardConfig.Trails, snapshot.Cosmetics.Trail)
+		picker("Glow", "Zen glow", LevelRewardConfig.Glows, snapshot.Cosmetics.Glow)
+
+		-- The whole track, every level that unlocks something.
+		local track = PanelKit.section(content, "Reward track", true, true)
+		for milestone = 2, LevelRules.MAX_LEVEL do
+			local lines = LevelRewardRules.rewardsAt(milestone)
+			if #lines > 0 then
+				local reached = level >= milestone
+				local line = PanelKit.text(
+					track.Body,
+					string.format(
+						"%s Lv %d   %s",
+						if reached then "✓" else "🔒",
+						milestone,
+						table.concat(lines, ", ")
+					),
+					if reached then nil else "Muted"
+				)
+				if reached then
+					line.TextColor3 = C.Good:Lerp(C.Text, 0.4)
+				end
+			end
+		end
 	end
 
 	local function hammersPage(): ()
@@ -680,6 +797,8 @@ function PlayerPanelController.start(): ()
 		window:selectTab(activeTab)
 		if activeTab == "Profile" then
 			profilePage()
+		elseif activeTab == "Levels" then
+			levelsPage()
 		elseif activeTab == "Hammers" then
 			hammersPage()
 		elseif activeTab == "Events" then
@@ -705,7 +824,7 @@ function PlayerPanelController.start(): ()
 
 	-- Live values: in place on the Profile page, a rebuild for the Hammers page.
 	ProgressController.Changed:Connect(function()
-		if activeTab == "Hammers" or activeTab == "Pets" then
+		if activeTab == "Hammers" or activeTab == "Pets" or activeTab == "Levels" then
 			render()
 		else
 			refreshProfile()

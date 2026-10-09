@@ -252,6 +252,12 @@ local function buildHud(): (ScreenGui, Frame)
 			return
 		end
 		local level = LevelRules.levelFor(snapshot.Xp)
+		if LevelRules.isMax(level) then
+			-- The cap: a full bar; XP keeps counting for the leaderboard.
+			setFill(xpFill, 1, 1)
+			xpLabel.Text = string.format("Lv %d   MAX LEVEL   %d XP", level, snapshot.Xp)
+			return
+		end
 		local floor = LevelRules.scoreForLevel(level)
 		local nextAt = LevelRules.scoreForLevel(level + 1)
 		setFill(xpFill, snapshot.Xp - floor, nextAt - floor)

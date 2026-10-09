@@ -4,7 +4,7 @@
 
 local AdminConfig = table.freeze({
 	-- Set Level: highest level an admin can give.
-	MaxSetLevel = 500,
+	MaxSetLevel = 100, -- GameConfig.MaxLevel (2026-10-09; was 500 before the level cap)
 	-- Set Damage: fixed damage per hit (0 clears it). Session only.
 	MaxSetDamage = 1000000,
 
