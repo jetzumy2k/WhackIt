@@ -34,6 +34,45 @@ Invoke-Step "Format (StyLua)" { stylua --check src tests scripts }
 Invoke-Step "Lint src (Selene)" { selene src scripts }
 Invoke-Step "Lint tests (Selene)" { selene --config selene.tests.toml tests }
 
+# A remote named like an Instance member (e.g. "Remove") is shadowed: indexing
+# `Remotes.Office.Remove` returns the method, not the RemoteEvent, and the
+# server fails to boot. Compare every name under ReplicatedStorage.Remotes with
+# the Object / Instance / Folder members in the Roblox type definitions.
+Invoke-Step "Remote names (no Instance member clashes)" {
+	$members = @{}
+	$inClass = $false
+	foreach ($line in Get-Content $definitions) {
+		if ($line -match '^declare extern type (Object|Instance|Folder)( extends \w+)? with') {
+			$inClass = $true
+			continue
+		}
+		if ($inClass -and $line -match '^end') { $inClass = $false; continue }
+		if ($inClass -and $line -match '^\s+(function\s+)?([A-Za-z_]\w*)\s*[:(]') {
+			$members[$Matches[2]] = $true
+		}
+	}
+	$tree = (Get-Content default.project.json -Raw | ConvertFrom-Json).tree.ReplicatedStorage.Remotes
+	$clashes = New-Object System.Collections.ArrayList
+	function Walk($node, $path) {
+		foreach ($prop in $node.PSObject.Properties) {
+			if ($prop.Name.StartsWith('$')) { continue }
+			if ($members.ContainsKey($prop.Name)) { [void]$clashes.Add("$path.$($prop.Name)") }
+			Walk $prop.Value "$path.$($prop.Name)"
+		}
+	}
+	Walk $tree "Remotes"
+	if ($members.Count -lt 20) {
+		Write-Host "Could not read Instance members from $definitions" -ForegroundColor Red
+		$global:LASTEXITCODE = 1
+	} elseif ($clashes.Count -gt 0) {
+		Write-Host ("Remote names clash with Instance members: " + ($clashes -join ", ")) -ForegroundColor Red
+		$global:LASTEXITCODE = 1
+	} else {
+		Write-Host "$($members.Count) Instance members checked, no clashes"
+		$global:LASTEXITCODE = 0
+	}
+}
+
 Invoke-Step "Sourcemap (game)" { rojo sourcemap default.project.json --include-non-scripts -o sourcemap.json }
 Invoke-Step "Type-check src (luau-lsp)" {
 	luau-lsp analyze --platform=roblox --sourcemap=sourcemap.json "--defs=$definitions" `

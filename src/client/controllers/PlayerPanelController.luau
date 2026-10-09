@@ -12,6 +12,10 @@
 	  Levels     your title, the next level reward, the whole reward track, and
 	             the trail / Zen glow looks your level unlocked (pick ->
 	             Level.SetCosmetic, checked by the server)
+	  Social     your office (go there, who may visit) and every office in
+	             this server to visit (OfficeController -> Office.Go /
+	             Office.SetPrivacy, checked by the server); also opened by the
+	             "🏢 Social" HUD button
 	  Hammers    equipped hammer, every hammer you own (Equip -> the existing
 	             Shop.EquipHammer remote), the Bag
 	  Events     events running now (EventController) with live countdowns
@@ -42,6 +46,7 @@ local LevelRewardRules =
 local LevelRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("LevelRules"))
 local PetConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("PetConfig"))
 local PetRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PetRules"))
+local OfficeConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("OfficeConfig"))
 local SettingsConfig =
 	require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("SettingsConfig"))
 local Types = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Types"))
@@ -53,6 +58,7 @@ local BagController = require(script.Parent.BagController)
 local EventController = require(script.Parent.EventController)
 local PetController = require(script.Parent.PetController)
 local LeaderboardController = require(script.Parent.LeaderboardController)
+local OfficeController = require(script.Parent.OfficeController)
 local PanelKit = require(script.Parent.Parent.Lib.PanelKit)
 local Responsive = require(script.Parent.Parent.Lib.Responsive)
 local ProgressController = require(script.Parent.ProgressController)
@@ -62,12 +68,17 @@ local StoreController = require(script.Parent.StoreController)
 
 local PlayerPanelController = {}
 
+-- Set in start(): opens the panel on a page.
+local openTabImpl: ((id: string) -> ())? = nil
+
 local ACCENT = Color3.fromRGB(70, 140, 230)
 local TOGGLE_KEY = Enum.KeyCode.M
 local GAMEPAD_TOGGLE_KEY = Enum.KeyCode.ButtonY
+local SOCIAL_COLOR = Color3.fromRGB(60, 160, 150)
 local TABS = {
 	{ Id = "Profile", Label = "Profile" },
 	{ Id = "Levels", Label = "🏅 Levels" },
+	{ Id = "Social", Label = "🏢 Social" },
 	{ Id = "Hammers", Label = "Hammers" },
 	{ Id = "Pets", Label = "🐾 Pets" },
 	{ Id = "Events", Label = "Events" },
@@ -136,6 +147,12 @@ function PlayerPanelController.start(): ()
 		window:toggle()
 	end)
 	PanelKit.tooltip(open, "Menu  (M, or Y on a controller)")
+
+	-- HUD column: straight to the Social page (offices).
+	local social = Responsive.dockButton("OpenSocial", "🏢", "Social", SOCIAL_COLOR, 5)
+	social.Activated:Connect(function()
+		PlayerPanelController.openTab("Social")
+	end)
 
 	local activeTab = "Profile"
 	-- Profile values updated in place: tile name -> value label.
@@ -365,6 +382,7 @@ function PlayerPanelController.start(): ()
 		end
 		picker("Trail", "Hammer trail", LevelRewardConfig.Trails, snapshot.Cosmetics.Trail)
 		picker("Glow", "Zen glow", LevelRewardConfig.Glows, snapshot.Cosmetics.Glow)
+		picker("Office", "Office theme", LevelRewardConfig.OfficeThemes, snapshot.Cosmetics.Office)
 
 		-- The whole track, every level that unlocks something.
 		local track = PanelKit.section(content, "Reward track", true, true)
@@ -683,6 +701,117 @@ function PlayerPanelController.start(): ()
 		tickEvents()
 	end
 
+	local function socialPage(): ()
+		local mine = OfficeController.mine()
+		local snapshot = ProgressController.get()
+		local my = PanelKit.section(content, "🏢 My office", false, true)
+		if mine == nil or snapshot == nil then
+			PanelKit.notice(my.Body, "Loading", "Your office is being set up...")
+		else
+			local inOwn = OfficeController.isInOwnOffice()
+			PanelKit.text(
+				my.Body,
+				if inOwn
+					then "You're in your office. Arrange it with ✏️ Edit at the bottom of the screen."
+					else "An open-plan room that's all yours: arrange the furniture any way you like.",
+				"Muted"
+			)
+			local actions = PanelKit.row(my.Body)
+			local main = PanelKit.button(
+				actions,
+				if inOwn then "✏️ Edit furniture" else "🏢 Go to my office",
+				C.Good
+			)
+			main.Size = UDim2.new(0.5, -4, 1, 0)
+			main.Activated:Connect(function()
+				window:close()
+				if inOwn then
+					OfficeController.setEditing(true)
+				else
+					OfficeController.goTo(nil)
+				end
+			end)
+			if OfficeController.current() then
+				local lobby = PanelKit.button(actions, "🚪 Back to the lobby", C.Neutral)
+				lobby.Size = UDim2.new(0.5, -4, 1, 0)
+				lobby.Activated:Connect(function()
+					window:close()
+					OfficeController.setEditing(false)
+					OfficeController.returnToLobby()
+				end)
+			end
+			PanelKit.text(my.Body, "Who can visit", "Heading")
+			local privacyRow = PanelKit.row(my.Body)
+			for _, privacy in OfficeConfig.PrivacyModes do
+				local chosen = snapshot.OfficePrivacy == privacy
+				local button =
+					PanelKit.button(privacyRow, privacy, if chosen then ACCENT else C.Neutral)
+				button.Size = UDim2.new(1 / #OfficeConfig.PrivacyModes, -6, 1, 0)
+				button.Activated:Connect(function()
+					OfficeController.setPrivacy(privacy)
+				end)
+			end
+			PanelKit.text(my.Body, OfficeConfig.PrivacyText[snapshot.OfficePrivacy] or "", "Muted")
+		end
+
+		local list = PanelKit.section(content, "Offices in this server", false, true)
+		local others: { OfficeController.Office } = {}
+		for _, office in OfficeController.offices() do
+			if office.UserId ~= localPlayer.UserId then
+				table.insert(others, office)
+			end
+		end
+		if #others == 0 then
+			PanelKit.notice(
+				list.Body,
+				"Empty",
+				"You're the only one here right now. Other players' offices show up here."
+			)
+			return
+		end
+		for _, office in others do
+			local row = PanelKit.row(list.Body, 56)
+			local avatar = Instance.new("ImageLabel")
+			avatar.LayoutOrder = 1
+			avatar.BackgroundColor3 = C.Field
+			avatar.Size = UDim2.fromOffset(48, 48)
+			avatar.Image =
+				string.format("rbxthumb://type=AvatarHeadShot&id=%d&w=48&h=48", office.UserId)
+			avatar.Parent = row
+			Instance.new("UICorner").Parent = avatar
+			local label = Instance.new("TextLabel")
+			label.LayoutOrder = 2
+			label.BackgroundTransparency = 1
+			label.Size = UDim2.new(1, -(48 + 130 + 16), 1, 0)
+			label.Font = PanelKit.FONT
+			label.TextColor3 = C.Text
+			label.TextXAlignment = Enum.TextXAlignment.Left
+			label.TextWrapped = true
+			label.Text = string.format(
+				"%s  (@%s)\n%s",
+				office.Name,
+				office.Username,
+				OfficeConfig.PrivacyText[office.Privacy] or office.Privacy
+			)
+			label.Parent = row
+			PanelKit.setTextSize(label, PanelKit.SMALL_SIZE)
+			local private = office.Privacy == "Private"
+			local visit =
+				PanelKit.button(row, if private then "🔒 Private" else "Visit", C.Primary)
+			visit.LayoutOrder = 3
+			visit.Size = UDim2.new(0, 130, 1, -8)
+			if private then
+				PanelKit.setDisabled(visit, true)
+			else
+				visit.Activated:Connect(function()
+					-- The server checks privacy (and friendship) again.
+					window:close()
+					OfficeController.goTo(office.UserId)
+				end)
+			end
+		end
+	end
+
 	local function gamePage(): ()
 		local places = PanelKit.section(content, "Go to", false, true)
 		local grid = PanelKit.grid(places.Body, 220, 96)
@@ -718,6 +847,7 @@ function PlayerPanelController.start(): ()
 		local where = PanelKit.section(content, "Around the office", false, true)
 		for _, line in
 			{
+				"Your office: 🏢 Social (HUD button or the Social page), then Go to my office.",
 				"Leaderboard: the Hall of Calm on the lobby's west wall.",
 				"Hammer vending machine: beside the stairs (press E).",
 				"Senior offices: up the stairs (Level 10+).",
@@ -805,6 +935,8 @@ function PlayerPanelController.start(): ()
 			eventsPage()
 		elseif activeTab == "Pets" then
 			petsPage()
+		elseif activeTab == "Social" then
+			socialPage()
 		elseif activeTab == "Game" then
 			gamePage()
 		elseif activeTab == "Settings" then
@@ -821,10 +953,28 @@ function PlayerPanelController.start(): ()
 	window:onOpen(function()
 		task.defer(render)
 	end)
+	openTabImpl = function(id: string)
+		activeTab = id
+		if window:isOpen() then
+			render()
+		else
+			window:open()
+		end
+	end
 
 	-- Live values: in place on the Profile page, a rebuild for the Hammers page.
+	OfficeController.Changed:Connect(function()
+		if activeTab == "Social" then
+			render()
+		end
+	end)
 	ProgressController.Changed:Connect(function()
-		if activeTab == "Hammers" or activeTab == "Pets" or activeTab == "Levels" then
+		if
+			activeTab == "Hammers"
+			or activeTab == "Pets"
+			or activeTab == "Levels"
+			or activeTab == "Social"
+		then
 			render()
 		else
 			refreshProfile()
@@ -861,6 +1011,13 @@ function PlayerPanelController.start(): ()
 			end
 		end
 	end)
+end
+
+-- Opens the Player Panel on page `id` (e.g. "Social" from the HUD button).
+function PlayerPanelController.openTab(id: string): ()
+	if openTabImpl then
+		openTabImpl(id)
+	end
 end
 
 return PlayerPanelController

@@ -10,17 +10,18 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
+local FurnitureConfig = require(ReplicatedStorage.Config.FurnitureConfig)
 local LevelRewardConfig = require(ReplicatedStorage.Config.LevelRewardConfig)
 local Validate = require(script.Parent.Validate)
 
-export type CosmeticKind = "Trail" | "Glow"
+export type CosmeticKind = "Trail" | "Glow" | "Office"
 
--- The trail and glow a player picked ("" = the default look).
-export type Cosmetics = { Trail: string, Glow: string }
+-- The trail, Zen glow and office theme a player picked ("" = default).
+export type Cosmetics = { Trail: string, Glow: string, Office: string }
 
 local LevelRewardRules = {}
 
-LevelRewardRules.KINDS = table.freeze({ "Trail", "Glow" } :: { CosmeticKind })
+LevelRewardRules.KINDS = table.freeze({ "Trail", "Glow", "Office" } :: { CosmeticKind })
 
 function LevelRewardRules.titleFor(level: number): string
 	local name = LevelRewardConfig.Titles[1].Name
@@ -44,13 +45,18 @@ function LevelRewardRules.coinsBetween(fromLevel: number, toLevel: number): numb
 end
 
 local function catalogue(kind: string): { LevelRewardConfig.Cosmetic }
-	return if kind == "Trail" then LevelRewardConfig.Trails else LevelRewardConfig.Glows
+	return if kind == "Trail"
+		then LevelRewardConfig.Trails
+		elseif kind == "Glow" then LevelRewardConfig.Glows
+		else LevelRewardConfig.OfficeThemes
 end
 
 function LevelRewardRules.cosmetic(kind: string, id: string): LevelRewardConfig.Cosmetic?
 	return if kind == "Trail"
 		then LevelRewardConfig.TrailsById[id]
-		else LevelRewardConfig.GlowsById[id]
+		elseif kind == "Glow" then LevelRewardConfig.GlowsById[id]
+		elseif kind == "Office" then LevelRewardConfig.OfficeThemesById[id]
+		else nil
 end
 
 -- "" (the default look) is always allowed; others need their level.
@@ -74,6 +80,8 @@ function LevelRewardRules.parseChoice(rawKind: unknown, rawId: unknown): (Cosmet
 		kind = "Trail"
 	elseif rawKind == "Glow" then
 		kind = "Glow"
+	elseif rawKind == "Office" then
+		kind = "Office"
 	else
 		return nil, nil
 	end
@@ -90,17 +98,20 @@ end
 -- Saved picks: known ids only (unlocked or not: a lowered level only hides
 -- them until the level is back).
 function LevelRewardRules.sanitizeCosmetics(raw: unknown): Cosmetics
-	local result: Cosmetics = { Trail = "", Glow = "" }
+	local result: Cosmetics = { Trail = "", Glow = "", Office = "" }
 	if typeof(raw) ~= "table" then
 		return result
 	end
 	local data = raw :: { [string]: unknown }
-	local trail, glow = data.Trail, data.Glow
+	local trail, glow, office = data.Trail, data.Glow, data.Office
 	if typeof(trail) == "string" and LevelRewardRules.cosmetic("Trail", trail) then
 		result.Trail = trail
 	end
 	if typeof(glow) == "string" and LevelRewardRules.cosmetic("Glow", glow) then
 		result.Glow = glow
+	end
+	if typeof(office) == "string" and LevelRewardRules.cosmetic("Office", office) then
+		result.Office = office
 	end
 	return result
 end
@@ -113,11 +124,16 @@ function LevelRewardRules.rewardsAt(level: number): { string }
 			table.insert(lines, "Title: " .. title.Name)
 		end
 	end
-	for _, list in { catalogue("Trail"), catalogue("Glow") } do
+	for _, list in { catalogue("Trail"), catalogue("Glow"), catalogue("Office") } do
 		for _, item in list do
 			if item.Level == level then
 				table.insert(lines, item.Name)
 			end
+		end
+	end
+	for _, item in FurnitureConfig.List do
+		if item.Tier == "Level" and item.MinLevel == level then
+			table.insert(lines, "Office: " .. item.Name)
 		end
 	end
 	for _, hammer in HammerConfig.List do

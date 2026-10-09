@@ -86,6 +86,35 @@ return function()
 			end
 		end)
 
+		it("handles office themes as a third look", function()
+			local kind, id = LevelRewardRules.parseChoice("Office", "garden")
+			expect(kind).to.equal("Office")
+			expect(id).to.equal("garden")
+			local garden = LevelRewardConfig.OfficeThemesById.garden
+			expect(LevelRewardRules.isUnlocked("Office", "garden", garden.Level - 1)).to.equal(
+				false
+			)
+			expect(LevelRewardRules.isUnlocked("Office", "garden", garden.Level)).to.equal(true)
+			expect(LevelRewardRules.sanitizeCosmetics({ Office = "garden" }).Office).to.equal(
+				"garden"
+			)
+			expect(LevelRewardRules.sanitizeCosmetics({ Office = "ocean" }).Office).to.equal("")
+		end)
+
+		it("lists office themes and level-reward furniture on the track", function()
+			local function has(level: number, needle: string): boolean
+				for _, line in LevelRewardRules.rewardsAt(level) do
+					if string.find(line, needle, 1, true) then
+						return true
+					end
+				end
+				return false
+			end
+			expect(has(10, "Warm Wood Office")).to.equal(true)
+			expect(has(30, "Office: Aquarium")).to.equal(true)
+			expect(has(100, "Office: Golden Hammer Statue")).to.equal(true)
+		end)
+
 		it("keeps saved picks that exist, even while locked, and drops the rest", function()
 			local picks = LevelRewardRules.sanitizeCosmetics({ Trail = "prism", Glow = "disco" })
 			expect(picks.Trail).to.equal("prism")

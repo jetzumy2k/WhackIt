@@ -38,6 +38,8 @@ local BagRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("
 local EventConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("EventConfig"))
 local EventRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("EventRules"))
 local HammerConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("HammerConfig"))
+local FurnitureConfig =
+	require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("FurnitureConfig"))
 local PetConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("PetConfig"))
 local StoreConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("StoreConfig"))
 
@@ -92,6 +94,7 @@ local REWARD_KINDS: { { Key: string, Text: string } } = {
 	{ Key = "Item", Text = "Store item (boost, bundle, egg, Mystery Hammer)" },
 	{ Key = "Hammer", Text = "Hammer" },
 	{ Key = "Pet", Text = "Pet" },
+	{ Key = "Furniture", Text = "Special office furniture" },
 }
 -- History filters (HistoryService). Key nil = everything.
 local HISTORY_MODES = { "Player", "Admin" }
@@ -1418,6 +1421,12 @@ function AdminController.start(): ()
 		elseif kind == "Hammer" then
 			for _, hammer in SALE_HAMMERS do
 				table.insert(keys, { Key = hammer.Id, Text = hammer.DisplayName })
+			end
+		elseif kind == "Furniture" then
+			for _, item in FurnitureConfig.List do
+				if item.Tier == "Special" then
+					table.insert(keys, { Key = item.Key, Text = item.Name })
+				end
 			end
 		elseif kind == "Pet" then
 			for _, species in PetConfig.Species do

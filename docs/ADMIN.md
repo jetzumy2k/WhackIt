@@ -134,6 +134,7 @@ Give a player **in this server** something the game already has:
 | Store item | 1-50 of any store item: boost, bundle (as its boosts), egg, Mystery Hammer | the player's **Bag** (`BagRules.grant`) |
 | Hammer | any coin hammer they don't own yet | `OwnedHammers` |
 | Pet | any species; its buffs are rolled like a hatched pet's | `PetService.grantPet` (first pet is equipped) |
+| Special office furniture (2026-10-09) | 1-50 of a Special item (trophies, docs/OFFICES.md) | the player's furniture inventory (`OfficeService.grantSpecial`, at most 1,000 each) |
 
 Optional **reason** (one line, up to 100 characters, admins only). **GIVE REWARD** asks "Give … to
 …?" first. The server re-checks admin rights, the target, every limit and the catalogues

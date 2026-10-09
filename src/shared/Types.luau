@@ -76,7 +76,12 @@ export type ProfileSnapshot = {
 	-- On/off player settings (Config/SettingsConfig, Shared/SettingsRules).
 	Settings: { [string]: boolean },
 	-- Level reward looks the player picked ("" = default; docs/GAMEPLAY_RULES.md).
-	Cosmetics: { Trail: string, Glow: string },
+	Cosmetics: { Trail: string, Glow: string, Office: string },
+	-- Personal office (docs/OFFICES.md): Special furniture owned, the placed
+	-- furniture (Shared/FurnitureRules entries) and who may visit.
+	Furniture: { [string]: number },
+	OfficeLayout: { { Id: number, Item: string, X: number, Z: number, R: number } },
+	OfficePrivacy: string,
 }
 
 export type OwnedPet = {

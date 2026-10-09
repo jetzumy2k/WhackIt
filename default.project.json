@@ -212,6 +212,38 @@
           }
         },
 
+        "Office": {
+          "$className": "Folder",
+
+          "Go": {
+            "$className": "RemoteEvent"
+          },
+
+          "Return": {
+            "$className": "RemoteEvent"
+          },
+
+          "Place": {
+            "$className": "RemoteEvent"
+          },
+
+          "Move": {
+            "$className": "RemoteEvent"
+          },
+
+          "RemoveItem": {
+            "$className": "RemoteEvent"
+          },
+
+          "SetPrivacy": {
+            "$className": "RemoteEvent"
+          },
+
+          "Directory": {
+            "$className": "RemoteEvent"
+          }
+        },
+
         "Settings": {
           "$className": "Folder",
 

@@ -552,3 +552,37 @@ levels quickly (it pays no coins, by design).
 | 364 | Admin panel → Set level field | Says 1 to 100; 101 is refused |
 | 365 | Data (API access on, test place): a v9 profile at old Lv 50 (XP 1,440,600) joins | Still Lv 50 (XP raised to 8,427,000), coins unchanged, no level-up card; a Lv 8 profile keeps its XP exactly |
 | 366 | Output | No errors from SessionService, LevelRewardService, MoodService, HammerService, LevelUpController, PlayerPanelController |
+## Personal offices (2026-10-09, major update Phase 2a, docs/OFFICES.md)
+Specs first: `Config/FurnitureConfig`, `Config/OfficeConfig`, `Shared/FurnitureRules`,
+`Shared/FurnitureModel`, `Server/OfficeWingBuilder`, `Server/PlayerDataSchema` (v11). Set **Max
+Players** (Game Settings) before testing; use **Test → Clients and Servers** with 2-3 players for the
+visiting rows.
+
+| # | Check | Expected |
+|---|---|---|
+| 367 | Join; HUD column | A 🏢 **Social** button at the end of the column (all screen sizes, clear of the jump button) |
+| 368 | 🏢 Social → **Go to my office** | You stand inside the door of a 40 × 40 room with your name over the door, a long window, a soft light; a Computer Desk, chair and small plant are already there; the bar says "🏢 Your office" with ✏️ Edit / 🚪 Lobby |
+| 369 | ✏️ Edit | The furniture strip appears, your hammer is put away; clicking never swings |
+| 370 | Pick Sofa; move the mouse over the floor | A see-through sofa follows, snapping to whole studs; green on free floor, red near a wall, in the doorway or over the desk, with the reason in the hint |
+| 371 | R / ⟳ Turn, then click (or ✓ Place) on green floor | The sofa turns, then appears for real; the strip stays on Sofa so you can place another |
+| 372 | Place a Round Rug under the sofa; then another rug on top of it | The first is allowed; the second is red ("That overlaps the Round Rug.") |
+| 373 | Click a placed item → ✥ Move, put it elsewhere; select it → R; → 🗑 Remove (or Delete) | It moves, turns in place, disappears; the count "n / 60 items" follows |
+| 374 | ✓ Done; rejoin (API access on) | Your hammer is back; after rejoining the office looks exactly the same |
+| 375 | Trophies tab with none owned | "Trophies come from rewards and events." / cards show "0 left", disabled |
+| 376 | Admin → Rewards → Special office furniture → Golden Hammer Trophy ×2 to yourself | Toast; Trophies tab shows "2 left"; you can place 2, not a third |
+| 377 | Fill the room to 60 items (or note the count stops you) | The 61st is refused: "Your office is full (60 items)." |
+| 378 | Phone: Edit, tap the floor, ✓ Place; tap a placed item → Move / Remove | Works with taps; ✓ Done gives you the thumbstick back |
+| 379 | Controller: Edit, aim with the camera, X to place, LB/RB to turn, X on furniture to select, B to cancel then leave | All work; the panel selection starts on a category tab, never ✓ Done |
+| 380 | Player 2: 🏢 Social → Offices in this server | Player 1's office listed with avatar, name, "Anyone can visit", **Visit** |
+| 381 | Player 2 → Visit | Player 2 arrives in player 1's office; their bar says "🏢 <Name>'s office" with only 🚪 Lobby (no Edit) |
+| 382 | Player 1 sets **Private** while player 2 is inside | Within ~1 s player 2 is sent to the lobby with "That office is closed to visitors now."; the list shows "🔒 Private", Visit disabled |
+| 383 | Player 1 sets **Friends**; player 2 (not a friend) presses Visit (Studio test players aren't friends) | Toast "…'s office is for friends only."; stays where they were |
+| 384 | Player 2 in player 1's (Public) office; player 1 leaves the server | Player 2 is sent to the lobby within ~1 s; the room shows "Vacant Office" |
+| 385 | Door prompt (E) inside any office; 🚪 Lobby; respawn while in an office | Each returns you to the lobby; no "[MovementGuard]" warnings, hits on bosses work right away |
+| 386 | Exploit / command bar as a visitor in someone's office: `Remotes.Office.Place:FireServer("sofa", 0, 0, 0)`; as owner: `("sofa", 0.5, 0, 0)`, `("sofa", 999, 0, 0)`, `("sofa", 0, 0, 45)`, `("rocket", 0, 0, 0)`, `RemoveItem:FireServer("x")`, `Go:FireServer(-1)`, 30 Place calls in a row | Visitor: "Go to your office…" toast, nothing changes; the others rejected and logged (at most once per 5 s); rate limit holds; the room never changes |
+| 387 | Data: an existing (v10) profile joins | Loads with the starting desk, chair and plant, Public; coins, hammers, pets, settings unchanged |
+| 388 | Output | No errors from OfficeService, OfficeController, PlayerPanelController, FurnitureModel |
+| 389 | Admin Set level 30; Edit → Level rewards tab | Executive Desk and Aquarium show "Free"; Zen Fountain and the statue "🔒 Lv 50" / "🔒 Lv 100", disabled; placing a locked one is refused ("Reach Level 50 to place the Zen Fountain.") |
+| 390 | Place an Aquarium, then Admin Set level 1, rejoin | The aquarium is still there and can be moved; a new one can't be placed |
+| 391 | Admin Set level 40; 🏅 Levels → Office theme → Garden Office | Your room's walls go green and the carpet dark green at once; a visitor sees it; Default restores the slate look |
+| 392 | Exploit: `Remotes.Level.SetCosmetic:FireServer("Office", "royal_gold")` at Lv 40 | Ignored (still Garden); nothing logged as an error |

@@ -14,11 +14,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BagRules = require(ReplicatedStorage.Shared.BagRules)
 local BossConfig = require(ReplicatedStorage.Config.BossConfig)
+local FurnitureRules = require(ReplicatedStorage.Shared.FurnitureRules)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
 local HammerRules = require(ReplicatedStorage.Shared.HammerRules)
 local LevelRewardRules = require(ReplicatedStorage.Shared.LevelRewardRules)
 local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
+local OfficeConfig = require(ReplicatedStorage.Config.OfficeConfig)
 local PetConfig = require(ReplicatedStorage.Config.PetConfig)
 local PetRules = require(ReplicatedStorage.Shared.PetRules)
 local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
@@ -63,6 +65,11 @@ export type PlayerData = {
 	-- v10 (docs/GAMEPLAY_RULES.md "Level rewards")
 	LevelRewardsClaimed: number, -- highest level whose level-up coins were paid
 	Cosmetics: LevelRewardRules.Cosmetics, -- picked trail and Zen glow ("" = default)
+	-- v11 (docs/OFFICES.md)
+	Furniture: FurnitureRules.Owned, -- Special furniture owned (Basic items are unlimited)
+	OfficeLayout: FurnitureRules.Layout, -- placed furniture, room-local
+	NextOfficeItemId: number, -- next layout entry id (never reused)
+	OfficePrivacy: string, -- "Public" | "Friends" | "Private"
 }
 
 export type PendingGift = {
@@ -78,7 +85,7 @@ export type Migration = (data: RawData) -> ()
 
 local PlayerDataSchema = {}
 
-PlayerDataSchema.CURRENT_VERSION = 10
+PlayerDataSchema.CURRENT_VERSION = 11
 
 -- Upper bound for counters; far beyond legitimate play, small enough to stay
 -- an exact integer and to keep leaderboard values sane.
@@ -168,6 +175,14 @@ PlayerDataSchema.MIGRATIONS = table.freeze({
 		data.LevelRewardsClaimed = keptLevel
 		data.Cosmetics = {}
 	end,
+	[11] = function(data: RawData)
+		-- v10 -> v11: personal offices. Everyone gets the starting furniture
+		-- (sanitize() fills in the default layout when none is saved).
+		data.Furniture = {}
+		data.OfficeLayout = nil
+		data.NextOfficeItemId = nil
+		data.OfficePrivacy = OfficeConfig.DefaultPrivacy
+	end,
 }) :: { [number]: Migration }
 
 -- Most recent purchase ids remembered for duplicate-receipt protection. Roblox
@@ -205,7 +220,11 @@ function PlayerDataSchema.template(): PlayerData
 		Incubation = nil,
 		Settings = SettingsRules.defaults(),
 		LevelRewardsClaimed = 1,
-		Cosmetics = { Trail = "", Glow = "" },
+		Cosmetics = { Trail = "", Glow = "", Office = "" },
+		Furniture = {},
+		OfficeLayout = FurnitureRules.defaultLayout(),
+		NextOfficeItemId = #FurnitureRules.defaultLayout() + 1,
+		OfficePrivacy = OfficeConfig.DefaultPrivacy,
 	}
 end
 
@@ -461,6 +480,24 @@ function PlayerDataSchema.sanitize(data: RawData): ()
 	data.LevelRewardsClaimed =
 		math.clamp(counter(data.LevelRewardsClaimed, 1), 1, LevelRules.MAX_LEVEL)
 	data.Cosmetics = LevelRewardRules.sanitizeCosmetics(data.Cosmetics)
+	-- Office: owned Special furniture, then the layout checked against it
+	-- (bad entries dropped, the rest kept as placed). No saved layout at all
+	-- means a new office: it gets the starting furniture.
+	local ownedFurniture = FurnitureRules.sanitizeOwned(data.Furniture)
+	data.Furniture = ownedFurniture
+	local layout, nextId
+	if data.OfficeLayout == nil then
+		layout = FurnitureRules.defaultLayout()
+		nextId = #layout + 1
+	else
+		layout, nextId = FurnitureRules.parseLayout(data.OfficeLayout, ownedFurniture)
+	end
+	data.OfficeLayout = layout
+	-- Ids are never reused, even for removed furniture.
+	data.NextOfficeItemId = math.max(nextId, counter(data.NextOfficeItemId, 1))
+	if not FurnitureRules.isPrivacy(data.OfficePrivacy) then
+		data.OfficePrivacy = OfficeConfig.DefaultPrivacy
+	end
 
 	-- Must be a hammer the player actually owns.
 	local hammerId = data.EquippedHammerId

@@ -31,6 +31,10 @@ return function()
 			end
 			check(LevelRewardConfig.Trails, LevelRewardConfig.TrailsById)
 			check(LevelRewardConfig.Glows, LevelRewardConfig.GlowsById)
+			check(LevelRewardConfig.OfficeThemes, LevelRewardConfig.OfficeThemesById)
+			for _, theme in LevelRewardConfig.OfficeThemes do
+				expect(theme.Floor).never.to.equal(nil) -- themes colour the carpet too
+			end
 		end)
 
 		it("never puts two rewards of the track on the same level", function()
