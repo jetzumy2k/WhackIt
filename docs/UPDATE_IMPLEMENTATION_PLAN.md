@@ -67,9 +67,9 @@ panel can be driven with a gamepad. Reduced motion removes the shake and panel t
 
 ## 3b. Levelling rework (owner request 2026-10-09, before 2a)
 
-**Status (2026-10-09):** 🟡 implemented on branch `feat/levelling-rework`; `scripts/check.ps1` passes;
-Studio specs **594 passed, 0 failed**; playtest (`docs/PLAYTEST.md` "Levelling rework") deferred by the
-owner to the next session. Decisions in
+**Status (2026-10-10):** ✅ complete on branch `feat/levelling-rework`; `scripts/check.ps1` passes;
+Studio specs **594 passed, 0 failed**; playtest (`docs/PLAYTEST.md` "Levelling rework", 351–366)
+reported passed by the owner (2026-10-10). Decisions in
 `docs/MAJOR_GAME_UPDATE.md` §21.4. **Phase 2a is parked** (a git stash on `feat/phase2a-offices`,
 unverified) until this is finished; when it resumes, its schema version becomes **v11** (this work took
 v10), and its office rewards join the level reward track.
