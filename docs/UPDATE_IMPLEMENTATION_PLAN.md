@@ -76,11 +76,11 @@ v10), and its office rewards join the level reward track.
 
 ## 4. Phase 2a: furniture, personal offices, Office Directory
 
-**Status (2026-10-09):** 🟡 implemented on branch `feat/phase2a-offices`, stacked on the levelling
-rework (#13), schema **v11**, with office themes and level-reward furniture on the level track (docs/OFFICES.md);
+**Status (2026-10-10):** ✅ complete on branch `feat/phase2a-offices`, after the levelling
+rework (#13, merged), schema **v11**, with office themes and level-reward furniture on the level track (docs/OFFICES.md);
 `scripts/check.ps1` passes; Studio specs **636 passed, 0 failed**; Studio Play boots clean after
 fixing a remote named `Remove` (2026-10-10, see docs/REMOTE_CONTRACTS.md "Naming"); playtest
-(`docs/PLAYTEST.md` "Personal offices") pending.
+(`docs/PLAYTEST.md` "Personal offices", 367–392) reported passed by the owner (2026-10-10).
 Owner decision: Basic furniture is free and unlimited, Special items (trophies) come from rewards.
 Changes from the plan below: layout entries carry a stable `Id` (so a move or removal can never hit
 the wrong item), the starter furniture is a placed default layout rather than an inventory kit, the
