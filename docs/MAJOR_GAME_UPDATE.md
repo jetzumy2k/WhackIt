@@ -3,7 +3,7 @@
 **Document:** `MAJOR_GAME_UPDATE.md`  
 **Purpose:** Implementation-ready product and technical plan for Claude coding agents  
 **Project:** Existing Roblox experience, *Whack It Out!*  
-**Status:** Proposed specification — audit the repository before implementation
+**Status:** Proposed specification — audit the repository before implementation. Owner decisions of 2026-10-09 (§21) override anything below that disagrees.
 
 ---
 
@@ -180,6 +180,8 @@ Requirements:
 
 Players should progress from a shared workspace to a personal desk and eventually a private office. The server must enforce office ownership, access permissions, and placement permissions.
 
+> **Superseded by §21.3:** every player has their own open-space office from the start. Career progress unlocks furniture, decorations and titles instead of the office itself.
+
 ## 7. Feature C — Quests, Inventory, Furniture, and Customization
 
 Create a configurable quest system supporting appropriate tutorial, daily, weekly, career, and event quests.
@@ -254,7 +256,9 @@ Use a physics approach that balances responsiveness with server-authoritative sc
 
 ### 8.2 Recreation Rankings and Rewards
 
-Create separate Recreation Rating and Recreation Token systems. Do not merge them into the existing boss score or combat XP.
+> **Superseded in part by §21.2:** there are no Recreation Tokens. Fees and rewards use the existing coins; the token amounts below no longer apply.
+
+Create a separate Recreation Rating system. Do not merge it into the existing boss score or combat XP.
 
 Requirements:
 
@@ -530,3 +534,73 @@ Identify exact files and systems that must change, features that can reuse exist
 Do not begin large-scale implementation until the audit is complete.
 
 The goal is to make Whack It Out! a polished, modern, socially engaging stress-relief experience combining funny bosses, recreational competition, career progression, quests, personal office customization, daily events, and cooperative activities—without losing the identity of the original game.
+
+## 21. Owner Decisions (2026-10-09)
+
+These answers from the owner override earlier sections. Values marked *(provisional)* are suggestions to balance in playtesting and must live in config modules.
+
+### 21.1 Pickleball: challenges, modes and rules
+
+**Modes:** Singles (1 v 1) and Doubles (2 v 2), both released together.
+
+**Finding opponents (server-wide challenge):**
+1. A player opens the Pickleball panel (at the recreation building or from the Menu), picks Singles or Doubles and presses **Challenge**.
+2. The server announces it to everyone in the server with the existing notification card: "🏓 <Name> wants a Singles match! [Accept]". For Doubles the card shows the open places ("2 v 2, 1 of 4 joined").
+3. **Singles:** the first player to accept becomes the opponent, and the match starts.
+   **Doubles:** each accepter picks a team that still has room (the challenger's team gets 1 more player, the other team 2). The match starts when all 4 places are filled.
+4. The server holds the lock on places: two players accepting at once can't both get the last one. A player can't accept their own challenge or be in two challenges or matches at once.
+5. A challenge expires after 60 s for Singles and 90 s for Doubles *(provisional)*. The challenger can cancel. Each player has one open challenge at a time, with a 30 s cooldown between challenges *(provisional)*, so there's no spam.
+6. A Settings toggle lets a player hide challenge notices.
+7. When the match starts, players are moved to a free court. If none is free, the challenge waits in a queue and shows its position. Start with 2 courts *(provisional)*.
+
+**Rules: standard pickleball (USA Pickleball rulebook)**
+- One game to **11 points, win by 2**. Only the serving side scores (side-out scoring).
+- **Serve:** underhand, from behind the baseline, diagonally cross-court. It must clear the non-volley zone (the "kitchen") and its line and land in the diagonal service court. One attempt per serve.
+- **Singles serve position:** the server serves from the right when their score is even, from the left when it's odd.
+- **Doubles serving:** both partners serve before a side-out, except at the start of the game. The first serving team gets only one server ("0-0-2"). The score is shown as three numbers: serving team, receiving team, server 1 or 2.
+- **Two-bounce rule:** the serve must bounce before it's returned, and the return must bounce before it's hit back. After that, volleys are allowed.
+- **Non-volley zone:** the 7-foot area next to the net on each side. A player may not volley while standing in it or touching its line.
+- **Faults:** ball into the net, landing out (a ball on a line is in, but a serve landing on the kitchen line is a fault), two bounces before a return, a volley from the kitchen, or a serve to the wrong court.
+- **Court:** 20 × 44 studs (1 stud ≈ 1 ft), with the kitchen 7 studs deep on each side and the net 3 ft high at the sidelines and 34 in at the centre.
+- **Roblox adaptation:** the server owns the ball (a deterministic flight path that the server simulates and the clients draw). A player swings, and the server accepts the hit only if the ball is within paddle reach at that moment. Aim is a client *request* that the server clamps to allowed angles and power. Line calls, bounces, faults and the score are server-only.
+
+**Disconnects and cancellations:**
+- If anyone leaves before the first point is scored, the match is cancelled and every fee is refunded.
+- If someone leaves after that, their team forfeits. In Doubles, the remaining partner may finish alone or forfeit. The leaver gets no consolation prize.
+- If a match hits a 20-minute limit *(provisional)*, the side ahead wins. A tied match is cancelled with refunds.
+
+### 21.2 Fees and rewards: existing coins only
+
+There is **no new currency**. Pickleball uses the existing `Coins`, through `SessionService.trySpendCoins` / `addCoins`.
+
+| Item | Singles | Doubles (per player) |
+|---|---|---|
+| Entry fee (charged when the match starts, not when accepting) | 10 coins *(provisional)* | 10 coins *(provisional)* |
+| Winner | 60 coins *(provisional)* | 60 coins *(provisional)* |
+| Loser (consolation) | 20 coins *(provisional)* | 20 coins *(provisional)* |
+| Office supply drop | every player rolls once from the office-supply pool; the winners' pool has better odds | same |
+
+- The server issues the rewards. The fee is a coin sink, not a pot paid by the losers, so players never transfer coins to each other.
+- A player can only start or accept a challenge if they have the fee. The server checks again at the start.
+- **Anti-farming:** each player gets at most 10 rewarded matches per UTC day *(provisional)*, and the same set of opponents is rewarded at most 3 times per day *(provisional)*. After the cap, matches are "friendly": no fee, no coins, no drop, no rating change.
+- **Office supplies** are the furniture and decoration items in §7.1. They go into the player's furniture inventory. The drop table and its odds must be published in config.
+- The Recreation Rating and seasonal leaderboard (§8.2) stay. Top-10 season prizes are trophies, titles and decorations, plus coins *(amounts provisional)*.
+
+### 21.3 Personal offices
+
+**Every player gets their own office from the start.** It is an empty open-plan room they furnish however they like. Career progress unlocks furniture and decorations, not the room itself.
+
+**Slots (Claude's suggestion, accepted by the owner):**
+- **One slot per player place in the server.** The slot count equals `Players.MaxPlayers`, read at startup and never hard-coded, so every player always has an office. A 12–16 player server size is recommended.
+- Slots stand in an **Office Wing** that is far from the main map and invisible from it. Players get there by teleport, so the map's fixed positions and their specs stay unchanged.
+- Each slot is an open-plan room, about **40 × 40 studs**, with windows, a door and a nameplate ("<Name>'s Office"), plus a protected entry area near the door where nothing can be placed.
+- A free slot is assigned on join and released on leave. The layout is saved in the player's profile (schema v9: a list of `{ItemKey, X, Z, Rotation}` relative to the room) and rebuilt in any slot.
+- **New players get a free starter kit** (desk, chair, plant) so the room is never just bare.
+- **Placement:** owned items only, from approved templates, on a 1-stud grid with 90° rotation. Items must stay inside the room and outside the entry area, and can't overlap. The server checks everything. There is a limit of 60 items per office *(provisional)*.
+
+**Getting there and visiting:**
+- A **🏢 My Office** HUD button (and a Menu entry) teleports the player to their office. A **Return** button takes them back to the lobby.
+- An **Offices** button opens the **Office Directory** panel. It lists every player in this server who has an office: avatar, name, office name and a **Visit** button. Players choose an office from the list, and the button teleports them to that office's entry area.
+- **Privacy** (owner setting): Public (default), Friends only, or Private. The server enforces it, both when the visit starts and while the visitor is inside.
+- Visitors can look around but never edit. Edit mode exists only for the owner, inside their own office.
+- Phase 6 may later add visits to offline players' offices across servers (a read-only copy of the saved layout). It is out of scope for the first release.
