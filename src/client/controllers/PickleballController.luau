@@ -53,6 +53,7 @@ local C = PanelKit.Colors
 local ACCENT = Color3.fromRGB(110, 210, 120)
 local CARD_COLOR = Color3.fromRGB(26, 29, 41)
 local BALL_COLOR = Color3.fromRGB(230, 240, 90)
+local REACH_COLOR = Color3.fromRGB(90, 255, 120)
 local COURT = PickleballConfig.Court
 local BALL = PickleballConfig.Ball
 local SHOT = PickleballConfig.Shot
@@ -60,6 +61,9 @@ local MAX_NAME = 40
 -- A ball that has come to rest disappears after this long.
 local REST_SECONDS = 3
 local SWING_TWEEN = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local ARM_WINDUP = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local ARM_SWEEP = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+local ARM_BACK = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 export type Seat = { UserId: number, Name: string }
 
@@ -108,6 +112,8 @@ local balls: { [number]: Ball } = {}
 local renderConnection: RBXScriptConnection? = nil
 local changedEvent = Instance.new("BindableEvent")
 local openPanel: (() -> ())? = nil
+-- Each shoulder joint's C0 before the first swing (the swing returns to it).
+local shoulderRest: { [Motor6D]: CFrame? } = setmetatable({}, { __mode = "k" }) :: any
 
 -- Fires when the challenge list or the match changes.
 PickleballController.Changed = changedEvent.Event
@@ -146,7 +152,8 @@ local function parseSeats(raw: unknown): { { Seat } }
 				if typeof(entry) == "table" then
 					local seat = entry :: { [string]: unknown }
 					local userId = number(seat.UserId, 0)
-					if userId > 0 then
+					-- Not "> 0": Studio's local test players have negative ids.
+					if userId ~= 0 then
 						table.insert(teams[team], {
 							UserId = userId,
 							Name = string.sub(text(seat.Name, "Player"), 1, MAX_NAME),
@@ -271,16 +278,40 @@ local function hide(ball: Ball): ()
 	ball.Marker.Transparency = 1
 end
 
+-- Whether the local player could hit a ball at `position` (court-local) on
+-- court `index` now; the same reach the server checks (RecreationService).
+local function inMyReach(index: number, ball: Ball, position: Vector3): boolean
+	local current = match
+	local character = localPlayer.Character
+	local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
+	if current == nil or current.Court ~= index or root == nil or not root:IsA("BasePart") then
+		return false
+	end
+	local team = teamOfMine(current.Teams)
+	if team == nil or not PickleballRules.onHalf(team, position) then
+		return false
+	end
+	local spot = root.Position - ball.Center
+	local distance = Vector2.new(position.X - spot.X, position.Z - spot.Z).Magnitude
+	return position.Y <= SHOT.MaxHitHeight and distance <= SHOT.Reach
+end
+
 local function step(): ()
 	local now = serverNow()
 	local moving = false
-	for _, ball in balls do
+	for index, ball in balls do
 		local flight, events = ball.Flight, ball.Events
 		if flight and events then
 			local t = now - flight.T0
 			local position = BallFlight.positionAt(flight, events, BALL, t)
 			ball.Part.Position = ball.Center + position + Vector3.new(0, BALL.Radius, 0)
 			ball.Part.Transparency = 0
+			-- Green while it's in reach: swing now.
+			local reachable = inMyReach(index, ball, position)
+			ball.Part.Color = if reachable then REACH_COLOR else BALL_COLOR
+			ball.Part.Material = if reachable
+				then Enum.Material.Neon
+				else Enum.Material.SmoothPlastic
 			-- The bounce ring shows until the ball gets there.
 			ball.Marker.Transparency = if t < events.BounceTime and not events.NetHit
 				then 0.4
@@ -358,9 +389,46 @@ local function aim(team: number, courtIndex: number, usePointer: boolean): (numb
 	return math.clamp(u, -1, 1), math.clamp(v, 0, 1)
 end
 
-local function animatePaddle(): ()
+local function rightShoulder(character: Model): Motor6D?
+	local upper = character:FindFirstChild("RightUpperArm") -- R15
+	local motor = if upper then upper:FindFirstChild("RightShoulder") else nil
+	if motor == nil then
+		local torso = character:FindFirstChild("Torso") -- R6
+		motor = if torso then torso:FindFirstChild("Right Shoulder") else nil
+	end
+	return if motor and motor:IsA("Motor6D") then motor else nil
+end
+
+-- A forehand: the arm winds back to the right, sweeps across and returns.
+-- Turned in the torso's frame, so R6 and R15 swing the same way. Local
+-- only (other players see the ball fly).
+local function animateSwing(): ()
 	local character = localPlayer.Character
-	local tool = if character then character:FindFirstChildOfClass("Tool") else nil
+	if character == nil then
+		return
+	end
+	local motor = rightShoulder(character)
+	if motor then
+		local saved: CFrame? = shoulderRest[motor]
+		local rest: CFrame = saved or motor.C0
+		shoulderRest[motor] = rest
+		local function turned(pitch: number, yaw: number): CFrame
+			return CFrame.new(rest.Position)
+				* CFrame.Angles(math.rad(pitch), math.rad(yaw), 0)
+				* rest.Rotation
+		end
+		local windUp = TweenService:Create(motor, ARM_WINDUP, { C0 = turned(10, -55) })
+		local sweep = TweenService:Create(motor, ARM_SWEEP, { C0 = turned(25, 50) })
+		local back = TweenService:Create(motor, ARM_BACK, { C0 = rest })
+		windUp.Completed:Connect(function()
+			sweep:Play()
+		end)
+		sweep.Completed:Connect(function()
+			back:Play()
+		end)
+		windUp:Play()
+	end
+	local tool = character:FindFirstChildOfClass("Tool")
 	if tool == nil or tool:GetAttribute("Paddle") ~= true then
 		return
 	end
@@ -383,7 +451,7 @@ local function swing(power: number, usePointer: boolean): ()
 		return
 	end
 	local u, v = aim(team, current.Court, usePointer)
-	animatePaddle()
+	animateSwing()
 	remote("Swing"):FireServer(u, v, power)
 end
 
@@ -709,7 +777,7 @@ local function buildHud(): (ScreenGui, () -> ())
 		end
 		messageLine.Text = current.Message
 		messageLine.Visible = current.Message ~= ""
-		hintLine.Text = "Aim with the mouse · Click: swing · Q: soft · E: hard"
+		hintLine.Text = "Aim with the mouse · Click: swing when the ball turns green · Q: soft · E: hard"
 			.. if current.Friendly then " · Friendly match" else ""
 	end
 	return gui, refresh

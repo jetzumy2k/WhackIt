@@ -60,6 +60,8 @@ local REWARDS = PickleballConfig.Rewards
 local PADDLE_ATTRIBUTE = "Paddle"
 -- Aim values a client may send (clamped further by the rules).
 local AIM_LIMIT = 2
+-- How finely a held swing looks ahead for the ball (seconds).
+local HOLD_STEP = 0.05
 
 type Challenge = {
 	Id: string,
@@ -942,32 +944,123 @@ function beginServe(match: Match): ()
 	end)
 end
 
+-- The ball's horizontal distance from `spot` if a player of `team` standing
+-- there can reach it at `point`, else nil.
+local function reachOf(team: number, point: Vector3, spot: Vector3): number?
+	local distance = Vector2.new(point.X - spot.X, point.Z - spot.Z).Magnitude
+	if
+		PickleballRules.onHalf(team, point)
+		and point.Y <= SHOT.MaxHitHeight
+		and distance <= SHOT.Reach + SHOT.ReachGrace
+	then
+		return distance
+	end
+	return nil
+end
+
+local function lastLiveTime(events: BallFlight.Events): number
+	return if events.NetHit then (events.NetTime or 0) else events.SecondBounceTime
+end
+
 -- Where the ball was closest to the player within the lag window, if within
--- reach: (seconds after launch, ball position, distance).
-local function ballInReach(rally: Rally, team: number, spot: Vector3): (number?, Vector3?, number?)
+-- reach and not before `minTime`: (seconds after launch, ball position, distance).
+local function ballInReach(
+	rally: Rally,
+	team: number,
+	spot: Vector3,
+	minTime: number
+): (number?, Vector3?, number?)
 	local flight, events = rally.Flight, rally.Events
 	if flight == nil or events == nil then
 		return nil, nil, nil
 	end
 	local elapsed = now() - flight.T0
-	local lastLive = if events.NetHit then (events.NetTime or 0) else events.SecondBounceTime
+	local lastLive = lastLiveTime(events)
 	local best: number?, bestPoint: Vector3?, bestDistance: number? = nil, nil, nil
 	for step = 0, 4 do
 		local t = elapsed - SHOT.LagWindow * step / 4
-		if t >= 0 and t <= lastLive then
+		if t >= 0 and t >= minTime and t <= lastLive then
 			local point = BallFlight.positionAt(flight, events, BALL, t)
-			local distance = Vector2.new(point.X - spot.X, point.Z - spot.Z).Magnitude
-			if
-				PickleballRules.onHalf(team, point)
-				and point.Y <= SHOT.MaxHitHeight
-				and distance <= SHOT.Reach + SHOT.ReachGrace
-				and (bestDistance == nil or distance < bestDistance)
-			then
+			local distance = reachOf(team, point, spot)
+			if distance and (bestDistance == nil or distance < bestDistance) then
 				best, bestPoint, bestDistance = t, point, distance
 			end
 		end
 	end
 	return best, bestPoint, bestDistance
+end
+
+-- The first moment in the next SwingHold seconds (and not before `minTime`)
+-- when the ball comes within reach of `spot`, as seconds from now.
+local function heldWait(rally: Rally, team: number, spot: Vector3, minTime: number): number?
+	local flight, events = rally.Flight, rally.Events
+	if flight == nil or events == nil then
+		return nil
+	end
+	local elapsed = now() - flight.T0
+	local lastLive = lastLiveTime(events)
+	for wait = HOLD_STEP, SHOT.SwingHold + 1e-6, HOLD_STEP do
+		local t = elapsed + wait
+		if t > lastLive then
+			return nil
+		end
+		if t >= minTime and reachOf(team, BallFlight.positionAt(flight, events, BALL, t), spot) then
+			return wait
+		end
+	end
+	return nil
+end
+
+-- A swing during a rally. A swing a little early is held (`held` false the
+-- first time) until the ball comes in reach, and a volley that would be a
+-- fault waits for the bounce if it's coming soon; otherwise it's called.
+local function strike(
+	match: Match,
+	player: Player,
+	u: number,
+	v: number,
+	power: number,
+	held: boolean
+): ()
+	local team = teamOf(match, player)
+	local rally = match.Rally
+	local events = rally.Events
+	if team == nil or events == nil or match.Phase ~= "Rally" or rally.HitterTeam == team then
+		return -- no ball to hit, or it's still coming from this side
+	end
+	local root = rootOf(player)
+	if root == nil then
+		return
+	end
+	local spot = CourtBuilder.toLocal(match.Court.Center, root.Position)
+	local inKitchen = PickleballRules.inKitchen(COURT, team, spot)
+	-- Volleying (hitting before the bounce) here would be this fault.
+	local volleyFault = PickleballRules.hitFault(rally.ShotIndex + 1, false, inKitchen)
+	local minTime = if volleyFault then events.BounceTime else 0
+	local t, point, distance = ballInReach(rally, team, spot, minTime)
+	if t == nil or point == nil or distance == nil then
+		if not held then
+			local wait = heldWait(rally, team, spot, minTime)
+			if wait then
+				local seq = match.Seq
+				task.delay(wait, function()
+					if match.Seq == seq and not match.Finished and match.Present[player] then
+						strike(match, player, u, v, power, true)
+					end
+				end)
+				return
+			end
+		end
+		if volleyFault and ballInReach(rally, team, spot, 0) ~= nil then
+			rallyOver(match, team, volleyFault)
+		end
+		return -- a miss: the rally goes on
+	end
+	local from = Vector3.new(point.X, math.max(point.Y, BALL.MinHitHeight), point.Z)
+	local aim = PickleballRules.aimTarget(COURT, team, u, v, nil)
+	local target =
+		PickleballRules.scatter(aim, PickleballRules.scatterRadius(SHOT, distance, power), random)
+	launch(match, team, from, target, power, nil)
 end
 
 local function onSwing(player: Player, rawU: unknown, rawV: unknown, rawPower: unknown): ()
@@ -990,40 +1083,11 @@ local function onSwing(player: Player, rawU: unknown, rawV: unknown, rawPower: u
 		return
 	end
 	match.LastSwing[player] = now()
-	local team = teamOf(match, player)
-	if team == nil then
-		return
-	end
 	if match.Phase == "Serve" then
 		serve(match, player, u, v, power)
 		return
 	end
-	local rally = match.Rally
-	if match.Phase ~= "Rally" or rally.HitterTeam == team then
-		return -- no ball to hit, or it's still coming from this side
-	end
-	local root = rootOf(player)
-	if root == nil then
-		return
-	end
-	local spot = CourtBuilder.toLocal(match.Court.Center, root.Position)
-	local t, point, distance = ballInReach(rally, team, spot)
-	if t == nil or point == nil or distance == nil then
-		return -- a miss: the rally goes on
-	end
-	local events = rally.Events :: BallFlight.Events
-	local bounced = t > events.BounceTime
-	local inKitchen = PickleballRules.inKitchen(COURT, team, spot)
-	local fault = PickleballRules.hitFault(rally.ShotIndex + 1, bounced, inKitchen)
-	if fault then
-		rallyOver(match, team, fault)
-		return
-	end
-	local from = Vector3.new(point.X, math.max(point.Y, BALL.MinHitHeight), point.Z)
-	local aim = PickleballRules.aimTarget(COURT, team, u, v, nil)
-	local target =
-		PickleballRules.scatter(aim, PickleballRules.scatterRadius(SHOT, distance, power), random)
-	launch(match, team, from, target, power, nil)
+	strike(match, player, u, v, power, false)
 end
 
 -- Leaving and forfeiting --------------------------------------------------------

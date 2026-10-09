@@ -37,7 +37,8 @@ start a match, open challenges), 📖 How to play and 🏆 Prizes.
   paddle handed over; everyone walks at 18 (no sprint). Office trips are refused until it ends.
 - **Controls:** click / tap 🏓 / R2 swings; Q / **Soft** / L2 hits softly (dinks and lobs); E / **Hard** /
   R1 drives. Aim with the mouse at a spot on the other side (touch and controllers aim where the
-  camera looks). A yellow ring shows where the ball will bounce.
+  camera looks). A yellow ring shows where the ball will bounce, and the ball turns **green** while
+  it's in your reach: swing then. Your arm swings (seen by you only for now; others see the ball fly).
 - **The score bar** (bottom centre) shows both sides' points, the called score ("3-5" or "3-5-1"), who
   serves, what just happened ("Into the net! Side out.") and the time left. **Forfeit** (top right)
   needs two taps.
@@ -65,7 +66,10 @@ hard shot plus up to 4.5 for a stretched one (the ball 3-6 studs away). The path
 every client compute the same path from four numbers (`Rec.Shot`). Line calls, the net, the bounces
 and the score are the server's alone. A hit counts only from the side the ball is on, with the ball
 within 6 + 1.5 studs horizontally and at most 9 up, checked when the swing arrives and up to 0.2 s
-before (players see the ball a little late). A swing that misses changes nothing.
+before (players see the ball a little late). A swing a little early is **held** for up to 0.35 s
+(`Shot.SwingHold`) until the ball comes in reach, and when a volley would be a fault (two-bounce or
+kitchen rule) it waits for the bounce if that comes within the hold; a forbidden volley is called only
+when no bounce comes in time. A swing that misses changes nothing.
 
 ### Leaving
 - Before the first point: the match is cancelled and every fee refunded.

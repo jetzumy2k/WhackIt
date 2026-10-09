@@ -78,6 +78,9 @@ local PickleballConfig = table.freeze({
 		-- The server also checks where the ball was this long before the
 		-- request arrived (players see the ball slightly late).
 		LagWindow = 0.2,
+		-- A swing a little early waits this long for the ball to come in
+		-- reach (and, when a volley would be a fault, to bounce) (P).
+		SwingHold = 0.35,
 		SwingCooldown = 0.5,
 		-- Shot presets (client buttons): power for each.
 		SoftPower = 0.1,
