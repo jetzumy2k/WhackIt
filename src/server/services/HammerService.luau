@@ -6,10 +6,13 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
+local Attributes = require(ReplicatedStorage.Shared.Attributes)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
 local HammerRules = require(ReplicatedStorage.Shared.HammerRules)
+local HammerModel = require(ReplicatedStorage.Shared.HammerModel)
 local HammerTool = require(ServerScriptService.Lib.HammerTool)
+local LevelRewardRules = require(ReplicatedStorage.Shared.LevelRewardRules)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 
 local HammerService = {}
@@ -58,6 +61,16 @@ local function giveHammer(player: Player, character: Model): ()
 	removeHammers(backpack)
 
 	local tool = HammerTool.build(hammer)
+	-- A level-reward trail (LevelRewardService sets the attribute to an
+	-- unlocked pick only) replaces the hammer's own trail colour.
+	local trailId = player:GetAttribute(Attributes.TrailStyle)
+	local trail = if typeof(trailId) == "string" and trailId ~= ""
+		then LevelRewardRules.cosmetic("Trail", trailId)
+		else nil
+	local head = tool:FindFirstChild("Head", true)
+	if trail and head then
+		head:SetAttribute(HammerModel.TRAIL_COLOR_ATTRIBUTE, trail.Color)
+	end
 	tool.Parent = backpack
 	humanoid:EquipTool(tool)
 end

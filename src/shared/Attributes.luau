@@ -28,6 +28,10 @@ return table.freeze({
 	-- The equipped pet (docs/PETS.md); unset = none. Every client draws it.
 	PetSpecies = "PetSpecies",
 	PetRarity = "PetRarity",
+	-- Level reward looks in use (docs/GAMEPLAY_RULES.md "Level rewards"):
+	-- LevelRewardConfig ids, "" = the default look. Only unlocked picks.
+	TrailStyle = "TrailStyle",
+	GlowStyle = "GlowStyle",
 
 	-- On each incubator Model (Workspace.PetCenter.Incubators), docs/PETS.md
 	IncubatorIndex = "IncubatorIndex",

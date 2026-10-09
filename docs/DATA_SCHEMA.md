@@ -13,10 +13,10 @@ validation live in `src/server/lib/PlayerDataSchema.luau`; storage settings in
 | Session locking | ProfileStore | One server owns a profile at a time, so progress can't be duplicated by joining two servers |
 | Auto-save | ProfileStore | Periodic, plus on leave (`EndSession`) and server shutdown |
 
-## Schema v9 (current)
+## Schema v10 (current)
 ```lua
 type PlayerData = {
-    SchemaVersion: number,        -- 9
+    SchemaVersion: number,        -- 10
     Score: number,                -- lifetime score (integer, 0..2^50); shown in leaderstats
     Stress: number,               -- Stress Meter, 0..GameConfig.MaxStress, carries over between sessions
     TotalHits: number,            -- accepted hammer hits (integer, 0..2^50)
@@ -52,6 +52,9 @@ type PlayerData = {
                                   -- seconds) and the pet it will hatch (never sent to the client early)
     -- v9 (docs/UI.md "Settings")
     Settings: {[key]: boolean},   -- on/off player settings (Config/SettingsConfig), e.g. ReducedMotion
+    -- v10 (docs/GAMEPLAY_RULES.md "Level rewards")
+    LevelRewardsClaimed: number,  -- highest level whose level-up coins were paid (1..MaxLevel)
+    Cosmetics: {Trail: string, Glow: string}, -- picked level-reward looks; "" = default
 }
 ```
 New players start from `PlayerDataSchema.template()`: `StartingScore`, `StartingStress`, `StartingCoins`,
@@ -67,6 +70,7 @@ zero counters, `DefaultHammerId`, nothing bought, no defeats.
 | v5 | `AdminUnlocks = {}` |
 | v6 | `Bag = {}`, `ClaimedGifts = {}` (earlier purchases were already used) |
 | v8 | Pets (2026-10-08): `Pets = {}`, `NextPetNumber = 1`, `EquippedPetId = ""`, `Incubation = nil`. Eggs are ordinary Bag items (`egg_common`, `egg_rare`, `egg_mythical`). |
+| v10 | Level rework (2026-10-09): **no level is lost.** XP is raised to `max(Xp, LevelRules.scoreForLevel(min(oldLevel, 100)))`, where `oldLevel` is the old curve's `floor(sqrt(Xp / 600)) + 1` (`LevelRules.legacyLevelFor`); players at Level 10 or below keep their XP exactly. `LevelRewardsClaimed = that level` (no back-dated coins); `Cosmetics = {}`. XP only ever goes up, so the XP leaderboard keeps every player's order among themselves. |
 | v9 | Settings (2026-10-09): `Settings = {}`; sanitize fills every known setting with its default (`ReducedMotion = false`). |
 | v7 | Mystery Hammers (2026-10-08): each saved hammer without `BonusDamagePercent` gets `StoreConfig.Mystery.LegacyBonusDamagePercent` (15); `sanitize` then sets `Damage` to the fixed base (35). Old hammers rolled 20-35 damage, so every one ends up at least as strong. The crit roll is kept. The bump also stops older servers, which would drop the new field, from loading and saving this data. |
 
@@ -111,6 +115,11 @@ is present (its default when missing or not a boolean); settings this server doe
 if their key is id-like (≤ 32 characters) and their value a boolean, at most 32 of them, so a newer
 server's setting survives a rolling update. **Adding a setting needs no migration.** Writer:
 `SettingsService` → `Settings` (via `Settings.Set`).
+
+Sanitizing v10: `LevelRewardsClaimed` a whole number clamped to 1..`MaxLevel`; `Cosmetics` keeps known
+trail / glow ids (even ones the level no longer unlocks: they just show the default look until it does,
+`LevelRewardRules.sanitizeCosmetics`). Writers: `SessionService.addXp` / `setXp` → `LevelRewardsClaimed`;
+`LevelRewardService` → `Cosmetics`.
 
 Player history and the admin audit log are **not** player data either: DataStore `PlayerHistory`,
 keys `Player_<UserId>` (last 200 entries) and `Admin_<YYYYMMDD>` (up to 500 per UTC day), written

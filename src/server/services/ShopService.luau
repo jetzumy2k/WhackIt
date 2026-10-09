@@ -23,6 +23,7 @@ local EventService = require(script.Parent.EventService)
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
 local HammerRules = require(ReplicatedStorage.Shared.HammerRules)
 local HammerService = require(script.Parent.HammerService)
+local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressService = require(script.Parent.ProgressService)
 local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
@@ -65,12 +66,18 @@ local function onBuy(player: Player, raw: unknown, rawShownPrice: unknown): ()
 		return RemoteController.reject(player, "BuyHammer", "bad shown price")
 	end
 
-	-- Not enough coins / already owned / price went up are normal UI races,
-	-- not abuse: refuse quietly (the Sync below redraws the shop).
+	-- Not enough coins / level / already owned / price went up are normal UI
+	-- races, not abuse: refuse quietly (the Sync below redraws the shop).
 	local price = EventService.hammerPrice(hammerId)
 	if
 		price <= shownPrice
-		and ProgressionRules.checkPurchase(hammerId, data.Coins, data.OwnedHammers, price)
+		and ProgressionRules.checkPurchase(
+				hammerId,
+				data.Coins,
+				data.OwnedHammers,
+				price,
+				LevelRules.levelFor(data.Xp)
+			)
 			== "Ok"
 	then
 		if SessionService.trySpendCoins(player, price) then

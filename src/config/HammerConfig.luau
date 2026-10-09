@@ -8,6 +8,9 @@ export type HammerDefinition = {
 	Description: string,
 	Damage: number,
 	Price: number, -- coins; 0 = owned by everyone from the start
+	-- Player Level needed to buy it (2026-10-09, docs/GAMEPLAY_RULES.md);
+	-- players who already own it keep it.
+	MinLevel: number?,
 	HeadColor: Color3, -- main colours (fallback look, UI accents)
 	HandleColor: Color3,
 	Style: string, -- the look in Config/HammerStyleConfig
@@ -97,6 +100,7 @@ local list: { HammerDefinition } = {
 		Description = "For burning through the to-do list.",
 		Damage = 29,
 		Price = 2500,
+		MinLevel = 15,
 		HeadColor = Color3.fromRGB(255, 120, 30),
 		HandleColor = Color3.fromRGB(50, 42, 40),
 		Style = "fire",
@@ -107,6 +111,7 @@ local list: { HammerDefinition } = {
 		Description = "Faster than an urgent email.",
 		Damage = 30,
 		Price = 3500,
+		MinLevel = 20,
 		HeadColor = Color3.fromRGB(215, 230, 255),
 		HandleColor = Color3.fromRGB(30, 40, 80),
 		Style = "lightning",
@@ -117,6 +122,7 @@ local list: { HammerDefinition } = {
 		Description = "Puts every problem in perspective.",
 		Damage = 31,
 		Price = 5000,
+		MinLevel = 30,
 		HeadColor = Color3.fromRGB(170, 120, 255),
 		HandleColor = Color3.fromRGB(60, 30, 110),
 		Style = "cosmic",
@@ -127,6 +133,7 @@ local list: { HammerDefinition } = {
 		Description = "Heavy-duty relief for the toughest days.",
 		Damage = 32,
 		Price = 8000,
+		MinLevel = 40,
 		HeadColor = Color3.fromRGB(255, 200, 40),
 		HandleColor = Color3.fromRGB(110, 115, 125),
 		Style = "stress_crusher",

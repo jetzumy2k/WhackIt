@@ -35,7 +35,7 @@ Pick anyone in your server with the `<` `>` arrows (yourself by default).
 
 | Tool | What it does | Saved? |
 |---|---|---|
-| Set level | Sets XP to the minimum for that level (1 to 500). Lowering a level can re-lock Senior bosses unless they're admin-unlocked. Score and the leaderboard are untouched. | Yes |
+| Set level | Sets XP to the minimum for that level (1 to 100, the max level since 2026-10-09). Lowering a level can re-lock Senior bosses unless they're admin-unlocked. Levels set this way count as rewarded **without** paying level-up coins. Score and the leaderboard are untouched. | Yes |
 | Set damage | Every hit does exactly that much damage (no crits, ignores boss toughness). **Hits with admin damage earn nothing**: no score, coins, XP, unlocks or buff drops for that boss life, and the Victory Card says so. "Normal" (or 0) turns it off. | No: ends when the player leaves |
 | Unlock / Remove unlock | Opens one boss for that player even without the defeats or level it needs. "Unlock all" opens every boss including the CEO and the Executive Floor. "Reset admin unlocks" removes only admin unlocks; unlocks the player earned stay. | Yes (`AdminUnlocks`, schema v5) |
 
@@ -130,7 +130,7 @@ Give a player **in this server** something the game already has:
 | Reward | Limits | Goes to |
 |---|---|---|
 | Coins | 1-100,000 | `SessionService.addCoins` (leaderstats too) |
-| XP | 1-10,000,000 | `SessionService.addXp` (level-ups and bonuses as usual) |
+| XP | 1-10,000,000 | `SessionService.addXp` (level-ups, bonuses and level-up coins as usual) |
 | Store item | 1-50 of any store item: boost, bundle (as its boosts), egg, Mystery Hammer | the player's **Bag** (`BagRules.grant`) |
 | Hammer | any coin hammer they don't own yet | `OwnedHammers` |
 | Pet | any species; its buffs are rolled like a hatched pet's | `PetService.grantPet` (first pet is equipped) |

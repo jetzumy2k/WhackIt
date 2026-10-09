@@ -604,3 +604,15 @@ There is **no new currency**. Pickleball uses the existing `Coins`, through `Ses
 - **Privacy** (owner setting): Public (default), Friends only, or Private. The server enforces it, both when the visit starts and while the visitor is inside.
 - Visitors can look around but never edit. Edit mode exists only for the owner, inside their own office.
 - Phase 6 may later add visits to offline players' offices across servers (a read-only copy of the saved layout). It is out of scope for the first release.
+
+### 21.4 Levelling rework (owner decision 2026-10-09)
+
+The owner found levelling pointless (no unlocks after Level 10, damage that made hammers irrelevant, no cap). Decided, all of it:
+- **Max level 100**, a steeper curve after Level 10 (Level 10 unchanged; Level 100 ≈ 127 h of ideal farming), XP still counting on the Top Level board after the cap.
+- **Level damage** +3 per level up to Level 10, then +1 (Level 100: +117 instead of +297).
+- **Rewards:** coins every level (20 × level); every 5 levels a title, a hammer trail or a Zen glow colour; the Golden name tag at 100; level requirements on the top four coin hammers.
+- **No player loses a level** (one-time XP protection).
+- **Career = level titles.** The separate Career rank of §6 is dropped: the level titles (Intern … Chief Calm Officer) are the career, and quests, pickleball and co-op give XP. This replaces §6's "keep career progression separate from combat XP".
+- Office themes and level-reward furniture join the reward track with Phase 2a.
+
+Details: `docs/GAMEPLAY_RULES.md` "Player Level", "Level bonuses", "Level rewards".
