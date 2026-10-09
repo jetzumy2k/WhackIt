@@ -27,6 +27,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local Workspace = game:GetService("Workspace")
 
 local ArenaConfig = require(ReplicatedStorage.Config.ArenaConfig)
+local Attributes = require(ReplicatedStorage.Shared.Attributes)
 local FurnitureConfig = require(ReplicatedStorage.Config.FurnitureConfig)
 local FurnitureModel = require(ReplicatedStorage.Shared.FurnitureModel)
 local FurnitureRules = require(ReplicatedStorage.Shared.FurnitureRules)
@@ -285,7 +286,15 @@ end
 
 -- Remote handlers -----------------------------------------------------------------
 
+local function inPickleballMatch(player: Player): boolean
+	local match = player:GetAttribute(Attributes.RecMatch)
+	return typeof(match) == "string" and match ~= ""
+end
+
 local function onGo(player: Player, rawTarget: unknown): ()
+	if inPickleballMatch(player) then
+		return toast(player, "Finish your pickleball match first.")
+	end
 	local target = player
 	if rawTarget ~= nil then
 		local userId = Validate.integer(rawTarget, 1, MAX_USER_ID)

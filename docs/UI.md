@@ -77,6 +77,7 @@ follows them to every server; a change shows at once and the server's next sync 
 | Setting | Default | Effect |
 |---|---|---|
 | Reduced motion | Off | see below |
+| Hide challenge notices | Off | other players' pickleball challenges don't pop up as cards; the "🏓 n OPEN" chip and the Pickleball panel still list them (docs/PICKLEBALL.md, 2026-10-10) |
 | Music | On | the existing music switch (kept on this device only, as before); shown only when there is music |
 
 Adding a setting: an entry in `Config/SettingsConfig` and the code that reads it

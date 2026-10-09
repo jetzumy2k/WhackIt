@@ -586,3 +586,42 @@ visiting rows.
 | 390 | Place an Aquarium, then Admin Set level 1, rejoin | The aquarium is still there and can be moved; a new one can't be placed |
 | 391 | Admin Set level 40; 🏅 Levels → Office theme → Garden Office | Your room's walls go green and the carpet dark green at once; a visitor sees it; Default restores the slate look |
 | 392 | Exploit: `Remotes.Level.SetCosmetic:FireServer("Office", "royal_gold")` at Lv 40 | Ignored (still Garden); nothing logged as an error |
+
+## Pickleball (2026-10-10, major update Phase 4, docs/PICKLEBALL.md)
+Specs first: `Shared/BallFlight`, `Shared/PickleballRules`, `Config/PickleballConfig`,
+`Server/CourtBuilder`, `Server/PlayerDataSchema` (v12), `Config/FurnitureConfig`, `Config/SettingsConfig`.
+Then **Test → Clients and Servers** with 2 players (4 for doubles). Set **Max Players = 12** in Game
+Settings first. Admin → Rewards can top up coins if a test player runs short.
+
+| # | Check | Expected |
+|---|---|---|
+| 393 | Walk out of the lobby and round the building to the north | A walkway leads north to the Recreation Center: a paved area with two courts (lines, tinted kitchens, nets), benches, a board at each court's far end and the "🏓 RECREATION CENTER" sign; the hedge is further north; no skyline block stands on the grounds |
+| 394 | Press E at the sign; also 🏢 Social → 🏓 Pickleball | The Pickleball panel opens (🏓 Play, 📖 How to play, 🏆 Prizes) with your rating 1000, 0 W · 0 L, "Rewarded today 0 / 10" |
+| 395 | Player 1: Challenge: Singles | Player 2 gets the card "🏓 PICKLEBALL CHALLENGE · <P1> wants a Singles match!" with ACCEPT, and a "🏓 1 OPEN" chip top-left; Player 1's panel says the challenge is open; challenging again says "already in a pickleball challenge" |
+| 396 | Player 2: Settings → Hide challenge notices on; Player 1 cancels and challenges again (wait 30 s) | No card for Player 2, but the chip and the panel still list it; before 30 s Player 1 gets "Wait N s" |
+| 397 | Nobody accepts for 60 s | The challenge disappears; Player 1 gets "Nobody took your pickleball challenge in time." |
+| 398 | Player 2 accepts | Both lose 10 coins and stand on Court 1 at opposite baselines facing the net; hammer gone, a paddle in hand, Shift doesn't sprint; score bar "You 0 - 0 <name>" then the server's line says "(swing!)"; the court board shows the match |
+| 399 | The server clicks (aim with the mouse) | The ball arcs diagonally into the service court with a yellow ring where it bounces; both clients see the same ball; clicks by the receiver before the serve do nothing |
+| 400 | The server waits 15 s | It serves automatically |
+| 401 | The receiver hits the serve before it bounces | "Two-bounce rule: let it bounce first!"; the point or side-out follows the rules |
+| 402 | Rally: let it bounce, return, keep going; then drive a low ball short with E (Hard), and aim far past the baseline | "Into the net!" and, sometimes, "Out!" end the rally on the hitter; a ball on a line is in |
+| 403 | After the third shot, stand in the kitchen and hit the ball before it bounces | "Kitchen volley!"; hitting it there after a bounce is fine |
+| 404 | Let a ball bounce twice | "Two bounces!": the rally goes to the hitter |
+| 405 | Watch the serves | Only the serving side scores; singles serves come from the right on an even score and the left on an odd one; players are put back in place before each serve; the bar shows "Score 3-1" |
+| 406 | Play to 11 (win by 2) | Winner: "🏆 YOU WON! Game! +60 coins · 📦 <item> for your office", rating 1016 (+16); loser: "🏓 GOOD GAME! +20 coins · 📦 <item>", rating 984 (-16); ~6 s later both stand by the sign with their hammers; the item is in ✏️ Edit → Office supplies |
+| 407 | A third player walks onto a court during a match; a player tries to cross the net | The visitor is put outside the fence; nobody gets past the net |
+| 408 | During a match, 🏢 Social → Go to my office | Toast "Finish your pickleball match first." |
+| 409 | Player 2 closes their client right after the match starts (before any point) | Player 1: "Match cancelled ... before the first point: fees refunded."; coins back for both |
+| 410 | Player 2 leaves after a point was played | Player 1 wins ("<P2> left."), gets the winner's rewards; when Player 2 rejoins (Studio API access on), their rating is lower and they got no coins or supply |
+| 411 | Forfeit (tap twice) | As leaving, but the forfeiter stays in the game and is sent back with the hammer |
+| 412 | Doubles with 4 players: one challenges, others use Join A / Join B (and the card's ACCEPT) | The card says "n of 4 joined"; the match starts at 4; the score reads "0-0-2" at the start; the serving pair swap courts after each point; both partners serve before a side-out; the receiver stands diagonally opposite |
+| 413 | A doubles player leaves after a point | Their partner plays on alone (always placed to serve or return), or forfeits |
+| 414 | Both courts busy and another challenge fills (6 players) | Its players see "Both courts are busy..." and "#1 in line"; it starts when a court frees |
+| 415 | Play 3 rewarded matches against the same opponent the same UTC day, then a 4th | The 4th says "Friendly match": no fee, no coins, no supply, no rating change |
+| 416 | Exploits (client command bar): `Remotes.Rec.Swing:FireServer(5, 5, 99)`; Swing outside a match; `Remotes.Rec.Accept:FireServer("bad id!")`; Accept your own challenge; 10 Challenges in a row; swing while the ball is on the other side | First and third rejected and logged; the others are ignored or answered with a toast; the rate limit holds |
+| 417 | Two players accept the last singles place at the same moment | Only one gets it; the other gets "That match is full." |
+| 418 | Phone emulator during a match | Soft / 🏓 / Hard buttons bottom-right, the score bar readable, Forfeit reachable; the panel scrolls |
+| 419 | Gamepad during a match | R2 swings, L2 soft, R1 hard; the panel can be driven with the D-pad |
+| 420 | Studio only: set `PickleballConfig.Game.TimeLimit` to 60, play a short match | At the limit the side ahead wins ("Time's up!"); a tie is cancelled with refunds. Put it back to 1200 afterwards |
+| 421 | Rejoin after matches (Studio API access on) | Rating and wins/losses kept; an older (v11) profile loads with rating 1000 |
+| 422 | Output | No errors from RecreationService, PickleballController, CourtBuilder, HammerService, SprintController, PlayerDataService |

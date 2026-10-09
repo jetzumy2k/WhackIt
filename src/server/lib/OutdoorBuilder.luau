@@ -151,12 +151,20 @@ local function skyline(parent: Instance): ()
 		local radius = random:NextNumber(SKYLINE.InnerRadius, SKYLINE.OuterRadius)
 		local width = random:NextNumber(18, 40)
 		local height = random:NextNumber(40, 150)
+		local paletteIndex = random:NextInteger(1, #palette)
+		local position = Vector3.new(math.cos(angle) * radius, -1, math.sin(angle) * radius)
+		-- Since the campus grew north (Recreation Center), a few blocks would
+		-- stand on the grounds: skip those. Every number is still drawn, so
+		-- the other blocks stay exactly where they were.
+		if insideCampus(position, width / 2 + 10) then
+			continue
+		end
 		local building = part(
 			parent,
 			"SkylineBuilding",
 			Vector3.new(width, height, width),
-			CFrame.new(math.cos(angle) * radius, height / 2 - 1, math.sin(angle) * radius),
-			palette[random:NextInteger(1, #palette)],
+			CFrame.new(position.X, height / 2 - 1, position.Z),
+			palette[paletteIndex],
 			Enum.Material.Glass
 		)
 		building.CanCollide = false

@@ -1,6 +1,8 @@
 --!strict
 -- Gives every character its equipped hammer on spawn and keeps it in hand.
--- The Backpack hotbar is hidden on the client, so the hammer is the only tool.
+-- The Backpack hotbar is hidden on the client, so the hammer is the only tool
+-- (except a pickleball paddle during a match: the hammer is put away then,
+-- setPutAway).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -18,6 +20,10 @@ local PlayerDataService = require(script.Parent.PlayerDataService)
 local HammerService = {}
 
 local CHARACTER_LOAD_TIMEOUT = 10 -- seconds to wait for a Humanoid before giving up
+
+-- Players whose hammer is put away (a pickleball match): no hammer, even
+-- after a respawn, until it's given back.
+local putAway: { [Player]: boolean } = {}
 
 local function equippedHammer(player: Player): HammerTool.HammerLook?
 	-- Read from the saved data, not the session: on load, this service may run
@@ -49,6 +55,9 @@ local function giveHammer(player: Player, character: Model): ()
 		return
 	end
 
+	if putAway[player] then
+		return
+	end
 	local hammer = equippedHammer(player)
 	if hammer == nil then
 		warn(string.format("[HammerService] unknown hammer for %d", player.UserId))
@@ -84,6 +93,19 @@ function HammerService.reequip(player: Player): ()
 	end
 end
 
+-- Puts the hammer away (true) or gives it back (false).
+function HammerService.setPutAway(player: Player, away: boolean): ()
+	if away then
+		putAway[player] = true
+		local character = player.Character
+		removeHammers(character)
+		removeHammers(player:FindFirstChildOfClass("Backpack"))
+	elseif putAway[player] then
+		putAway[player] = nil
+		HammerService.reequip(player)
+	end
+end
+
 local watched: { [Player]: boolean } = {}
 
 local function watch(player: Player): ()
@@ -108,6 +130,7 @@ function HammerService.init(): ()
 	end)
 	Players.PlayerRemoving:Connect(function(player: Player)
 		watched[player] = nil
+		putAway[player] = nil
 	end)
 end
 

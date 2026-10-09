@@ -10,7 +10,8 @@
 	    free and unlimited from MinLevel on. Already placed ones stay if the
 	    level drops (an admin), but no new ones can be placed until it's back.
 	  * Special - owned in counts (PlayerData.Furniture), from rewards: admin
-	    rewards now, pickleball office-supply drops and quests later.
+	    rewards, pickleball office-supply drops (Config/PickleballConfig
+	    Supplies) and, later, quests.
 
 	Geometry: `Size` is the footprint (X width, Z depth) and height (Y) in
 	studs; parts are positioned by `Offset`, the part's centre relative to
@@ -93,6 +94,7 @@ local categories: { Category } = {
 	{ Id = "Storage", Label = "Plants & storage" },
 	{ Id = "Decor", Label = "Decor" },
 	{ Id = "Level", Label = "Level rewards" },
+	{ Id = "Supplies", Label = "Office supplies" },
 	{ Id = "Trophies", Label = "Trophies" },
 }
 
@@ -663,6 +665,102 @@ local items: { Item } = {
 			),
 			p("Handle", V(0.5, 3.4, 0.5), V(0, 3.3, 0), GOLD, { Material = Enum.Material.Metal }),
 			p("Head", V(2.4, 1.4, 1.2), V(0, 5.7, 0), GOLD, { Material = Enum.Material.Metal }),
+		},
+	},
+
+	-- Office supplies (Special): pickleball drops, Config/PickleballConfig ---
+	{
+		Key = "paddle_rack",
+		Name = "Paddle Rack",
+		Category = "Supplies",
+		Tier = "Special",
+		Size = V(3, 4.4, 1.2),
+		Parts = {
+			p("Board", V(3, 3.6, 0.3), V(0, 2.4, 0.4), WOOD),
+			p("Foot", V(3, 0.3, 1.2), V(0, 0.15, 0), DARK_WOOD),
+			p("Paddle", V(0.9, 1.3, 0.15), V(-0.9, 3.2, 0.15), BLUE),
+			p("Paddle", V(0.9, 1.3, 0.15), V(0.9, 3.2, 0.15), PINK),
+			p("Grip", V(0.25, 0.8, 0.2), V(-0.9, 2.2, 0.15), DARK),
+			p("Grip", V(0.25, 0.8, 0.2), V(0.9, 2.2, 0.15), DARK),
+		},
+	},
+	{
+		Key = "ball_bucket",
+		Name = "Ball Bucket",
+		Category = "Supplies",
+		Tier = "Special",
+		Size = V(2, 2.3, 2),
+		Parts = {
+			p(
+				"Bucket",
+				V(1.6, 1.8, 1.8),
+				V(0, 0.8, 0),
+				METAL,
+				{ Shape = CYLINDER, Upright = true, Material = Enum.Material.Metal }
+			),
+			p("Ball", V(0.6, 0.6, 0.6), V(-0.3, 1.7, 0.2), GREEN_LIGHT, { Shape = BALL }),
+			p("Ball", V(0.6, 0.6, 0.6), V(0.3, 1.75, -0.2), GREEN_LIGHT, { Shape = BALL }),
+			p("Ball", V(0.6, 0.6, 0.6), V(0.1, 1.9, 0.3), GREEN_LIGHT, { Shape = BALL }),
+		},
+	},
+	{
+		Key = "desk_fan",
+		Name = "Standing Fan",
+		Category = "Supplies",
+		Tier = "Special",
+		Size = V(2, 5.2, 2),
+		Parts = {
+			p("Base", V(0.3, 1.8, 1.8), V(0, 0.15, 0), DARK, { Shape = CYLINDER, Upright = true }),
+			p("Pole", V(0.25, 3.6, 0.25), V(0, 2.1, 0), METAL, { Material = Enum.Material.Metal }),
+			p("Cage", V(2, 2, 0.4), V(0, 4.1, 0), WHITE, { Transparency = 0.3 }),
+			p("Hub", V(0.5, 0.5, 0.6), V(0, 4.1, 0), BLUE),
+		},
+	},
+	{
+		Key = "mini_fridge",
+		Name = "Mini Fridge",
+		Category = "Supplies",
+		Tier = "Special",
+		Size = V(2.4, 3.2, 2.8),
+		Parts = {
+			p("Body", V(2.4, 3, 2.4), V(0, 1.6, 0), WHITE),
+			p("Feet", V(2.2, 0.1, 2.2), V(0, 0.05, 0), DARK),
+			p(
+				"Handle",
+				V(0.15, 1.2, 0.15),
+				V(0.9, 2.2, -1.25),
+				METAL,
+				{ Material = Enum.Material.Metal }
+			),
+			p("Logo", V(1.2, 0.3, 0.05), V(-0.2, 2.8, -1.22), BLUE, { Material = NEON }),
+		},
+	},
+	{
+		Key = "snack_machine",
+		Name = "Snack Machine",
+		Category = "Supplies",
+		Tier = "Special",
+		Size = V(4, 7, 3.2),
+		Parts = {
+			p("Body", V(4, 7, 3), V(0, 3.5, 0), Color3.fromRGB(200, 60, 70)),
+			p("Window", V(2.6, 4, 0.1), V(-0.4, 4.2, -1.52), SCREEN, { Transparency = 0.35 }),
+			p("Shelf", V(2.4, 0.15, 0.6), V(-0.4, 3.2, -1.2), WHITE),
+			p("Shelf", V(2.4, 0.15, 0.6), V(-0.4, 4.4, -1.2), WHITE),
+			p("Shelf", V(2.4, 0.15, 0.6), V(-0.4, 5.6, -1.2), WHITE),
+			p("Keypad", V(0.8, 1.6, 0.1), V(1.4, 4.4, -1.52), DARK),
+			p("Tray", V(2.6, 0.8, 0.1), V(-0.4, 1.2, -1.52), DARK),
+		},
+	},
+	{
+		Key = "neon_calm_sign",
+		Name = "Neon CALM Sign",
+		Category = "Supplies",
+		Tier = "Special",
+		Size = V(4, 5.2, 1.2),
+		Parts = {
+			p("Foot", V(3, 0.3, 1.2), V(0, 0.15, 0), DARK),
+			p("Post", V(0.3, 2.8, 0.3), V(0, 1.7, 0.2), DARK),
+			p("Sign", V(4, 1.8, 0.2), V(0, 4.1, 0), PINK, { Material = NEON, Text = "CALM" }),
 		},
 	},
 

@@ -32,6 +32,9 @@ return table.freeze({
 	-- LevelRewardConfig ids, "" = the default look. Only unlocked picks.
 	TrailStyle = "TrailStyle",
 	GlowStyle = "GlowStyle",
+	-- Pickleball (docs/PICKLEBALL.md): the match this player is playing ("" =
+	-- none). While set, the hammer is put away and sprint is off.
+	RecMatch = "RecMatch",
 
 	-- On each incubator Model (Workspace.PetCenter.Incubators), docs/PETS.md
 	IncubatorIndex = "IncubatorIndex",

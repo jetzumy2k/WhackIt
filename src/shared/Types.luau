@@ -82,6 +82,19 @@ export type ProfileSnapshot = {
 	Furniture: { [string]: number },
 	OfficeLayout: { { Id: number, Item: string, X: number, Z: number, R: number } },
 	OfficePrivacy: string,
+	-- Pickleball (docs/PICKLEBALL.md): rating and record this season, totals
+	-- and today's rewarded matches (Shared/PickleballRules.Record).
+	Recreation: {
+		Rating: number,
+		SeasonId: number,
+		Wins: number,
+		Losses: number,
+		TotalWins: number,
+		TotalLosses: number,
+		DayKey: string,
+		DayMatches: number,
+		DayOpponents: { [string]: number },
+	},
 }
 
 export type OwnedPet = {

@@ -30,9 +30,9 @@ on pickleball. This plan splits Phase 2 and moves Recreation forward:
 | D1 | Phase order | ✅ as in §1 | 1 |
 | D2 | Server size (`MaxPlayers`, Game Settings) | ✅ 12. Set it in Game Settings before Phase 2a. Office slots and court count scale with it. | 2a |
 | D3 | Where the Recreation Center stands | ✅ **Move the campus north boundary from z -130 to z -210** and build the center behind the office (x -60..60, z -140..-200). It's walkable from campus, so other players can see matches. The other option is a teleport-only area like the offices, which is cheaper but hides the matches. | 4 |
-| D4 | Doubles rewards | 60 / 20 coins **per player** (as in §21.2). Total coin output is twice the singles rate, which is acceptable because the daily caps limit it. | 4 |
-| D5 | Rating start and formula | Elo, start 1000, K = 32 (P). In doubles each player's change uses the team average. | 4 |
-| D6 | Season length | 4 weeks starting Monday 00:00 UTC (P) | 4 |
+| D4 | Doubles rewards | ✅ (2026-10-10) 60 / 20 coins **per player** (as in §21.2). Total coin output is twice the singles rate, which is acceptable because the daily caps limit it. | 4 |
+| D5 | Rating start and formula | ✅ (2026-10-10) Elo, start 1000, K = 32 (P). In doubles each player's change uses the team average. | 4 |
+| D6 | Season length | ✅ (2026-10-10) 4 weeks starting Monday 00:00 UTC (P) | 4 |
 
 ## 3. Phase 1: GUI foundation
 
@@ -135,6 +135,21 @@ the loser's and winner's pools (published in config and `docs/OFFICES.md`).
 no editing others' rooms) and the migration of a v8 profile.
 
 ## 5. Phase 4: Recreation Center and pickleball
+
+**Status (2026-10-10):** 🟡 implemented on branch `feat/phase4-pickleball` (docs/PICKLEBALL.md), schema
+**v12**; `scripts/check.ps1` passes; Studio specs and the playtest (`docs/PLAYTEST.md` "Pickleball",
+393–422) not run yet. D4–D6 accepted by the owner. Changes from the plan below:
+- **Split into 4a and 4b.** 4a (this branch): challenges, matches, rules, rewards, supplies, the Elo
+  rating with its season reset. 4b (next): the seasonal leaderboard (ordered store per season) and
+  the top-10 season prizes. v12 already saves `SeasonId` and `SeasonClaims`, so 4b needs no migration.
+- **Friendly matches are per match:** if anyone in it has reached a daily cap, nobody pays or earns.
+- **Doubles:** either partner may return a serve (players are placed so the correct receiver stands
+  in the right court); a player left alone is always placed to serve or return.
+- **Six new Special furniture items** (office supplies) for the drop pools; the Golden Hammer
+  Trophy and Zen Bonsai are in them too, the Champion Plaque is kept for season prizes.
+- `PlayerDataService.beforeRelease` (new): a leaver's forfeit is recorded before their data is saved
+  for the last time. `HammerService.setPutAway` (new) keeps the hammer away during a match.
+- Courts at x ±24 (not ±20) so a 14-stud spectator lane with the sign fits between them.
 
 ### 5.1 Rules (`Shared/PickleballRules`, `Shared/BallFlight`; pure, spec-covered)
 Standard rules from §21.1: one game to 11, win by 2, side-out scoring, singles serving side

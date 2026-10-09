@@ -177,6 +177,19 @@ on the Executive Floor without access.
 | `Level.SetCosmetic` | client -> server | `kind: "Trail" \| "Glow" \| "Office", id: string` (`""` = default); `maxArgs` 2, `RemoteLimits.Settings` | `LevelRewardRules.parseChoice`: known kind and `""` or a known id (else rejected); the player's level unlocks it (else ignored, a UI race). Saves `Cosmetics`, sets `TrailStyle` / `GlowStyle` (re-equips the hammer for a new trail), repaints the office for a theme (`OfficeService.applyTheme`); `Profile.Sync` |
 | `Level.LevelUp` | server -> one client | `{ FromLevel, ToLevel, Coins }` | sent when XP reaches levels never rewarded before and their coins are paid (`SessionService.addXp`); display only (the level-up card) |
 
+## Rec: pickleball (docs/PICKLEBALL.md, 2026-10-10)
+| Remote | Direction | Payload | Server checks / handling |
+|---|---|---|---|
+| `Rec.Challenge` | client -> server | `mode: "Singles" \| "Doubles"`; `maxArgs` 1, `RemoteLimits.Rec` (burst 4, 0.5/s) | known mode (else rejected); data loaded; not already in a challenge or match; 30 s since the player's last challenge; can pay the fee (10 coins) unless today's rewarded matches are used up. Opens a challenge that expires after 60 s (singles) / 90 s (doubles); `Rec.Challenges` to everyone |
+| `Rec.Accept` | client -> server | `challengeId: string, team: 1 \| 2 \| nil`; `maxArgs` 2, `RemoteLimits.Rec` | `Validate.id` and `Validate.integer` (else rejected); the challenge is open, not the sender's own, not full; the sender isn't in another challenge or match and can pay. The seat is checked and taken without yielding (two accepts can't both get the last place). Full: the match starts on a free court, or waits in line |
+| `Rec.Cancel` | client -> server | none; `maxArgs` 0, `RemoteLimits.Rec` | the challenger cancels the challenge for everyone; anyone else leaves it (a full one waiting for a court opens again with a new expiry) |
+| `Rec.Forfeit` | client -> server | none; `maxArgs` 0, `RemoteLimits.Rec` | only from a player in a match. Before the first point: the match is cancelled and every fee refunded. After: that player's side loses for them (no coins or supply, rating and day counters as a loss); a doubles partner may play on alone |
+| `Rec.Swing` | client -> server | `u: number, v: number, power: number` (aim across [-1, 1], aim deep [0, 1], power [0, 1]); `maxArgs` 3, `RemoteLimits.RecSwing` (burst 6, 4/s) | numbers in range (u, v within ±2, then clamped by the rules; else rejected); the sender plays a match on this server, isn't flagged by `MovementGuardService`, and 0.5 s since their last swing. Serve: only the server's swing counts (launched from behind the baseline on their side). Rally: only a player on the side the ball is on, with the ball within reach (6 + 1.5 studs horizontally, at most 9 above the court, checked now and up to 0.2 s back). Faults by the hit (two-bounce rule, kitchen volley) end the rally; otherwise the server works out the next flight (aim + spread) and broadcasts it. A miss changes nothing |
+| `Rec.Challenges` | server -> all clients | `{ Challenges = { { Id, Mode, HostUserId, HostName, Teams = { { {UserId, Name} }, {...} }, TeamSize, ExpiresAt, QueuePosition } }, FreeCourts }` | on every change, and to each player when their data loads; display only (cards, chip, panel) |
+| `Rec.MatchState` | server -> match players | `{ MatchId, Court, Mode, Phase, Teams, Points, Serving, ServerNumber, ServerUserId, ReceiverUserId, Callout, Message, EndsAt, Friendly, Winner }` | at the start, before each serve, after each rally and at the end; display only (score bar). Spectators read the court's board |
+| `Rec.Shot` | server -> all clients | `{ Court, Launch: Vector3, Velocity: Vector3, T0 }` (court-local; server time) or `{ Court, Clear = true }` | each shot; every client draws the same path (`Shared/BallFlight`). Line calls never come from the client |
+| `Rec.Result` | server -> one client | `{ MatchId, Won, Reason, Friendly, Points, Team, Coins, Supply, RatingChange, Rating }` or `{ MatchId, Cancelled = true, Reason }` | once per match id per player (`ProcessedMatches`); display only (result card) |
+
 ## `Store.RequestPurchase`: client -> server
 | | |
 |---|---|
@@ -248,10 +261,8 @@ change. Display only.
 | | |
 |---|---|
 | Purpose | The player's own progression for the UI (HUD, shop, locked bosses) |
-| Payload | `Types.ProfileSnapshot`: `{ Coins, OwnedHammerIds, EquippedHammerId, BossDefeats, UnlockedBossIds, ZenLevel, Level, Xp, Buffs, MysteryHammers, AdminUnlocks, Bag, Pets, EquippedPetId, Incubation, Settings, Cosmetics }` |
-| When | on data load, after every reward, purchase, equip and `Settings.Set` request |
-| Payload | `Types.ProfileSnapshot`: `{ Coins, OwnedHammerIds, EquippedHammerId, BossDefeats, UnlockedBossIds, ZenLevel, Level, Xp, Buffs, MysteryHammers, AdminUnlocks, Bag, Pets, EquippedPetId, Incubation, Settings, Furniture, OfficeLayout, OfficePrivacy }` |
-| When | on data load, after every reward, purchase, equip, `Settings.Set` and `Office.*` edit request |
+| Payload | `Types.ProfileSnapshot`: `{ Coins, OwnedHammerIds, EquippedHammerId, BossDefeats, UnlockedBossIds, ZenLevel, Level, Xp, Buffs, MysteryHammers, AdminUnlocks, Bag, Pets, EquippedPetId, Incubation, Settings, Cosmetics, Furniture, OfficeLayout, OfficePrivacy, Recreation }` |
+| When | on data load, after every reward, purchase, equip, `Settings.Set`, `Office.*` edit and pickleball fee, refund or result |
 | Client handling | display only; parsed defensively (`ProgressController`) |
 
 ## `Leaderboard.Snapshot`: server -> all clients (2026-10-07)
@@ -274,6 +285,7 @@ Names live in `Shared/Attributes`. Only the server writes them; clients read the
 | Event boss `Model` (docs/EVENTS.md) | `BossName`, `BossLook`, `EventBoss` | as a custom boss, plus `EventBoss = true` |
 | `Player` | `PetSpecies`, `PetRarity` | the equipped pet (unset = none); every client draws it (docs/PETS.md) |
 | `Player` | `TrailStyle`, `GlowStyle` | the level-reward trail and Zen glow in use (`""` = default; only unlocked picks); the hammer trail and the Zen glow use them |
+| `Player` | `RecMatch` | the pickleball match this player is in (unset = none): the client turns sprint off and shows the score bar; the server keeps its own record (docs/PICKLEBALL.md) |
 | `Player` | `AdminBypass` | an admin's boss-access bypass is on (display only: their doors and labels; the server checks its own flag) |
 | Incubator `Model` (`Workspace.PetCenter.Incubators`) | `IncubatorIndex`, `OwnerUserId`, `OwnerName`, `EggRarity`, `EndsAt`, `HatchedSpecies` | the egg on show and its end time (unix seconds); `HatchedSpecies` while it hatches |
 | World egg `Model` (`Workspace.PetCenter.WorldEggs`) | `WorldEggRarity` | its rarity |
@@ -287,7 +299,7 @@ Names live in `Shared/Attributes`. Only the server writes them; clients read the
 Reach is checked against the character's position, which Roblox lets each client simulate. The
 server samples every character's root position every `MovementLimits.SampleInterval` (0.5 s); a
 horizontal move faster than `MaxHorizontalSpeed` (50 studs/s; walking is 16) flags the player and
-`RequestHammerHit` is ignored for `SuspectSeconds` (5 s). Respawns start fresh. This blocks teleporting
+`RequestHammerHit` and `Rec.Swing` are ignored for `SuspectSeconds` (5 s). Respawns start fresh. This blocks teleporting
 to a boss and large speed hacks; small boosts under the limit are an accepted v1 limitation. Sprint (`GameConfig.SprintSpeed` 26) stays well under the limit.
 
 ## Removed

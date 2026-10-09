@@ -15,7 +15,10 @@
 	  z -20 ..   0  corridor
 	  z   0 ..  34  lobby, spawn at Z = +20 (default.project.json)
 	  z  34 .. 150  outdoor campus through the lobby entrance (Campus below),
-	                walled in at x +-130, z -130 .. 150
+	                walled in at x +-130, z -210 .. 150
+	  z -200 .. -140 the Recreation Center behind the building (pickleball,
+	                Config/PickleballConfig, Lib/CourtBuilder), reached by a
+	                walkway from the loop around the building
 
 	Office centres on a floor are 34 studs apart and floors 15 studs apart,
 	more than GameConfig.HitReach plus its lag grace, so a swing can only ever
@@ -221,7 +224,9 @@ local ArenaConfig = table.freeze({
 		EntranceHeight = 10,
 		GroundY = -1,
 		-- Invisible walls keep players on the grounds; a low hedge marks them.
-		Boundary = table.freeze({ MinX = -130, MaxX = 130, MinZ = -130, MaxZ = 150 }),
+		-- North edge moved from z -130 to -210 for the Recreation Center
+		-- (major update decision D3, 2026-10-09).
+		Boundary = table.freeze({ MinX = -130, MaxX = 130, MinZ = -210, MaxZ = 150 }),
 		BoundaryHeight = 60,
 		-- Decorative road just outside the south boundary.
 		StreetNorthZ = 160,
@@ -242,6 +247,8 @@ local ArenaConfig = table.freeze({
 			-- Garden and Coffee Corner down to the cross walk's ends and the loop.
 			table.freeze({ MinX = -100, MaxX = -94, MinZ = 46, MaxZ = 88 }),
 			table.freeze({ MinX = 94, MaxX = 100, MinZ = 46, MaxZ = 88 }),
+			-- North from the loop to the Recreation Center.
+			table.freeze({ MinX = -4, MaxX = 4, MinZ = -140, MaxZ = -66 }),
 		}),
 		-- Round areas: centre (Y = ground) and radius.
 		Garden = table.freeze({ Center = Vector3.new(-70, -1, 88), Radius = 24 }),

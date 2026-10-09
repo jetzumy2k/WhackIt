@@ -125,6 +125,17 @@ function ProgressService.snapshot(
 		Furniture = table.clone(data.Furniture),
 		OfficeLayout = table.clone(data.OfficeLayout),
 		OfficePrivacy = data.OfficePrivacy,
+		Recreation = {
+			Rating = data.Recreation.Rating,
+			SeasonId = data.Recreation.SeasonId,
+			Wins = data.Recreation.Wins,
+			Losses = data.Recreation.Losses,
+			TotalWins = data.Recreation.TotalWins,
+			TotalLosses = data.Recreation.TotalLosses,
+			DayKey = data.Recreation.DayKey,
+			DayMatches = data.Recreation.DayMatches,
+			DayOpponents = table.clone(data.Recreation.DayOpponents),
+		},
 	}
 end
 
