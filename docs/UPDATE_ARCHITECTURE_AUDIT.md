@@ -86,9 +86,10 @@ migration, sanitize rules and specs (`docs/DATA_SCHEMA.md` "Changing the schema"
 
 | Version | Phase | New fields (all with safe defaults, nothing removed) |
 |---|---|---|
-| v9 | 2a Offices | `Settings = {ReducedMotion=false, HideChallenges=false, OfficePrivacy="Public"}`; `Furniture: {[itemKey]: count}` (starter kit: desk, chair, plant); `OfficeLayout: {{Item, X, Z, R}}` (at most 60, positions relative to the room, R in 0/90/180/270) |
-| v10 | 4 Pickleball | `Recreation = {Rating, Wins, Losses, Season, DayKey, DayRewarded, DayPairs: {[pairKey]: n}}`; `ProcessedMatches: {string}` (last 200); `SeasonClaims: {string}` (last 20) |
-| v11 | 2b Quests/Career | `Quests` (active, progress, claimed ids per reset window); `Career = {Points, Rank}` |
+| v9 ✅ | 1 GUI foundation (2026-10-09) | `Settings: {[key]: boolean}` (`ReducedMotion`). New on/off settings (`HideChallenges` in Phase 4) are config entries and need **no** migration (`SettingsRules.sanitize`) |
+| v10 | 2a Offices | `Furniture: {[itemKey]: count}` (starter kit: desk, chair, plant); `OfficeLayout: {{Item, X, Z, R}}` (at most 60, positions relative to the room, R in 0/90/180/270); `OfficePrivacy: "Public" \| "Friends" \| "Private"` (not an on/off setting, so its own field) |
+| v11 | 4 Pickleball | `Recreation = {Rating, Wins, Losses, Season, DayKey, DayRewarded, DayPairs: {[pairKey]: n}}`; `ProcessedMatches: {string}` (last 200); `SeasonClaims: {string}` (last 20) |
+| v12 | 2b Quests/Career | `Quests` (active, progress, claimed ids per reset window); `Career = {Points, Rank}` |
 | later | 5–6 | event objective claims, showcase settings |
 
 Size check: a full layout is 60 × ~40 bytes ≈ 2.4 KB. Match history is **not** kept in the profile

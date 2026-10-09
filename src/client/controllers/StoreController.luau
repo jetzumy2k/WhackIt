@@ -19,6 +19,7 @@ local PetConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild(
 local StoreConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("StoreConfig"))
 
 local LocalTime = require(script.Parent.Parent.Lib.LocalTime)
+local GamepadNav = require(script.Parent.Parent.Lib.GamepadNav)
 local Responsive = require(script.Parent.Parent.Lib.Responsive)
 
 local StoreController = {}
@@ -767,6 +768,12 @@ function StoreController.start(): ()
 	end
 	close.Activated:Connect(function()
 		panel.Visible = false
+	end)
+	GamepadNav.watch(panel, function()
+		panel.Visible = false
+	end)
+	GamepadNav.watch(picker, function()
+		picker.Visible = false
 	end)
 
 	gui.Parent = localPlayer:WaitForChild("PlayerGui")

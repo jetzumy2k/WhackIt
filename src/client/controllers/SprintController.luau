@@ -22,6 +22,7 @@ local Workspace = game:GetService("Workspace")
 local GameConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("GameConfig"))
 
 local Responsive = require(script.Parent.Parent.Lib.Responsive)
+local UiTokens = require(script.Parent.Parent.Lib.UiTokens)
 
 local SprintController = {}
 
@@ -67,8 +68,10 @@ local function apply(): ()
 	sprinting = wantSprint
 	local camera = Workspace.CurrentCamera
 	if camera then
+		-- Reduced motion: no zoom-out while sprinting (docs/UI.md).
+		local zoom = wantSprint and not UiTokens.reducedMotion()
 		TweenService:Create(camera, FOV_TWEEN, {
-			FieldOfView = if wantSprint then GameConfig.SprintFieldOfView else defaultFieldOfView,
+			FieldOfView = if zoom then GameConfig.SprintFieldOfView else defaultFieldOfView,
 		}):Play()
 	end
 end

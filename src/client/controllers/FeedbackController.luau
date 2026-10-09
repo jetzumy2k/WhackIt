@@ -16,6 +16,7 @@ local BossVisualController = require(script.Parent.BossVisualController)
 local CharacterExpression = require(script.Parent.Parent.Lib.CharacterExpression)
 local HitEffects = require(script.Parent.Parent.Lib.HitEffects)
 local SwingAnimator = require(script.Parent.Parent.Lib.SwingAnimator)
+local UiTokens = require(script.Parent.Parent.Lib.UiTokens)
 
 local FeedbackController = {}
 
@@ -140,6 +141,9 @@ local function playBonk(crit: boolean): ()
 end
 
 local function shakeCamera(): ()
+	if UiTokens.reducedMotion() then
+		return -- Reduced motion: no camera shake (docs/UI.md)
+	end
 	local character = localPlayer.Character
 	local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
 	if humanoid == nil then

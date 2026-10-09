@@ -13,11 +13,17 @@
 	  * quick open/close animation (UIScale 0.94 <-> 1, ~0.12 s);
 	  * optional keyboard shortcut (ignored while typing in a text box).
 	Pieces: buttons (hover, press, selected and disabled states), collapsible
-	section cards, rows, text, stat tiles. Paragraph text uses fixed, readable
+	section cards, rows, text, stat tiles, on/off switches, progress bars,
+	empty / loading / error / locked notices, tooltips and a confirm dialog. Paragraph text uses fixed, readable
 	sizes and wraps; button and row captions shrink to fit their box (never
 	grow past their normal size, Lib/Responsive) instead of clipping.
 	Short windows (phones in landscape) get a slimmer header and tab strip so
 	more of the page shows.
+
+	Colours, fonts and sizes come from Lib/UiTokens. Motion honours Reduced
+	motion (UiTokens.motion): windows, dialogs and bars change instantly.
+	Gamepad: every window and dialog is watched by Lib/GamepadNav (first
+	control selected on open, B closes).
 
 	Nothing here runs per frame: hover/press tweens only play on input, and
 	layout only reacts to size changes.
@@ -27,33 +33,21 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
+local GamepadNav = require(script.Parent.GamepadNav)
 local Responsive = require(script.Parent.Responsive)
+local UiTokens = require(script.Parent.UiTokens)
 
 local PanelKit = {}
 
-PanelKit.Colors = table.freeze({
-	Window = Color3.fromRGB(26, 29, 41),
-	Header = Color3.fromRGB(34, 38, 55),
-	Nav = Color3.fromRGB(31, 34, 49),
-	Card = Color3.fromRGB(40, 44, 63),
-	Field = Color3.fromRGB(52, 57, 80),
-	Text = Color3.fromRGB(240, 242, 248),
-	Muted = Color3.fromRGB(170, 176, 198),
-	Heading = Color3.fromRGB(255, 214, 120),
-	Primary = Color3.fromRGB(70, 140, 230),
-	Good = Color3.fromRGB(70, 175, 95),
-	Danger = Color3.fromRGB(205, 75, 80),
-	Neutral = Color3.fromRGB(78, 84, 108),
-	Disabled = Color3.fromRGB(70, 72, 84),
-})
+PanelKit.Colors = UiTokens.Color
 local C = PanelKit.Colors
 
-PanelKit.FONT = Enum.Font.GothamMedium
-PanelKit.FONT_BOLD = Enum.Font.GothamBold
-PanelKit.TITLE_FONT = Enum.Font.FredokaOne
-PanelKit.TEXT_SIZE = 17
-PanelKit.SMALL_SIZE = 15
-PanelKit.ROW_HEIGHT = 46 -- comfortable to tap
+PanelKit.FONT = UiTokens.Font.Body
+PanelKit.FONT_BOLD = UiTokens.Font.Bold
+PanelKit.TITLE_FONT = UiTokens.Font.Title
+PanelKit.TEXT_SIZE = UiTokens.Text.Body
+PanelKit.SMALL_SIZE = UiTokens.Text.Small
+PanelKit.ROW_HEIGHT = UiTokens.Size.Row
 local HEADER_HEIGHT = 64
 local SHORT_HEADER_HEIGHT = 48
 local SIDEBAR_WIDTH = 176
@@ -62,7 +56,7 @@ local SHORT_TOPNAV_HEIGHT = 42
 local COMPACT_BELOW = 640 -- window width (px) under which the nav moves to the top
 local SHORT_BELOW = 440 -- window height (px) under which the header and tabs slim down
 local SMALL_SCREEN_BELOW = 900 -- screen width (px) under which the window fills more of it
-local OPEN_SECONDS = 0.12
+local OPEN_SECONDS = UiTokens.Motion.Open
 
 export type Tab = { Id: string, Label: string }
 
@@ -81,6 +75,28 @@ export type Window = {
 	onOpen: (self: Window, callback: () -> ()) -> (),
 }
 
+-- An on/off switch row: `set` changes what it shows without calling onChange.
+export type Toggle = {
+	Frame: Frame,
+	Button: TextButton,
+	set: (value: boolean) -> (),
+}
+
+export type ProgressBar = {
+	Frame: Frame,
+	-- `fraction` is clamped to 0..1; `text` is drawn over the bar.
+	set: (fraction: number, text: string) -> (),
+}
+
+export type NoticeKind = "Empty" | "Loading" | "Error" | "Locked"
+
+export type ConfirmDialog = {
+	Frame: Frame,
+	-- Shows `message` with [Cancel] [confirmLabel]; `action` runs on confirm.
+	ask: (message: string, confirmLabel: string?, action: () -> ()) -> (),
+	hide: () -> (),
+}
+
 export type Section = {
 	Frame: Frame,
 	Body: Frame,
@@ -88,7 +104,7 @@ export type Section = {
 
 local function corner(parent: Instance, radius: number?): ()
 	local c = Instance.new("UICorner")
-	c.CornerRadius = UDim.new(0, radius or 10)
+	c.CornerRadius = UDim.new(0, radius or UiTokens.Radius.Tile)
 	c.Parent = parent
 end
 
@@ -201,12 +217,12 @@ function PanelKit.button(parent: Instance, content: string, color: Color3?): Tex
 	button.Text = content
 	button.Parent = parent
 	PanelKit.setTextSize(button, PanelKit.TEXT_SIZE)
-	corner(button, 8)
+	corner(button, UiTokens.Radius.Button)
 	local scale = Instance.new("UIScale")
 	scale.Parent = button
 	PanelKit.setColor(button, color or C.Neutral)
 
-	local hoverInfo = TweenInfo.new(0.08)
+	local hoverInfo = TweenInfo.new(UiTokens.Motion.Hover)
 	local function base(): Color3
 		local value = button:GetAttribute("BaseColor")
 		return if typeof(value) == "Color3" then value else C.Neutral
@@ -264,8 +280,8 @@ function PanelKit.section(
 	card.Size = UDim2.fromScale(1, 0)
 	card.AutomaticSize = Enum.AutomaticSize.Y
 	card.Parent = parent
-	corner(card, 12)
-	padding(card, 12)
+	corner(card, UiTokens.Radius.Card)
+	padding(card, UiTokens.Space.M)
 	list(card, 10)
 
 	local header: GuiObject
@@ -283,7 +299,7 @@ function PanelKit.section(
 	header.BackgroundTransparency = 1
 	local headerText = header :: TextLabel
 	headerText.Font = PanelKit.FONT_BOLD
-	headerText.TextSize = math.floor(18 * Responsive.textScale())
+	headerText.TextSize = math.floor(UiTokens.Text.Section * Responsive.textScale())
 	headerText.TextColor3 = C.Heading
 	headerText.TextXAlignment = Enum.TextXAlignment.Left
 	headerText.TextTruncate = Enum.TextTruncate.AtEnd
@@ -384,6 +400,195 @@ function PanelKit.grid(parent: Instance, minWidth: number, height: number): Fram
 	return frame
 end
 
+-- An on/off switch: the setting's name and description on the left, an
+-- "On" / "Off" button on the right. Clicking flips it at once and calls
+-- `onChange`; the caller may correct it later with `set` (e.g. the server's
+-- saved value).
+function PanelKit.toggle(
+	parent: Instance,
+	label: string,
+	description: string?,
+	value: boolean,
+	onChange: (value: boolean) -> ()
+): Toggle
+	local frame = Instance.new("Frame")
+	frame.Name = "Toggle"
+	frame.LayoutOrder = nextOrder(parent)
+	frame.BackgroundTransparency = 1
+	frame.Size = UDim2.fromScale(1, 0)
+	frame.AutomaticSize = Enum.AutomaticSize.Y
+	frame.Parent = parent
+
+	local textColumn = Instance.new("Frame")
+	textColumn.Name = "Text"
+	textColumn.BackgroundTransparency = 1
+	textColumn.Size = UDim2.new(1, -112, 0, 0)
+	textColumn.AutomaticSize = Enum.AutomaticSize.Y
+	textColumn.Parent = frame
+	list(textColumn, UiTokens.Space.XS)
+	PanelKit.text(textColumn, label, "Heading")
+	if description then
+		PanelKit.text(textColumn, description, "Muted")
+	end
+
+	local button = PanelKit.button(frame, "", C.Neutral)
+	button.Name = "Switch"
+	button.AnchorPoint = Vector2.new(1, 0)
+	button.Position = UDim2.fromScale(1, 0)
+	button.Size = UDim2.fromOffset(100, PanelKit.ROW_HEIGHT)
+
+	local current = value
+	local function show(on: boolean): ()
+		current = on
+		button.Text = if on then "On" else "Off"
+		PanelKit.setColor(button, if on then C.Good else C.Neutral)
+	end
+	show(value)
+	button.Activated:Connect(function()
+		show(not current)
+		onChange(current)
+	end)
+	return { Frame = frame, Button = button, set = show }
+end
+
+-- A bar that fills to a fraction, with text over it. Fill changes ease
+-- (instantly with reduced motion), one tween at a time.
+function PanelKit.progressBar(parent: Instance, accent: Color3?): ProgressBar
+	local track = Instance.new("Frame")
+	track.Name = "ProgressBar"
+	track.LayoutOrder = nextOrder(parent)
+	track.BackgroundColor3 = C.Field
+	track.Size = UDim2.new(1, 0, 0, UiTokens.Size.ProgressBar)
+	track.ClipsDescendants = true
+	track.Parent = parent
+	corner(track, UiTokens.Radius.Button)
+	local fill = Instance.new("Frame")
+	fill.Name = "Fill"
+	fill.BackgroundColor3 = accent or C.Primary
+	fill.BorderSizePixel = 0
+	fill.Size = UDim2.fromScale(0, 1)
+	fill.Parent = track
+	corner(fill, UiTokens.Radius.Button)
+	local label = Instance.new("TextLabel")
+	label.Name = "Label"
+	label.BackgroundTransparency = 1
+	label.Size = UDim2.fromScale(1, 1)
+	label.ZIndex = 2
+	label.Font = PanelKit.FONT_BOLD
+	label.TextColor3 = C.Text
+	label.TextStrokeTransparency = 0.6
+	label.Text = ""
+	label.Parent = track
+	PanelKit.setTextSize(label, PanelKit.SMALL_SIZE)
+
+	local tween: Tween? = nil
+	local barInfo =
+		TweenInfo.new(UiTokens.Motion.Bar, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	local function set(fraction: number, text: string): ()
+		local clamped = if fraction == fraction then math.clamp(fraction, 0, 1) else 0
+		label.Text = text
+		if tween then
+			tween:Cancel()
+		end
+		local target = UDim2.fromScale(clamped, 1)
+		if UiTokens.reducedMotion() then
+			fill.Size = target
+			return
+		end
+		local created = TweenService:Create(fill, barInfo, { Size = target })
+		tween = created
+		created:Play()
+	end
+	return { Frame = track, set = set }
+end
+
+local NOTICE_ICONS: { [NoticeKind]: string } = {
+	Empty = "📭",
+	Loading = "⏳",
+	Error = "⚠️",
+	Locked = "🔒",
+}
+
+-- A card for a page with nothing to show yet: one short sentence and at most
+-- one action button.
+function PanelKit.notice(
+	parent: Instance,
+	kind: NoticeKind,
+	message: string,
+	actionLabel: string?,
+	onAction: (() -> ())?
+): Frame
+	local card = Instance.new("Frame")
+	card.Name = "Notice" .. kind
+	card.LayoutOrder = nextOrder(parent)
+	card.BackgroundColor3 = C.Card
+	card.Size = UDim2.fromScale(1, 0)
+	card.AutomaticSize = Enum.AutomaticSize.Y
+	card.Parent = parent
+	corner(card, UiTokens.Radius.Card)
+	padding(card, UiTokens.Space.L)
+	list(card, UiTokens.Space.S)
+	local line = PanelKit.text(card, NOTICE_ICONS[kind] .. "  " .. message, "Muted")
+	if kind == "Error" then
+		line.TextColor3 = C.Danger:Lerp(C.Text, 0.35)
+	end
+	if actionLabel and onAction then
+		local button = PanelKit.button(card, actionLabel, C.Primary)
+		button.Activated:Connect(onAction)
+	end
+	return card
+end
+
+-- A short hint shown above `object`: on hover (mouse), while selected
+-- (gamepad), and for a moment after a long press (touch). Built once and
+-- only shown or hidden afterwards. Inside a clipping frame it may be cut
+-- off, so use it on HUD buttons and other unclipped controls.
+function PanelKit.tooltip(object: GuiObject, text: string): TextLabel
+	local tip = Instance.new("TextLabel")
+	tip.Name = "Tooltip"
+	tip.AnchorPoint = Vector2.new(0, 1)
+	tip.Position = UDim2.fromOffset(0, -6)
+	tip.AutomaticSize = Enum.AutomaticSize.XY
+	tip.Size = UDim2.new()
+	tip.BackgroundColor3 = C.Header
+	tip.BackgroundTransparency = 0.05
+	tip.Font = PanelKit.FONT
+	tip.TextSize =
+		math.max(Responsive.MIN_TEXT_SIZE, math.floor(PanelKit.SMALL_SIZE * Responsive.textScale()))
+	tip.TextColor3 = C.Text
+	tip.Text = text
+	tip.ZIndex = object.ZIndex + 10
+	tip.Visible = false
+	tip.Parent = object
+	corner(tip, UiTokens.Radius.Button)
+	padding(tip, UiTokens.Space.S)
+
+	-- A long press hides its tip after a moment, unless something showed it
+	-- again in the meantime.
+	local shownCount = 0
+	local function show(): ()
+		shownCount += 1
+		tip.Visible = true
+	end
+	local function hide(): ()
+		tip.Visible = false
+	end
+	object.MouseEnter:Connect(show)
+	object.MouseLeave:Connect(hide)
+	object.SelectionGained:Connect(show)
+	object.SelectionLost:Connect(hide)
+	object.TouchLongPress:Connect(function()
+		show()
+		local token = shownCount
+		task.delay(2, function()
+			if shownCount == token then
+				hide()
+			end
+		end)
+	end)
+	return tip
+end
+
 -- Window ------------------------------------------------------------------
 
 export type WindowOptions = {
@@ -393,6 +598,7 @@ export type WindowOptions = {
 	Accent: Color3,
 	DisplayOrder: number?,
 	Key: Enum.KeyCode?, -- desktop shortcut that toggles the window
+	GamepadKey: Enum.KeyCode?, -- gamepad button that toggles the window
 }
 
 function PanelKit.window(options: WindowOptions, parent: Instance): Window
@@ -410,7 +616,7 @@ function PanelKit.window(options: WindowOptions, parent: Instance): Window
 	frame.Visible = false
 	frame.ClipsDescendants = true
 	frame.Parent = gui
-	corner(frame, 16)
+	corner(frame, UiTokens.Radius.Window)
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = options.Accent
 	stroke.Thickness = 2
@@ -565,12 +771,17 @@ function PanelKit.window(options: WindowOptions, parent: Instance): Window
 		end,
 		open = function(_self: Window): ()
 			closing += 1
+			local reduced = UiTokens.reducedMotion()
 			if not frame.Visible then
-				scale.Scale = 0.94
+				scale.Scale = if reduced then 1 else 0.94
 				frame.Visible = true
 				for _, callback in openCallbacks do
 					callback()
 				end
+			end
+			if reduced then
+				scale.Scale = 1
+				return
 			end
 			TweenService:Create(
 				scale,
@@ -585,6 +796,10 @@ function PanelKit.window(options: WindowOptions, parent: Instance): Window
 				return
 			end
 			closing += 1
+			if UiTokens.reducedMotion() then
+				frame.Visible = false
+				return
+			end
 			local token = closing
 			local tween = TweenService:Create(
 				scale,
@@ -641,9 +856,18 @@ function PanelKit.window(options: WindowOptions, parent: Instance): Window
 	close.Activated:Connect(function()
 		window:close()
 	end)
-	if options.Key then
+	GamepadNav.watch(frame, function()
+		window:close()
+	end)
+	if options.Key or options.GamepadKey then
 		UserInputService.InputBegan:Connect(function(input: InputObject, processed: boolean)
-			if not processed and input.KeyCode == options.Key then
+			local key = options.Key and input.KeyCode == options.Key and not processed
+			-- Gamepad buttons count as processed while a control is selected,
+			-- so for them `processed` can't be trusted; a focused text box can.
+			local gamepadKey = options.GamepadKey
+				and input.KeyCode == options.GamepadKey
+				and UserInputService:GetFocusedTextBox() == nil
+			if key or gamepadKey then
 				window:toggle()
 			end
 		end)
@@ -651,6 +875,71 @@ function PanelKit.window(options: WindowOptions, parent: Instance): Window
 
 	gui.Parent = parent
 	return window
+end
+
+-- A small "Are you sure?" dialog over a window: the message, [Cancel] and a
+-- confirm button. Built once per window and reused. On a gamepad, Cancel is
+-- selected first, so pressing A by habit never confirms; B cancels.
+function PanelKit.confirmDialog(window: Window, accent: Color3?): ConfirmDialog
+	local color = accent or C.Danger
+	local dialog = Instance.new("Frame")
+	dialog.Name = "ConfirmDialog"
+	dialog.AnchorPoint = Vector2.new(0.5, 0.5)
+	dialog.Position = UDim2.fromScale(0.5, 0.5)
+	dialog.Size = UDim2.fromScale(0.8, 0)
+	dialog.AutomaticSize = Enum.AutomaticSize.Y
+	dialog.BackgroundColor3 = C.Header
+	dialog.ZIndex = 20
+	dialog.Visible = false
+	dialog.Parent = window.Frame
+	corner(dialog, UiTokens.Radius.Card)
+	local limit = Instance.new("UISizeConstraint")
+	limit.MaxSize = Vector2.new(420, math.huge)
+	limit.Parent = dialog
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = color
+	stroke.Thickness = 2
+	stroke.Parent = dialog
+	padding(dialog, UiTokens.Space.M)
+	list(dialog, 10)
+	local message = PanelKit.text(dialog, "", "Heading")
+	message.ZIndex = 21
+	local row = PanelKit.row(dialog)
+	row.ZIndex = 21
+	local cancel = PanelKit.button(row, "Cancel", C.Neutral)
+	cancel.Name = "Cancel"
+	cancel.Size = UDim2.new(0.5, -4, 1, 0)
+	cancel.ZIndex = 22
+	local confirm = PanelKit.button(row, "Confirm", color)
+	confirm.Name = "Confirm"
+	confirm.Size = UDim2.new(0.5, -4, 1, 0)
+	confirm.ZIndex = 22
+
+	local pending: (() -> ())? = nil
+	local function hide(): ()
+		pending = nil
+		dialog.Visible = false
+	end
+	cancel.Activated:Connect(hide)
+	confirm.Activated:Connect(function()
+		local action = pending
+		hide()
+		if action then
+			action()
+		end
+	end)
+	GamepadNav.watch(dialog, hide, cancel)
+
+	return {
+		Frame = dialog,
+		ask = function(text: string, confirmLabel: string?, action: () -> ()): ()
+			message.Text = text
+			confirm.Text = confirmLabel or "Confirm"
+			pending = action
+			dialog.Visible = true
+		end,
+		hide = hide,
+	}
 end
 
 return PanelKit

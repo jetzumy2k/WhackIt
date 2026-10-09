@@ -486,7 +486,7 @@ Admin-created bosses behave like the boss whose look they borrow.
 - Bosses never attack or hurt players.
 
 ## Player Panel (2026-10-07)
-A **Menu** button (top-left) or **M** opens the Player Panel (`PlayerPanelController`, built on
+A **Menu** button (top-left), **M** or **Y** on a controller opens the Player Panel (`PlayerPanelController`, built on
 `Lib/PanelKit` like the Admin Panel): a wide window with a sidebar (a top tab strip on narrow
 screens), cards, scrolling content, a quick scale-in/out animation and a close X.
 
@@ -495,9 +495,11 @@ screens), cards, scrolling content, a quick scale-in/out animation and a close X
 | Profile | level, XP to the next level, score, coins, stress, Zen level (updated live, text only); active boosts with time left; your leaderboard line |
 | Hammers | equipped hammer and its damage; every hammer you own with **Equip** (the existing `Shop.EquipHammer`, server-checked); a link to the Hammer Shop; your Bag's item count and **Open Bag** |
 | Game | shortcuts to the Hammer Shop, the Robux Store, the Bag (the existing panels) and, for admins, the Admin Panel; where things are in the office |
-| Help | how to play, controls (computer, phone, controller), the music setting when there is music |
+| Settings (2026-10-09) | saved on/off switches (Reduced motion) and the music switch when there is music (docs/UI.md "Settings") |
+| Help | how to play, controls (computer, phone, controller) |
 
-It only shows what already exists and only displays server data; it has no remote of its own. The
+It only shows what already exists and only displays server data; its only remote is
+`Settings.Set` for the Settings page (2026-10-09). The
 existing HUD buttons (Hammers, Store, Bag, Admin, Music) all still work.
 
 ## Lobby lounge NPCs (2026-10-07)

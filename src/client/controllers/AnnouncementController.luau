@@ -19,6 +19,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local Responsive = require(script.Parent.Parent.Lib.Responsive)
+local UiTokens = require(script.Parent.Parent.Lib.UiTokens)
 
 local AnnouncementController = {}
 
@@ -209,7 +210,7 @@ function AnnouncementController.start(): ()
 		if token ~= expected or not frame.Visible then
 			return
 		end
-		local tween = TweenService:Create(scale, HIDE_TWEEN, { Scale = 0.85 })
+		local tween = TweenService:Create(scale, UiTokens.motion(HIDE_TWEEN), { Scale = 0.85 })
 		tween.Completed:Connect(function()
 			if token ~= expected then
 				return
@@ -237,9 +238,9 @@ function AnnouncementController.start(): ()
 		onAction = card.OnAction
 		action.Text = card.ActionLabel or ""
 		action.Visible = card.ActionLabel ~= nil and card.OnAction ~= nil
-		scale.Scale = 0.85
+		scale.Scale = if UiTokens.reducedMotion() then 1 else 0.85
 		frame.Visible = true
-		TweenService:Create(scale, SHOW_TWEEN, { Scale = 1 }):Play()
+		TweenService:Create(scale, UiTokens.motion(SHOW_TWEEN), { Scale = 1 }):Play()
 		task.delay(card.Seconds, hide, current)
 	end
 

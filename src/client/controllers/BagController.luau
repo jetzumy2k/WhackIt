@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BagRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BagRules"))
 local ProgressController = require(script.Parent.ProgressController)
+local GamepadNav = require(script.Parent.Parent.Lib.GamepadNav)
 local Responsive = require(script.Parent.Parent.Lib.Responsive)
 local StoreConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("StoreConfig"))
 
@@ -203,6 +204,9 @@ function BagController.start(): ()
 		end
 	end)
 	close.Activated:Connect(function()
+		panel.Visible = false
+	end)
+	GamepadNav.watch(panel, function()
 		panel.Visible = false
 	end)
 	openPanel = function()

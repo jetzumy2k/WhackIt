@@ -120,6 +120,7 @@ function ProgressService.snapshot(
 				IncubatorIndex = shownIndex or 0,
 			}
 			else nil,
+		Settings = table.clone(data.Settings),
 	}
 end
 

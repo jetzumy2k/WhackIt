@@ -20,6 +20,7 @@ local HammerRules = require(ReplicatedStorage.Shared.HammerRules)
 local PetConfig = require(ReplicatedStorage.Config.PetConfig)
 local PetRules = require(ReplicatedStorage.Shared.PetRules)
 local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
+local SettingsRules = require(ReplicatedStorage.Shared.SettingsRules)
 local StoreConfig = require(ReplicatedStorage.Config.StoreConfig)
 
 export type PlayerData = {
@@ -55,6 +56,8 @@ export type PlayerData = {
 	NextPetNumber: number,
 	EquippedPetId: string, -- "" = no pet out
 	Incubation: PetRules.Incubation?, -- the egg incubating now, with what will hatch
+	-- v9 (docs/UI.md "Settings")
+	Settings: SettingsRules.Settings, -- on/off player settings (Config/SettingsConfig)
 }
 
 export type PendingGift = {
@@ -70,7 +73,7 @@ export type Migration = (data: RawData) -> ()
 
 local PlayerDataSchema = {}
 
-PlayerDataSchema.CURRENT_VERSION = 8
+PlayerDataSchema.CURRENT_VERSION = 9
 
 -- Upper bound for counters; far beyond legitimate play, small enough to stay
 -- an exact integer and to keep leaderboard values sane.
@@ -143,6 +146,11 @@ PlayerDataSchema.MIGRATIONS = table.freeze({
 		data.EquippedPetId = ""
 		data.Incubation = nil
 	end,
+	[9] = function(data: RawData)
+		-- v8 -> v9: player settings. Everyone starts from the defaults
+		-- (sanitize() fills them in).
+		data.Settings = {}
+	end,
 }) :: { [number]: Migration }
 
 -- Most recent purchase ids remembered for duplicate-receipt protection. Roblox
@@ -178,6 +186,7 @@ function PlayerDataSchema.template(): PlayerData
 		NextPetNumber = 1,
 		EquippedPetId = "",
 		Incubation = nil,
+		Settings = SettingsRules.defaults(),
 	}
 end
 
@@ -425,6 +434,9 @@ function PlayerDataSchema.sanitize(data: RawData): ()
 		end
 		data.Incubation = incubation
 	end
+
+	-- Known settings default when missing or broken; unknown ones are kept.
+	data.Settings = SettingsRules.sanitize(data.Settings)
 
 	-- Must be a hammer the player actually owns.
 	local hammerId = data.EquippedHammerId

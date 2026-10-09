@@ -20,6 +20,7 @@ local EventRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild
 local HammerModel = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("HammerModel"))
 local EventController = require(script.Parent.EventController)
 local ProgressController = require(script.Parent.ProgressController)
+local GamepadNav = require(script.Parent.Parent.Lib.GamepadNav)
 local Responsive = require(script.Parent.Parent.Lib.Responsive)
 
 local ShopController = {}
@@ -322,6 +323,9 @@ function ShopController.start(): ()
 		panel.Visible = true
 	end
 	close.Activated:Connect(function()
+		panel.Visible = false
+	end)
+	GamepadNav.watch(panel, function()
 		panel.Visible = false
 	end)
 

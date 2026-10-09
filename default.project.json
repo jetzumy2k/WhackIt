@@ -200,6 +200,14 @@
           }
         },
 
+        "Settings": {
+          "$className": "Folder",
+
+          "Set": {
+            "$className": "RemoteEvent"
+          }
+        },
+
         "Events": {
           "$className": "Folder",
 

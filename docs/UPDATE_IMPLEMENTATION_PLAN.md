@@ -36,6 +36,19 @@ on pickleball. This plan splits Phase 2 and moves Recreation forward:
 
 ## 3. Phase 1: GUI foundation
 
+**Status (2026-10-09):** ✅ implemented on branch `feat/phase1-gui-foundation`; `scripts/check.ps1`
+passes; Studio specs **568 passed, 0 failed** (2026-10-09; the first run's one failure was a float
+comparison in the new `UiTokens` spec, fixed); playtest `docs/PLAYTEST.md` 336–350 reported passed by the owner. Deviations from
+the table below, kept small on purpose:
+- **Schema v9 holds only `Settings`** (`ReducedMotion`). `HideChallenges` arrives with Phase 4 as a
+  config entry (no migration needed); `OfficePrivacy` and the furniture fields go in v10 with 2a.
+- **"🏢 Social" dock button moved to Phase 2a:** with no offices or pickleball yet it would open an
+  empty page. The Settings page lives in the Player Panel (Menu / M / Y).
+- **Layer tokens and the ranking / placement colours** are added with the first screen that uses
+  them (2a), so no token sits unused.
+- Gamepad navigation also covers the Hammer Shop, Store (and gift picker) and Bag, not only
+  PanelKit windows. The Admin panel's confirm dialog now uses `PanelKit.confirmDialog`.
+
 **Goal:** shared pieces and settings the new panels depend on. No new gameplay.
 
 | Work | Files |
@@ -44,7 +57,7 @@ on pickleball. This plan splits Phase 2 and moves Recreation forward:
 | Confirm dialog, tooltip, progress bar, empty/loading/error/locked states as PanelKit pieces | `PanelKit.luau` |
 | Gamepad navigation: when a panel opens, `GuiService.SelectedObject` goes to its first control; B / ButtonB closes; selectable order follows the layout | `PanelKit.luau`, `Responsive.luau` |
 | `Settings` page in the Player Panel: Reduced motion, Hide challenge notices, Music (moved here) | `PlayerPanelController.luau` |
-| Saved `Settings` (schema v9 starts here; the furniture fields arrive in 2a under the same version if 2a ships together, otherwise v10) | `PlayerDataSchema.luau`, specs |
+| Saved `Settings` (schema v9) | `PlayerDataSchema.luau`, specs |
 | `Settings.Set` remote (key from a fixed list, value checked against that key's type) | `default.project.json`, new `SettingsService.luau`, `REMOTE_CONTRACTS.md` |
 | Reduced motion: `UiTokens.motion()` returns 0-length tweens and turns off camera shake and floaty UI motion. Read by PanelKit, HitEffects (camera shake), the Victory Card and level-up cards | those modules |
 | "🏢 Social" dock button that opens the Player Panel on a new **Social** page (F2) | `Responsive.luau`, `PlayerPanelController.luau` |
