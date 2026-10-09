@@ -15,7 +15,11 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BagRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BagRules"))
+local PetConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("PetConfig"))
 local StoreConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("StoreConfig"))
+
+local LocalTime = require(script.Parent.Parent.Lib.LocalTime)
+local Responsive = require(script.Parent.Parent.Lib.Responsive)
 
 local StoreController = {}
 
@@ -32,6 +36,8 @@ local STORE_COLOR = Color3.fromRGB(230, 170, 40)
 local MUTED_COLOR = Color3.fromRGB(90, 90, 100)
 local ROW_HEIGHT = 56
 local MIN_TOUCH_SIZE = 44
+-- Fixed tab width: the tab strip scrolls when they don't all fit.
+local TAB_WIDTH = 96
 local GIFT_COLOR = Color3.fromRGB(220, 90, 150)
 -- Friends shown in the gift picker (the friends list is read once per session).
 local MAX_FRIENDS = 200
@@ -90,6 +96,8 @@ local TABS = {
 	{ Id = "Xp", Label = "XP Boost" },
 	{ Id = "Damage", Label = "Damage" },
 	{ Id = "CritDamage", Label = "Crit Dmg" },
+	{ Id = "Bundle", Label = "Bundles" },
+	{ Id = "Egg", Label = "Eggs" },
 	{ Id = "MysteryHammer", Label = "Mystery" },
 	{ Id = "Admin", Label = "Admin" },
 }
@@ -120,6 +128,7 @@ local function label(name: string, parent: Instance): TextLabel
 	text.TextScaled = true
 	text.TextXAlignment = Enum.TextXAlignment.Left
 	text.Parent = parent
+	Responsive.capText(text, 22)
 	return text
 end
 
@@ -132,6 +141,7 @@ local function button(name: string, parent: Instance): TextButton
 	clickable.AutoButtonColor = true
 	clickable.Parent = parent
 	corner(clickable)
+	Responsive.capText(clickable, 20)
 	return clickable
 end
 
@@ -176,46 +186,53 @@ local function durationText(seconds: number): string
 	return string.format("%d min", seconds // 60)
 end
 
--- "2026-10-05 18:30" (local time) <-> unix seconds.
-local function formatLocal(unix: number): string
-	if unix <= 0 then
-		return ""
-	end
-	return DateTime.fromUnixTimestamp(unix):FormatLocalTime("YYYY-MM-DD HH:mm", "en-us")
-end
-
-local function parseLocal(text: string): number?
-	local year, month, day, hour, minute =
-		string.match(text, "^%s*(%d%d%d%d)%-(%d%d?)%-(%d%d?)%s+(%d%d?):(%d%d)%s*$")
-	if year == nil then
-		return nil
-	end
-	local ok, dateTime = pcall(
-		DateTime.fromLocalTime,
-		tonumber(year) :: number,
-		tonumber(month) :: number,
-		tonumber(day) :: number,
-		tonumber(hour) :: number,
-		tonumber(minute) :: number
-	)
-	return if ok then dateTime.UnixTimestamp else nil
-end
-
 local function oddsText(): string
 	local mystery = StoreConfig.Mystery
-	local damageCount = mystery.DamageMax - mystery.DamageMin + 1
+	local bonusCount = mystery.BonusDamageMaxPercent - mystery.BonusDamageMinPercent + 1
 	local critCount = mystery.CritDamageMaxPercent - mystery.CritDamageMinPercent + 1
 	return string.format(
-		"Odds: Damage %d to %d, each value 1 in %d (%.2f%%).  Crit damage +%d%% to +%d%%, each 1 in %d (%.1f%%). It waits in your Bag; the stats are rolled once when you open it, and it's yours to keep.",
-		mystery.DamageMin,
-		mystery.DamageMax,
-		damageCount,
-		100 / damageCount,
+		"Base damage %d (always). Odds: bonus damage +%d%% to +%d%%, each value 1 in %d (%.1f%%).  Crit damage +%d%% to +%d%%, each 1 in %d (%.1f%%). It waits in your Bag; the bonuses are rolled once when you open it and never change, and it's yours to keep.",
+		mystery.BaseDamage,
+		mystery.BonusDamageMinPercent,
+		mystery.BonusDamageMaxPercent,
+		bonusCount,
+		100 / bonusCount,
 		mystery.CritDamageMinPercent,
 		mystery.CritDamageMaxPercent,
 		critCount,
 		100 / critCount
 	)
+end
+
+-- Odds for each egg, as Roblox requires for paid random items.
+local function eggOddsText(): string
+	local lines: { string } = {}
+	for _, rarity in PetConfig.Rarities do
+		local parts: { string } = {}
+		local odds = PetConfig.EggOdds[rarity]
+		for _, species in PetConfig.Species do
+			local weight = if odds then odds[species.Id] else nil
+			if weight and weight > 0 then
+				table.insert(parts, string.format("%s %d%%", species.Name, weight))
+			end
+		end
+		table.insert(lines, string.format("%s Egg: %s.", rarity, table.concat(parts, ", ")))
+	end
+	local random = PetConfig.RareRandomBuff
+	table.insert(
+		lines,
+		string.format(
+			"Rare pets also get one extra buff of another kind, equally likely: +%d-%d%% XP, +%d-%d%% Damage or +%d-%d%% Crit Damage (each whole value equally likely). Eggs wait in your Bag and hatch in an incubator outside in %d seconds.",
+			random.Xp.Min,
+			random.Xp.Max,
+			random.Damage.Min,
+			random.Damage.Max,
+			random.CritDamage.Min,
+			random.CritDamage.Max,
+			PetConfig.IncubationSeconds
+		)
+	)
+	return "Odds: " .. table.concat(lines, "  ")
 end
 
 function StoreController.start(): ()
@@ -247,12 +264,8 @@ function StoreController.start(): ()
 	gui.ResetOnSpawn = false
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-	local open = button("OpenStore", gui)
-	open.Text = "Store"
-	open.BackgroundColor3 = STORE_COLOR
-	open.AnchorPoint = Vector2.new(1, 1)
-	open.Position = UDim2.new(1, -16, 1, -128)
-	open.Size = UDim2.fromOffset(140, MIN_TOUCH_SIZE + 4)
+	-- HUD button in the shared column (Lib/Responsive), above Hammers.
+	local open = Responsive.dockButton("OpenStore", "🛒", "Store", STORE_COLOR, 3)
 	open.Visible = false
 
 	local panel = Instance.new("Frame")
@@ -268,11 +281,13 @@ function StoreController.start(): ()
 	sizeLimit.MinSize = Vector2.new(320, 300)
 	sizeLimit.MaxSize = Vector2.new(620, 520)
 	sizeLimit.Parent = panel
+	Responsive.fitPopup(panel, sizeLimit, Vector2.new(0.65, 0.7))
 
 	local title = label("Title", panel)
 	title.Position = UDim2.fromOffset(16, 10)
 	title.Size = UDim2.new(1, -90, 0, 34)
 	title.Text = "Store"
+	Responsive.capText(title, 30)
 
 	local close = button("Close", panel)
 	close.Text = "X"
@@ -281,11 +296,17 @@ function StoreController.start(): ()
 	close.Position = UDim2.new(1, -10, 0, 8)
 	close.Size = UDim2.fromOffset(MIN_TOUCH_SIZE, MIN_TOUCH_SIZE)
 
-	local tabBar = Instance.new("Frame")
+	-- Scrolls sideways when the tabs don't all fit (narrow phone screens).
+	local tabBar = Instance.new("ScrollingFrame")
 	tabBar.Name = "Tabs"
 	tabBar.BackgroundTransparency = 1
+	tabBar.BorderSizePixel = 0
 	tabBar.Position = UDim2.fromOffset(10, 56)
 	tabBar.Size = UDim2.new(1, -20, 0, MIN_TOUCH_SIZE)
+	tabBar.ScrollingDirection = Enum.ScrollingDirection.X
+	tabBar.ScrollBarThickness = 0
+	tabBar.AutomaticCanvasSize = Enum.AutomaticSize.X
+	tabBar.CanvasSize = UDim2.new()
 	tabBar.Parent = panel
 	local tabLayout = Instance.new("UIListLayout")
 	tabLayout.FillDirection = Enum.FillDirection.Horizontal
@@ -312,6 +333,8 @@ function StoreController.start(): ()
 		local line = label("Note", list)
 		line.LayoutOrder = order
 		line.Size = UDim2.new(1, 0, 0, height)
+		-- Grows when the text wraps onto more lines (narrow phone screens).
+		line.AutomaticSize = Enum.AutomaticSize.Y
 		line.TextScaled = false
 		line.TextSize = 16
 		line.TextWrapped = true
@@ -474,12 +497,66 @@ function StoreController.start(): ()
 		end)
 	end
 
+	-- A bundle card: name, what it contains, and one purchase button.
+	local function bundleRow(product: StoreConfig.Product, order: number): ()
+		local card = Instance.new("Frame")
+		card.Name = product.Key
+		card.LayoutOrder = order
+		card.Size = UDim2.fromScale(1, 0)
+		card.AutomaticSize = Enum.AutomaticSize.Y
+		card.BackgroundColor3 = ROW_COLOR
+		card.Parent = list
+		corner(card)
+		local inset = Instance.new("UIPadding")
+		inset.PaddingLeft = UDim.new(0, 12)
+		inset.PaddingRight = UDim.new(0, 12)
+		inset.PaddingTop = UDim.new(0, 10)
+		inset.PaddingBottom = UDim.new(0, 10)
+		inset.Parent = card
+		local cardLayout = Instance.new("UIListLayout")
+		cardLayout.Padding = UDim.new(0, 6)
+		cardLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		cardLayout.Parent = card
+
+		local name = label("Name", card)
+		name.LayoutOrder = 1
+		name.Size = UDim2.new(1, 0, 0, 30)
+		name.Text = string.upper(BagRules.itemText(product))
+		name.TextColor3 = STORE_COLOR
+		Responsive.capText(name, 24)
+
+		local contents = label("Contents", card)
+		contents.LayoutOrder = 2
+		contents.Size = UDim2.fromScale(1, 0)
+		contents.AutomaticSize = Enum.AutomaticSize.Y
+		contents.TextScaled = false
+		contents.TextSize = 17
+		contents.TextWrapped = true
+		contents.TextYAlignment = Enum.TextYAlignment.Top
+		contents.Text = table.concat(BagRules.contentsLines(product), "\n")
+
+		local buy = button("Buy", card)
+		buy.LayoutOrder = 3
+		buy.Size = UDim2.new(1, 0, 0, MIN_TOUCH_SIZE)
+		buy.BackgroundColor3 = ROBUX_COLOR
+		buy.Text = "PURCHASE  R$ " .. product.SuggestedPrice
+		buy.Activated:Connect(function()
+			requestRemote:FireServer(product.Key)
+		end)
+		task.spawn(function()
+			local price = priceOf(product)
+			if buy.Parent ~= nil then
+				buy.Text = "PURCHASE  R$ " .. price
+			end
+		end)
+	end
+
 	local function adminPage(): ()
 		local scheduleText = if state.Mode == "Schedule"
 			then string.format(
 				"Schedule: %s to %s (your local time)",
-				formatLocal(state.StartsAt),
-				formatLocal(state.EndsAt)
+				LocalTime.format(state.StartsAt),
+				LocalTime.format(state.EndsAt)
 			)
 			else "Mode: " .. state.Mode
 		note(
@@ -528,7 +605,7 @@ function StoreController.start(): ()
 			box.Font = Enum.Font.FredokaOne
 			box.TextSize = 18
 			box.ClearTextOnFocus = false
-			box.Text = formatLocal(value)
+			box.Text = LocalTime.format(value)
 			box.Parent = list
 			corner(box)
 			return box
@@ -544,7 +621,7 @@ function StoreController.start(): ()
 		scheduleButton.BackgroundColor3 = TAB_ACTIVE_COLOR
 		scheduleButton.Text = "Set schedule"
 		scheduleButton.Activated:Connect(function()
-			local startsAt, endsAt = parseLocal(startBox.Text), parseLocal(endBox.Text)
+			local startsAt, endsAt = LocalTime.parse(startBox.Text), LocalTime.parse(endBox.Text)
 			if startsAt == nil or endsAt == nil then
 				errorLine.Text = "Use the format YYYY-MM-DD HH:MM for both times."
 				return
@@ -564,9 +641,10 @@ function StoreController.start(): ()
 		end
 		open.Visible = state.Open or state.IsAdmin
 		tabButtons.MysteryHammer.Visible = state.MysteryAllowed
+		tabButtons.Egg.Visible = state.MysteryAllowed
 		tabButtons.Admin.Visible = state.IsAdmin
 		if
-			(activeTab == "MysteryHammer" and not state.MysteryAllowed)
+			((activeTab == "MysteryHammer" or activeTab == "Egg") and not state.MysteryAllowed)
 			or (activeTab == "Admin" and not state.IsAdmin)
 		then
 			activeTab = "Xp"
@@ -585,6 +663,40 @@ function StoreController.start(): ()
 		end
 
 		local order = 10
+		if activeTab == "Bundle" then
+			note(
+				"Each bundle puts its boosts in your Bag as separate items. Use them one at a time, whenever you like. Bundles can't be gifted.",
+				1,
+				44
+			)
+			local any = false
+			for _, product in StoreConfig.Products do
+				if product.Kind == "Bundle" and product.ProductId ~= 0 then
+					any = true
+					order += 1
+					bundleRow(product, order)
+				end
+			end
+			if not any then
+				note("Coming soon.", order, 30)
+			end
+			return
+		end
+		if activeTab == "Egg" then
+			note(eggOddsText(), 1, 120)
+			local any = false
+			for _, product in StoreConfig.Products do
+				if product.Kind == "Egg" and product.ProductId ~= 0 then
+					any = true
+					order += 1
+					productRow(product, "🥚 " .. BagRules.itemText(product), order)
+				end
+			end
+			if not any then
+				note("Coming soon.", order, 30)
+			end
+			return
+		end
 		if activeTab == "MysteryHammer" then
 			local mystery = StoreConfig.ByKey.mystery_hammer
 			note(oddsText(), 1, 80)
@@ -627,7 +739,7 @@ function StoreController.start(): ()
 		local tabButton = button(tab.Id, tabBar)
 		tabButton.LayoutOrder = order
 		tabButton.Text = tab.Label
-		tabButton.Size = UDim2.fromScale(0.19, 1)
+		tabButton.Size = UDim2.new(0, TAB_WIDTH, 1, 0)
 		tabButton.Activated:Connect(function()
 			activeTab = tab.Id
 			render()

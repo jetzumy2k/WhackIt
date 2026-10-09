@@ -11,8 +11,9 @@
 	     reached the DataStore; otherwise NotProcessedYet so Roblox retries.
 	Delivery never depends on the store being open: paid is paid.
 
-	What is delivered (docs/STORE.md "Bag and gifts"):
+	What is delivered (docs/STORE.md "Bag and gifts", "Bundles"):
 	  * normally, one of the item into the buyer's Bag; they use it when they like;
+	    a bundle puts each of its boosts in the Bag as separate items;
 	  * if the buyer chose "Gift" for this product (PendingGift, set by
 	    StoreService before the prompt), the item goes to the friend's gift inbox
 	    (GiftService) instead. The PendingGift is cleared only after the purchase
@@ -27,6 +28,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local BagRules = require(ReplicatedStorage.Shared.BagRules)
 local GiftService = require(script.Parent.GiftService)
+local HistoryService = require(script.Parent.HistoryService)
 local PlayerDataSchema = require(ServerScriptService.Lib.PlayerDataSchema)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressService = require(script.Parent.ProgressService)
@@ -66,8 +68,18 @@ local function grantToBag(
 	data: PlayerDataSchema.PlayerData,
 	product: StoreConfig.Product
 ): string
-	BagRules.add(data.Bag, product.Key, 1)
+	local added = BagRules.grant(data.Bag, product, 1)
 	ProgressService.sync(player)
+	if product.Kind == "Bundle" then
+		return string.format(
+			"%s: %d boosts added to your Bag. Use them whenever you like!",
+			BagRules.itemText(product),
+			added
+		)
+	end
+	if product.Kind == "Egg" then
+		return BagRules.itemText(product) .. " added to your Bag. Take it to an Incubator outside!"
+	end
 	return BagRules.itemText(product) .. " added to your Bag. Use it whenever you like!"
 end
 
@@ -150,6 +162,18 @@ local function processReceipt(receipt: { [string]: any }): Enum.ProductPurchaseD
 		if not table.find(data.ProcessedPurchases, purchaseId) then
 			recordPurchase(data, purchaseId)
 			ToastRemote:FireClient(player, message)
+			HistoryService.record(
+				player.UserId,
+				"Purchase",
+				if pending then "Gift" else "Buy",
+				string.format(
+					"%s %s (product %d, purchase %s)",
+					if pending then "Gifted" else "Bought",
+					BagRules.itemText(product),
+					product.ProductId,
+					purchaseId
+				)
+			)
 		end
 	end
 

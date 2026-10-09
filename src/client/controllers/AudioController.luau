@@ -13,6 +13,8 @@ local TweenService = game:GetService("TweenService")
 
 local MusicConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("MusicConfig"))
 
+local Responsive = require(script.Parent.Parent.Lib.Responsive)
+
 local AudioController = {}
 
 local LOAD_TIMEOUT_SECONDS = 10
@@ -68,19 +70,19 @@ local function buildToggle(): ()
 	gui.Name = "Music"
 	gui.ResetOnSpawn = false
 
-	local button = Instance.new("TextButton")
-	button.Name = "MusicToggle"
-	button.AnchorPoint = Vector2.new(0, 0)
-	button.Position = UDim2.fromOffset(16, 16)
-	button.Size = UDim2.fromOffset(120, MIN_TOUCH_SIZE)
-	button.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+	-- A small utility button beside the Menu button (top-left).
+	local button =
+		Responsive.iconButton(gui, "MusicToggle", "🎵", "Music", Color3.fromRGB(30, 30, 40))
 	button.BackgroundTransparency = 0.2
-	button.TextColor3 = Color3.new(1, 1, 1)
-	button.Font = Enum.Font.FredokaOne
-	button.TextScaled = true
-	button.Text = "Music: On"
-	button.Parent = gui
-	Instance.new("UICorner").Parent = button
+	Responsive.onChanged(function()
+		local phone = Responsive.formFactor() == "Phone"
+		-- Right of the Menu button (54 wide on phones, 120 elsewhere).
+		button.Position = UDim2.fromOffset(if phone then 16 + 54 + 8 else 16 + 120 + 8, 16)
+		button.Size = if phone
+			then UDim2.fromOffset(MIN_TOUCH_SIZE, 46)
+			else UDim2.fromOffset(104, 48)
+		Responsive.styleIconButton(button, phone, 18)
+	end)
 
 	toggleButton = button
 	button.Activated:Connect(function()
@@ -104,7 +106,11 @@ function AudioController.setMuted(value: boolean): ()
 	muted = value
 	local button = toggleButton
 	if button then
-		button.Text = if muted then "Music: Off" else "Music: On"
+		local icon = button:FindFirstChild("Icon")
+		if icon and icon:IsA("TextLabel") then
+			icon.Text = if muted then "🔇" else "🎵"
+		end
+		Responsive.setButtonLabel(button, if muted then "Muted" else "Music")
 	end
 	local sound = current
 	if sound then

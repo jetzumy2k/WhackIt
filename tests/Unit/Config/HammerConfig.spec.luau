@@ -41,7 +41,7 @@ return function()
 
 		it("keeps every coin hammer below the Mystery Hammer's best roll", function()
 			for _, hammer in HammerConfig.List do
-				expect(hammer.Damage < StoreConfig.Mystery.DamageMax).to.equal(true)
+				expect(hammer.Damage < StoreConfig.Mystery.BaseDamage).to.equal(true)
 			end
 		end)
 

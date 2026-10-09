@@ -3,8 +3,10 @@
 -- (coins, hammers, boss unlocks) for the UI. Display only: the server
 -- re-checks every hit, purchase and equip itself.
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Attributes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Attributes"))
 local CustomBossRules =
 	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CustomBossRules"))
 local ProgressionRules =
@@ -48,21 +50,25 @@ local function parseBuffs(value: unknown): { [string]: { Percent: number, Second
 	return buffs
 end
 
-local function parseMystery(
-	value: unknown
-): { { Id: string, Damage: number, CritDamagePercent: number } }
-	local list: { { Id: string, Damage: number, CritDamagePercent: number } } = {}
+local function parseMystery(value: unknown): { Types.MysteryHammer }
+	local list: { Types.MysteryHammer } = {}
 	if typeof(value) == "table" then
 		for _, entry in value :: { unknown } do
 			if typeof(entry) == "table" then
 				local raw = entry :: { [string]: unknown }
 				local id, damage, crit = raw.Id, raw.Damage, raw.CritDamagePercent
+				local bonus = raw.BonusDamagePercent
 				if
 					typeof(id) == "string"
 					and typeof(damage) == "number"
 					and typeof(crit) == "number"
 				then
-					table.insert(list, { Id = id, Damage = damage, CritDamagePercent = crit })
+					table.insert(list, {
+						Id = id,
+						Damage = damage,
+						BonusDamagePercent = if typeof(bonus) == "number" then bonus else 0,
+						CritDamagePercent = crit,
+					})
 				end
 			end
 		end
@@ -80,6 +86,58 @@ local function parseBag(raw: unknown): { [string]: number }
 		end
 	end
 	return bag
+end
+
+local function parsePets(raw: unknown): { Types.OwnedPet }
+	local pets: { Types.OwnedPet } = {}
+	if typeof(raw) ~= "table" then
+		return pets
+	end
+	for _, entry in raw :: { unknown } do
+		if typeof(entry) == "table" then
+			local data = entry :: { [string]: unknown }
+			local buffs: { { Kind: string, Percent: number } } = {}
+			if typeof(data.Buffs) == "table" then
+				for _, buff in data.Buffs :: { unknown } do
+					if typeof(buff) == "table" then
+						local kind = (buff :: { [string]: unknown }).Kind
+						local percent = (buff :: { [string]: unknown }).Percent
+						if typeof(kind) == "string" and typeof(percent) == "number" then
+							table.insert(buffs, { Kind = kind, Percent = percent })
+						end
+					end
+				end
+			end
+			if
+				typeof(data.Id) == "string"
+				and typeof(data.Species) == "string"
+				and typeof(data.Rarity) == "string"
+			then
+				table.insert(pets, {
+					Id = data.Id,
+					Species = data.Species,
+					Rarity = data.Rarity,
+					Buffs = buffs,
+				})
+			end
+		end
+	end
+	return pets
+end
+
+local function parseIncubation(raw: unknown): Types.IncubationView?
+	if typeof(raw) ~= "table" then
+		return nil
+	end
+	local data = raw :: { [string]: unknown }
+	if
+		typeof(data.Rarity) ~= "string"
+		or typeof(data.EndsAt) ~= "number"
+		or typeof(data.IncubatorIndex) ~= "number"
+	then
+		return nil
+	end
+	return { Rarity = data.Rarity, EndsAt = data.EndsAt, IncubatorIndex = data.IncubatorIndex }
 end
 
 -- Server messages are still checked so a malformed one can't break the UI.
@@ -126,6 +184,9 @@ local function parse(payload: unknown): Types.ProfileSnapshot?
 		MysteryHammers = parseMystery(data.MysteryHammers),
 		AdminUnlocks = stringList(data.AdminUnlocks) or {},
 		Bag = parseBag(data.Bag),
+		Pets = parsePets(data.Pets),
+		EquippedPetId = if typeof(data.EquippedPetId) == "string" then data.EquippedPetId else "",
+		Incubation = parseIncubation(data.Incubation),
 	}
 end
 
@@ -135,10 +196,19 @@ end
 
 -- False until the first snapshot arrives, so nothing looks unlocked by mistake.
 -- Admin-created bosses are open to everyone.
+-- The server turned on this admin's boss-access bypass (display only; the
+-- server checks its own copy on every hit).
+local function hasBypass(): boolean
+	return Players.LocalPlayer:GetAttribute(Attributes.AdminBypass) == true
+end
+
 function ProgressController.isBossUnlocked(bossId: string): boolean
 	local current = snapshot
 	if current == nil then
 		return false
+	end
+	if hasBypass() then
+		return true
 	end
 	return CustomBossRules.isCustomId(bossId) or table.find(current.UnlockedBossIds, bossId) ~= nil
 end
@@ -147,6 +217,9 @@ function ProgressController.unlockStatus(bossId: string): ProgressionRules.Unloc
 	local current = snapshot
 	if current == nil then
 		return nil
+	end
+	if hasBypass() then
+		return { Unlocked = true, PreviousBossId = nil, DefeatsNeeded = 0, LevelNeeded = 0 }
 	end
 	local adminUnlocks: { [string]: boolean } = {}
 	for _, id in current.AdminUnlocks do
@@ -168,6 +241,12 @@ function ProgressController.start(): ()
 		local parsed = parse(payload)
 		if parsed then
 			snapshot = parsed
+			changedEvent:Fire()
+		end
+	end)
+	-- Doors and boss labels follow an admin's bypass at once.
+	Players.LocalPlayer:GetAttributeChangedSignal(Attributes.AdminBypass):Connect(function()
+		if snapshot then
 			changedEvent:Fire()
 		end
 	end)

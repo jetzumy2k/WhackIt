@@ -24,6 +24,9 @@ Every boost comes in three lengths of **play time**: 30 minutes, 1 hour or 5 hou
 | +5 % Crit Damage | 15 | 25 | 99 |
 | +10 % Crit Damage | 25 | 45 | 149 |
 | **Mystery Hammer** (permanent) | 199 | | |
+| **Beginner Bundle** (2026-10-08) | 99 | | |
+| **Stress Reliever Package** (2026-10-08) | 599 | | |
+| **Common / Rare / Mythical Egg** (2026-10-08, docs/PETS.md) | 49 / 149 / 399 | | |
 
 Why these prices: 30-minute boosts sit at impulse prices (10–49 R$). Longer boosts give a better
 rate per minute, so the 5-hour packs are about 30–40 % of the 30-minute rate. Damage boosts cost more
@@ -41,17 +44,51 @@ fallbacks and suggestions.
 - XP boost multiplies XP from defeats. Score and coins are not boosted.
 - Damage boost multiplies hit damage. Crit Damage boost adds to the crit multiplier
   (base crit +50 %).
-- **Mystery Hammer:** waits unopened in the Bag. When the player taps **Open**, its stats are rolled
-  once and it's theirs forever: equipped straight away and listed under "Hammers".
+- **Mystery Hammer** (redesigned 2026-10-08): waits unopened in the Bag. When the player taps
+  **Open**, its two bonuses are rolled once on the server and saved with that hammer. It's theirs
+  forever: equipped straight away and listed under "Hammers". Equipping, respawning, rejoining or
+  hitting never rerolls it.
 
-  | Stat | Range | Odds |
+  | Stat | Value | Odds |
   |---|---|---|
-  | Damage | 20–35 (whole numbers) | each value 1 in 16 = 6.25 % |
-  | Crit damage | +5 % to +10 % | each value 1 in 6 ≈ 16.7 % |
+  | Base damage | **35** (fixed) | always |
+  | Bonus damage | +15 % to +25 % (whole numbers) | each value 1 in 11 ≈ 9.1 % |
+  | Crit damage | +5 % to +10 % (whole numbers) | each value 1 in 6 ≈ 16.7 % |
+
+  Hit damage is 35 × (1 + bonus damage + any Damage boost) × the boss's damage multiplier; crits
+  add the crit damage bonus to the base +50 % (docs/GAMEPLAY_RULES.md "Hit damage"). For example,
+  a +20 % hammer hits the Deadline Boss for 42.
+  **Hammers opened before 2026-10-08** (they rolled 20–35 damage) move to the 35 base, keep their
+  crit roll and get +15 % bonus damage (PlayerDataSchema v7), so none gets weaker.
 
   The odds are shown in the store before buying, as Roblox requires for paid random items. Players
   whose `PolicyService` info has `ArePaidRandomItemsRestricted` (or whose lookup fails) never see the
   Mystery tab, and the server refuses to prompt it for them.
+
+## Bundles (2026-10-08)
+Two store items put several boosts in the Bag at once (**Bundles** tab, `StoreConfig` `BUNDLES`):
+
+| Bundle | Contents | Suggested price | Bought separately |
+|---|---|---|---|
+| **Beginner Bundle** (`beginner_bundle`) | 3x +10 % XP (30 min), 3x +5 % Damage (30 min), 3x +5 % Crit Damage (30 min) | 99 R$ | 165 R$ |
+| **Stress Reliever Package** (`stress_reliever_package`) | 3x +10 % XP (5 h), 3x +5 % Damage (5 h), 3x +5 % Crit Damage (5 h) | 599 R$ | 1,041 R$ |
+
+- Delivery uses the normal `ProcessReceipt` path. Nothing is granted before Roblox confirms the
+  purchase, and a retried receipt is never granted twice (`ProcessedPurchases`). Buying again adds
+  another full set on top of what's already in the Bag.
+- The Bag gets the **contents** as separate items (`BagRules.grant`), not the bundle. Three 5-hour XP
+  boosts are three "Use" items. Each one, when used, follows the normal boost rule: time of the same
+  kind adds up while the strongest percent applies. It is never one 15-hour boost.
+- Bundles can't be gifted, and the Mystery Hammer isn't in any bundle.
+- The tiers in a bundle are a design choice. Change `Contents` in `StoreConfig` (they must be boost
+  keys; spec-checked: 3 of each kind, cheaper than buying separately).
+
+## Pet eggs (2026-10-08)
+The **Eggs** tab sells a Common, Rare and Mythical egg (docs/PETS.md). What hatches is random, so
+eggs follow the paid-random-item rules exactly like the Mystery Hammer: the tab and the purchase are
+offered only when `PolicyService` allows paid random items for that player, and the odds of every
+species, and of a Rare pet's extra buff, are shown before buying. A bought egg goes into the Bag
+(`ProcessReceipt`, as always), can't be gifted, and hatches in an incubator outside.
 
 ## Bag and gifts (2026-10-06)
 Nothing bought is used automatically any more. Everything goes into the player's **Bag** (button
@@ -65,7 +102,7 @@ Purchases made before this change were already applied and stay that way.
 ### Gifting
 Every boost has a **Gift** button next to Buy. The Mystery Hammer can't be gifted: it's a paid
 random item, and Roblox requires checking the *recipient's* PolicyService rules, which isn't possible
-for an offline friend.
+for an offline friend. Bundles can't be gifted either.
 1. The buyer picks one of their Roblox friends (online or offline) from the friend list.
 2. The server checks they really are friends (`Player:IsFriendsWithAsync`) and that the product is on
    sale, records the choice in the buyer's data (`PendingGift`), and opens the normal purchase prompt.
@@ -114,7 +151,7 @@ The server decides who is an admin (`Lib/AdminAuth`, shared with the Admin panel
 
 ## Going live: setup checklist
 1. Creator Hub → your experience → **Monetization → Developer Products**. Create one product per key
-   (34 in total), for example "+10% XP Boost (30 min)", priced as in the table above.
+   (36 in total), for example "+10% XP Boost (30 min)", priced as in the table above.
 
    | Kind | Keys |
    |---|---|
@@ -122,11 +159,15 @@ The server decides who is an admin (`Lib/AdminAuth`, shared with the Admin panel
    | Damage | `dmg_3_*`, `dmg_5_*`, `dmg_10_*` |
    | Crit Damage | `crit_3_*`, `crit_5_*`, `crit_10_*`, `crit_15_*`, `crit_20_*` |
    | Mystery Hammer | `mystery_hammer` |
+   | Bundles | `beginner_bundle`, `stress_reliever_package` (not created yet: they stay hidden until their ids are pasted in) |
+   | Pet eggs | `egg_common`, `egg_rare`, `egg_mythical` (not created yet; paid random items like the Mystery Hammer) |
 
    `*` stands for each of `30m`, `1h` and `5h`.
 2. Paste each product id into `PRODUCT_IDS` in `src/config/StoreConfig.luau`. Products without an id
    stay hidden, so you can launch a few at a time.
 3. Enable **Studio Access to API Services** to test the admin settings in Studio. Test purchases in
    Studio are free and go through the real `ProcessReceipt`.
-4. Update the experience questionnaire: the game now has **paid random items** (Mystery Hammer).
+4. Update the experience questionnaire: the game now has **paid random items** (Mystery Hammer
+   and pet eggs).
+   Its odds changed on 2026-10-08 (table above); the Store shows the new ones.
 5. Run the store checks in `PLAYTEST.md` (59 and later).

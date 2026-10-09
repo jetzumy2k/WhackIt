@@ -27,7 +27,9 @@ local function validData(): PlayerDataSchema.RawData
 		Xp = 1500,
 		Buffs = { Xp = { Percent = 10, SecondsLeft = 600 } },
 		ProcessedPurchases = { "receipt-1" },
-		MysteryHammers = { mystery_1 = { Damage = 30, CritDamagePercent = 7 } },
+		MysteryHammers = {
+			mystery_1 = { Damage = 35, BonusDamagePercent = 20, CritDamagePercent = 7 },
+		},
 		NextMysteryNumber = 2,
 		AdminUnlocks = {},
 		Bag = { xp_10_30m = 1 },
@@ -328,8 +330,10 @@ return function()
 			expect(buffs.Xp.Percent).to.equal(10)
 			expect(buffs.Xp.SecondsLeft).to.equal(600)
 			expect((data.ProcessedPurchases :: { string })[1]).to.equal("receipt-1")
-			local mystery = data.MysteryHammers :: { [string]: { Damage: number } }
-			expect(mystery.mystery_1.Damage).to.equal(30)
+			local mystery = data.MysteryHammers :: { [string]: { [string]: number } }
+			expect(mystery.mystery_1.Damage).to.equal(35)
+			expect(mystery.mystery_1.BonusDamagePercent).to.equal(20)
+			expect(mystery.mystery_1.CritDamagePercent).to.equal(7)
 		end)
 
 		it("drops unknown buff kinds and clamps buff values", function()
@@ -370,9 +374,8 @@ return function()
 				not_mystery = { Damage = 30, CritDamagePercent = 7 },
 			}
 			PlayerDataSchema.prepare(data)
-			local mystery =
-				data.MysteryHammers :: { [string]: { Damage: number, CritDamagePercent: number } }
-			expect(mystery.mystery_1.Damage).to.equal(StoreConfig.Mystery.DamageMax)
+			local mystery = data.MysteryHammers :: { [string]: { [string]: number } }
+			expect(mystery.mystery_1.Damage).to.equal(StoreConfig.Mystery.BaseDamage)
 			expect(mystery.mystery_1.CritDamagePercent).to.equal(
 				StoreConfig.Mystery.CritDamageMinPercent
 			)
@@ -480,6 +483,151 @@ return function()
 			local claimed = data.ClaimedGifts :: { string }
 			expect(#claimed).to.equal(PlayerDataSchema.MAX_CLAIMED_GIFTS)
 			expect(claimed[#claimed]).to.equal("gift-" .. (PlayerDataSchema.MAX_CLAIMED_GIFTS + 10))
+		end)
+	end)
+	describe("PlayerDataSchema v7 (Mystery Hammer base damage and bonus)", function()
+		it(
+			"upgrades a hammer opened before the bonus: base damage, legacy bonus, same crit",
+			function()
+				local data = validData()
+				data.SchemaVersion = 6
+				data.MysteryHammers = { mystery_1 = { Damage = 22, CritDamagePercent = 9 } }
+				data.EquippedHammerId = "mystery_1"
+				expect((PlayerDataSchema.prepare(data))).to.equal(true)
+				expect(data.SchemaVersion).to.equal(PlayerDataSchema.CURRENT_VERSION)
+				local mystery = data.MysteryHammers :: { [string]: { [string]: number } }
+				expect(mystery.mystery_1.Damage).to.equal(StoreConfig.Mystery.BaseDamage)
+				expect(mystery.mystery_1.BonusDamagePercent).to.equal(
+					StoreConfig.Mystery.LegacyBonusDamagePercent
+				)
+				expect(mystery.mystery_1.CritDamagePercent).to.equal(9)
+				-- Still owned and still in hand.
+				expect(data.EquippedHammerId).to.equal("mystery_1")
+			end
+		)
+
+		it("never rerolls: preparing the same data again changes nothing", function()
+			local data = validData()
+			PlayerDataSchema.prepare(data)
+			PlayerDataSchema.prepare(data)
+			local mystery = data.MysteryHammers :: { [string]: { [string]: number } }
+			expect(mystery.mystery_1.BonusDamagePercent).to.equal(20)
+			expect(mystery.mystery_1.CritDamagePercent).to.equal(7)
+		end)
+
+		it("repairs a broken bonus instead of deleting the paid hammer", function()
+			local data = validData()
+			data.MysteryHammers = {
+				mystery_1 = { Damage = 35, BonusDamagePercent = NAN, CritDamagePercent = 7 },
+				mystery_2 = { Damage = 35, BonusDamagePercent = 999, CritDamagePercent = 7 },
+			}
+			PlayerDataSchema.prepare(data)
+			local mystery = data.MysteryHammers :: { [string]: { [string]: number } }
+			expect(mystery.mystery_1.BonusDamagePercent).to.equal(
+				StoreConfig.Mystery.LegacyBonusDamagePercent
+			)
+			expect(mystery.mystery_2.BonusDamagePercent).to.equal(
+				StoreConfig.Mystery.BonusDamageMaxPercent
+			)
+		end)
+
+		it("keeps bundles out of pending gifts (they can't be gifted)", function()
+			local data = validData()
+			data.PendingGift = { RecipientUserId = 42, ProductKey = "beginner_bundle" }
+			PlayerDataSchema.prepare(data)
+			expect(data.PendingGift).to.equal(nil)
+		end)
+	end)
+	describe("PlayerDataSchema v8 (pets)", function()
+		local function rabbit(): { [string]: unknown }
+			return {
+				Species = "rabbit",
+				Rarity = "Rare",
+				Buffs = { { Kind = "Xp", Percent = 6 }, { Kind = "CritDamage", Percent = 7 } },
+				CreatedAt = 100,
+			}
+		end
+
+		it("gives existing players no pets, no egg incubating, nothing equipped", function()
+			local data = validData()
+			data.SchemaVersion = 7
+			expect((PlayerDataSchema.prepare(data))).to.equal(true)
+			expect(data.SchemaVersion).to.equal(PlayerDataSchema.CURRENT_VERSION)
+			expect((next(data.Pets :: {}))).to.equal(nil)
+			expect(data.NextPetNumber).to.equal(1)
+			expect(data.EquippedPetId).to.equal("")
+			expect(data.Incubation).to.equal(nil)
+			-- Nothing else is touched.
+			expect(data.Coins).to.equal(250)
+			expect(data.Xp).to.equal(1500)
+		end)
+
+		it("keeps pets and their buffs exactly as saved, and the equipped one", function()
+			local data = validData()
+			data.Pets = { pet_1 = rabbit(), pet_2 = rabbit() }
+			data.NextPetNumber = 3
+			data.EquippedPetId = "pet_2"
+			PlayerDataSchema.prepare(data)
+			PlayerDataSchema.prepare(data) -- loading again changes nothing
+			local pets = data.Pets :: { [string]: { Buffs: { { Kind: string, Percent: number } } } }
+			expect(pets.pet_1.Buffs[2].Percent).to.equal(7)
+			expect(pets.pet_2).never.to.equal(nil)
+			expect(data.EquippedPetId).to.equal("pet_2")
+		end)
+
+		it("unequips a pet the player doesn't own and drops broken pets", function()
+			local data = validData()
+			data.Pets = { pet_1 = rabbit(), not_a_pet = rabbit(), pet_2 = { Species = "dog" } }
+			data.EquippedPetId = "pet_9"
+			PlayerDataSchema.prepare(data)
+			local pets = data.Pets :: { [string]: unknown }
+			expect(pets.pet_1).never.to.equal(nil)
+			expect(pets.not_a_pet).to.equal(nil)
+			expect(pets.pet_2).to.equal(nil)
+			expect(data.EquippedPetId).to.equal("")
+		end)
+
+		it("never reuses a pet id", function()
+			local data = validData()
+			data.Pets = { pet_7 = rabbit() }
+			data.NextPetNumber = 2
+			PlayerDataSchema.prepare(data)
+			expect(data.NextPetNumber).to.equal(8)
+		end)
+
+		it("keeps an incubating egg with its times, so it isn't reset", function()
+			local data = validData()
+			data.Incubation = {
+				EggKey = "egg_rare",
+				StartedAt = 1000,
+				EndsAt = 1060,
+				IncubatorIndex = 2,
+				Pet = {
+					Species = "bear",
+					Rarity = "Rare",
+					Buffs = { { Kind = "Damage", Percent = 6 } },
+				},
+			}
+			PlayerDataSchema.prepare(data)
+			local incubation = data.Incubation :: { [string]: unknown }
+			expect(incubation.EndsAt).to.equal(1060)
+			expect(incubation.IncubatorIndex).to.equal(2)
+		end)
+
+		it("gives the egg back when a saved incubation is broken", function()
+			local data = validData()
+			data.Bag = {}
+			data.Incubation = { EggKey = "egg_common", StartedAt = 1000, EndsAt = 1060 }
+			PlayerDataSchema.prepare(data)
+			expect(data.Incubation).to.equal(nil)
+			expect((data.Bag :: { [string]: number }).egg_common).to.equal(1)
+		end)
+
+		it("keeps eggs in the Bag", function()
+			local data = validData()
+			data.Bag = { egg_mythical = 2 }
+			PlayerDataSchema.prepare(data)
+			expect((data.Bag :: { [string]: number }).egg_mythical).to.equal(2)
 		end)
 	end)
 end

@@ -20,6 +20,24 @@ local AdminConfig = table.freeze({
 	DropRateTopic = "DropRates",
 	DropRateRefreshSeconds = 300,
 
+	-- Admin events (docs/EVENTS.md, Config/EventConfig), shared by every server.
+	EventStoreName = "Events",
+	EventKey = "Global",
+	EventTopic = "Events",
+	EventRefreshSeconds = 300,
+
+	-- Player history and the admin audit log (Services/HistoryService).
+	HistoryStoreName = "PlayerHistory",
+	HistoryPerPlayer = 200, -- newest entries kept per player
+	HistoryPerAdminDay = 500, -- admin actions kept per UTC day
+	HistoryFlushSeconds = 30,
+
+	-- Admin rewards (docs/ADMIN.md "Rewards"): limits per grant.
+	MaxRewardCoins = 100000,
+	MaxRewardXp = 10000000,
+	MaxRewardItems = 50,
+	MaxRewardReasonLength = 100,
+
 	-- Ban / suspend (Players:BanAsync). Seconds; -1 is permanent.
 	BanDurations = table.freeze({
 		["1 hour"] = 3600,
@@ -40,6 +58,10 @@ local AdminConfig = table.freeze({
 	MaxNoteLength = 200,
 	-- Roblox usernames are 3-20 characters.
 	MaxUsernameLength = 20,
+
+	-- Server announcements (Config/AnnouncementConfig has the length and
+	-- durations): one per admin this often, on top of RemoteLimits.Admin.
+	AnnouncementCooldownSeconds = 10,
 })
 
 return AdminConfig

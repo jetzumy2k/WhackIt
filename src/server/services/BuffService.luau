@@ -7,8 +7,17 @@
 	    reaching 0 stress; not saved, it's a moment-to-moment reward.
 	  * admin-set damage (docs/ADMIN.md): a fixed damage per hit, for this
 	    session only; hits with it earn no rewards (CombatService/RewardService).
+	  * the equipped pet's buffs (docs/PETS.md), read from the player's saved
+	    pet, so nothing a client sends can change them.
 	CombatService asks statsFor() and damageOverride() for each hit;
 	RewardService asks xpMultiplier(). The server is the only place buffs are applied.
+
+	How bonuses combine (one formula, CombatRules.hitDamage):
+	  base          = hammer damage + Player Level bonus (+3 per level above 1)
+	  damage bonus  = Damage boost + Mystery Hammer bonus + pet Damage (added)
+	  crit chance   = base 5 % + Player Level (+0.05 points per level) + Zen
+	  crit damage   = base +50 % + hammer + Crit Damage boost + pet CritDamage
+	  XP multiplier = 1 + XP boost + pet XP (then x the XP event, RewardService)
 ]]
 
 local Players = game:GetService("Players")
@@ -20,6 +29,8 @@ local BuffRules = require(ReplicatedStorage.Shared.BuffRules)
 local CombatRules = require(ReplicatedStorage.Shared.CombatRules)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local HammerRules = require(ReplicatedStorage.Shared.HammerRules)
+local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
+local PetRules = require(ReplicatedStorage.Shared.PetRules)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressService = require(script.Parent.ProgressService)
 
@@ -29,6 +40,19 @@ local BuffService = {}
 
 local zenBuffUntil: { [Player]: number } = {}
 local damageOverrides: { [Player]: number? } = {}
+-- Admins with the boss-access bypass on (this session only, docs/ADMIN.md).
+local bossBypass: { [Player]: boolean? } = {}
+
+-- True when an admin turned on the bypass for themselves: every boss and
+-- door opens for them. Only AdminService sets it, after its own checks.
+function BuffService.hasBossBypass(player: Player): boolean
+	return bossBypass[player] == true
+end
+
+function BuffService.setBossBypass(player: Player, enabled: boolean): ()
+	bossBypass[player] = if enabled then true else nil
+	player:SetAttribute(Attributes.AdminBypass, if enabled then true else nil)
+end
 
 -- Admin-set damage per hit, or nil for normal hammer damage.
 function BuffService.damageOverride(player: Player): number?
@@ -75,10 +99,19 @@ function BuffService.grantTimed(
 	return true
 end
 
+-- The equipped pet's modifiers (all zero without one).
+local function petBonuses(data: PlayerDataService.PlayerData): PetRules.Bonuses
+	local pet = if data.EquippedPetId ~= "" then data.Pets[data.EquippedPetId] else nil
+	return PetRules.bonuses(pet)
+end
+
 -- Multiplier applied to XP earned (1 = no boost).
 function BuffService.xpMultiplier(player: Player): number
 	local data = PlayerDataService.get(player)
-	return 1 + (if data then BuffRules.fraction(data.Buffs.Xp) else 0)
+	if data == nil then
+		return 1
+	end
+	return 1 + BuffRules.fraction(data.Buffs.Xp) + petBonuses(data).Xp
 end
 
 -- Everything that shapes this player's next hit, or nil if they can't hit.
@@ -93,8 +126,15 @@ function BuffService.statsFor(player: Player): (CombatRules.HitStats?, HammerRul
 	end
 
 	local stats = CombatRules.baseStats(hammer.Damage)
-	stats.DamageBonus = BuffRules.fraction(data.Buffs.Damage)
-	stats.CritDamage += hammer.CritDamage + BuffRules.fraction(data.Buffs.CritDamage)
+	-- Permanent character progression, from the saved XP (never stored or
+	-- re-awarded); temporary boosts, pets and events stay separate below.
+	local level = LevelRules.levelFor(data.Xp)
+	stats.LevelDamage = LevelRules.bonusDamage(level)
+	stats.CritChance += LevelRules.bonusCritChance(level)
+	local pet = petBonuses(data)
+	-- A Mystery Hammer's and a pet's damage bonus add to a Damage boost's.
+	stats.DamageBonus = BuffRules.fraction(data.Buffs.Damage) + hammer.DamageBonus + pet.Damage
+	stats.CritDamage += hammer.CritDamage + BuffRules.fraction(data.Buffs.CritDamage) + pet.CritDamage
 	if zenSecondsLeft(player) > 0 then
 		stats.FlatBonus += GameConfig.ZenBuffFlatDamage
 		stats.CritChance += GameConfig.ZenBuffCritChance
@@ -135,6 +175,7 @@ function BuffService.init(): ()
 	Players.PlayerRemoving:Connect(function(player: Player)
 		zenBuffUntil[player] = nil
 		damageOverrides[player] = nil
+		bossBypass[player] = nil
 	end)
 end
 

@@ -17,6 +17,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local ArenaConfig = require(ReplicatedStorage.Config.ArenaConfig)
+local BuffService = require(script.Parent.BuffService)
 local BossConfig = require(ReplicatedStorage.Config.BossConfig)
 local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
 local MovementGuardService = require(script.Parent.MovementGuardService)
@@ -43,6 +44,9 @@ local function hasAccess(player: Player): boolean
 	local data = PlayerDataService.get(player)
 	if data == nil then
 		return false
+	end
+	if BuffService.hasBossBypass(player) then
+		return true -- an admin's boss-access bypass (AdminService)
 	end
 	return ProgressionRules.isBossUnlocked(
 		executive.CeoBossId,

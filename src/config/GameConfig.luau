@@ -6,7 +6,14 @@ local GameConfig = table.freeze({
 	-- Stress system (player's own meter; whacking relieves it, see docs/GAMEPLAY_RULES.md)
 	MaxStress = 100,
 	StartingStress = 100,
-	StressReliefPerDamage = 0.1, -- stress relieved per point of accepted damage
+	-- Stress relieved per boss hit (rebalanced 2026-10-08): the equipped
+	-- hammer's own damage x StressReliefPerDamage, at most StressReliefMaxPerHit.
+	-- Crits, boosts, pets, events and level bonuses don't change it, so
+	-- stronger characters no longer drain stress in a few seconds. Squeaky
+	-- Hammer 1 per hit (~45 s from full to Zen of steady hitting); the best
+	-- hammers 2.5 (~18 s).
+	StressReliefPerDamage = 0.1,
+	StressReliefMaxPerHit = 2.5,
 	DefeatStressRelief = 5, -- bonus for each reward-qualifying player when a boss is defeated
 	-- Stress creeps back when a player stops landing hits (docs/GAMEPLAY_RULES.md).
 	-- Only a server-accepted boss hit restarts the grace period; walking, running,
@@ -40,6 +47,12 @@ local GameConfig = table.freeze({
 
 	-- Player Level (Shared/LevelRules): level = floor(sqrt(xp / factor)) + 1
 	LevelScoreFactor = 600,
+	-- Character progression (2026-10-08, docs/GAMEPLAY_RULES.md "Level bonuses"):
+	-- every level above 1 adds this much base damage to every hit (on top of
+	-- the hammer's damage) and this much crit CHANCE (0.0005 = 0.05
+	-- percentage points). Derived from the level, never stored.
+	LevelDamagePerLevel = 3,
+	LevelCritChancePerLevel = 0.0005,
 	-- Senior bosses upstairs need at least this Player Level.
 	UpstairsMinLevel = 10,
 	-- The CEO (3rd floor) has this many times the HP of the toughest other boss

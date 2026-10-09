@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BagRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BagRules"))
 local ProgressController = require(script.Parent.ProgressController)
+local Responsive = require(script.Parent.Parent.Lib.Responsive)
 local StoreConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("StoreConfig"))
 
 local BagController = {}
@@ -40,6 +41,7 @@ local function label(name: string, parent: Instance): TextLabel
 	text.TextScaled = true
 	text.TextXAlignment = Enum.TextXAlignment.Left
 	text.Parent = parent
+	Responsive.capText(text, 22)
 	return text
 end
 
@@ -52,6 +54,7 @@ local function button(name: string, parent: Instance): TextButton
 	clickable.AutoButtonColor = true
 	clickable.Parent = parent
 	corner(clickable)
+	Responsive.capText(clickable, 20)
 	return clickable
 end
 
@@ -65,12 +68,8 @@ function BagController.start(): ()
 	gui.ResetOnSpawn = false
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-	local open = button("OpenBag", gui)
-	open.Text = "Bag"
-	open.BackgroundColor3 = BAG_COLOR
-	open.AnchorPoint = Vector2.new(1, 1)
-	open.Position = UDim2.new(1, -16, 1, -184)
-	open.Size = UDim2.fromOffset(140, MIN_TOUCH_SIZE + 4)
+	-- HUD button in the shared column (Lib/Responsive), above the Store.
+	local open = Responsive.dockButton("OpenBag", "🎒", "Bag", BAG_COLOR, 2)
 
 	local panel = Instance.new("Frame")
 	panel.Name = "Panel"
@@ -85,11 +84,13 @@ function BagController.start(): ()
 	sizeLimit.MinSize = Vector2.new(300, 260)
 	sizeLimit.MaxSize = Vector2.new(560, 480)
 	sizeLimit.Parent = panel
+	Responsive.fitPopup(panel, sizeLimit, Vector2.new(0.6, 0.65))
 
 	local title = label("Title", panel)
 	title.Position = UDim2.fromOffset(16, 10)
 	title.Size = UDim2.new(1, -90, 0, 34)
 	title.Text = "Bag"
+	Responsive.capText(title, 30)
 
 	local close = button("Close", panel)
 	close.Text = "X"
@@ -117,6 +118,8 @@ function BagController.start(): ()
 		local line = label("Note", list)
 		line.LayoutOrder = order
 		line.Size = UDim2.new(1, 0, 0, height)
+		-- Grows when the text wraps onto more lines (narrow phone screens).
+		line.AutomaticSize = Enum.AutomaticSize.Y
 		line.TextScaled = false
 		line.TextSize = 16
 		line.TextWrapped = true
@@ -137,10 +140,13 @@ function BagController.start(): ()
 		for _, count in bag do
 			total += count
 		end
-		open.Text = if total > 0 then string.format("Bag (%d)", total) else "Bag"
+		Responsive.setButtonLabel(
+			open,
+			if total > 0 then string.format("Bag (%d)", total) else "Bag"
+		)
 
 		note(
-			"Items you bought, got as gifts or won wait here. Use a boost when it suits you: it then counts down while you play, and the strongest boost of each kind applies.",
+			"Items you bought, got as gifts or won wait here. Use a boost when it suits you: it then counts down while you play, and the strongest boost of each kind applies. Eggs hatch at the Pet Incubation Center outside: stand by an incubator and tap Incubate.",
 			1,
 			62
 		)
@@ -170,7 +176,10 @@ function BagController.start(): ()
 			use.Position = UDim2.new(1, -10, 0.5, 0)
 			use.Size = UDim2.new(0.28, 0, 0, MIN_TOUCH_SIZE)
 			use.BackgroundColor3 = USE_COLOR
-			use.Text = if product.Kind == "MysteryHammer" then "Open" else "Use"
+			use.Text = if product.Kind == "Egg"
+				then "Incubate"
+				elseif product.Kind == "MysteryHammer" or product.Kind == "Bundle" then "Open"
+				else "Use"
 			use.Activated:Connect(function()
 				useRemote:FireServer(product.Key)
 			end)

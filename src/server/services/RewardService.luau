@@ -5,12 +5,16 @@
 	and, for players with at least MinRewardDamageShare, the stress bonus and a
 	defeat count toward unlocking the next boss.
 
-	XP is the score earned times GameConfig.XpRewardMultiplier and any XP boost.
+	XP is the score earned times GameConfig.XpRewardMultiplier, any XP boost
+	and the active XP event multiplier (EventService; the highest one applies).
 	Admin-created (custom) bosses don't count toward unlocks.
 	Each qualifying player may get a random 30-minute store boost in their Bag
 	(Shared/CustomBossRules, Shared/BagRules): always from a custom boss, and
 	from an office boss with a chance picked at random in the range in effect
 	(DropRateService: Normal, or Lucky during the Lucky window).
+	Active boss drop events (EventService) roll once each for every
+	qualifying player; a hit puts the item (a bundle as its separate boosts)
+	in the Bag.
 	Players who hit this boss life with admin-set damage get nothing.
 
 	Idempotent: BossState.markRewarded lets each player be rewarded at most once
@@ -26,6 +30,8 @@ local BuffService = require(script.Parent.BuffService)
 local CustomBossConfig = require(ReplicatedStorage.Config.CustomBossConfig)
 local CustomBossRules = require(ReplicatedStorage.Shared.CustomBossRules)
 local DropRateService = require(script.Parent.DropRateService)
+local EventService = require(script.Parent.EventService)
+local HistoryService = require(script.Parent.HistoryService)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
 local PlayerDataService = require(script.Parent.PlayerDataService)
@@ -47,6 +53,7 @@ export type Grant = {
 	StressRelieved: number,
 	UnlockedBossIds: { string }, -- bosses this defeat newly unlocked
 	BuffDrop: CustomBossRules.Drop?, -- the store boost this player got, if any
+	EventDrops: { string }, -- items won from drop events (display text)
 }
 
 local KIND_TEXT: { [string]: string } = { Xp = "XP", Damage = "Damage", CritDamage = "Crit Damage" }
@@ -107,12 +114,16 @@ function RewardService.grantDefeat(player: Player, state: BossState.BossState): 
 	-- XP follows score, boosted by any XP buff (Score itself stays unboosted).
 	SessionService.addXp(
 		player,
-		reward.Score * GameConfig.XpRewardMultiplier * BuffService.xpMultiplier(player)
+		reward.Score
+			* GameConfig.XpRewardMultiplier
+			* BuffService.xpMultiplier(player)
+			* EventService.xpMultiplier()
 	)
 	SessionService.addCoins(player, reward.Coins)
 
 	local stressRelieved = 0
 	local buffDrop: CustomBossRules.Drop? = nil
+	local eventDrops: { string } = {}
 	if reward.Qualifies then
 		data.TotalBossesDefeated += 1
 		if not definition.Custom then
@@ -123,6 +134,20 @@ function RewardService.grantDefeat(player: Player, state: BossState.BossState): 
 			buffDrop = CustomBossRules.pickDrop(DROP_OPTIONS, dropRandom:NextNumber())
 			if buffDrop then
 				BagRules.add(data.Bag, buffDrop.Key, 1)
+			end
+		end
+		-- Event drops: rolled here on the server, never by the client.
+		for _, drop in EventService.dropsFor(definition) do
+			local product = StoreConfig.ByKey[drop.ItemKey]
+			if product and dropRandom:NextNumber() < drop.Chance then
+				BagRules.grant(data.Bag, product, 1)
+				table.insert(eventDrops, BagRules.itemText(product))
+				HistoryService.record(
+					player.UserId,
+					"Event",
+					"Drop",
+					string.format("Won %s from event %s", BagRules.itemText(product), drop.EventId)
+				)
 			end
 		end
 		-- Last, so a Zen moment it may trigger sees the updated coins.
@@ -152,6 +177,7 @@ function RewardService.grantDefeat(player: Player, state: BossState.BossState): 
 		StressRelieved = stressRelieved,
 		UnlockedBossIds = newlyUnlocked,
 		BuffDrop = buffDrop,
+		EventDrops = eventDrops,
 	}
 end
 

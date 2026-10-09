@@ -13,14 +13,19 @@ values live in `src/config/` and formulas in `src/shared/CombatRules.luau` and `
 
 ## Hit damage
 ```
-raw    = (hammer.Damage + flatBonus) × (1 + damageBoost) × boss.DamageTakenMultiplier
+raw    = (hammer.Damage + levelDamage + flatBonus) × (1 + damageBoost) × boss.DamageTakenMultiplier
 crit?  = serverRoll < critChance            -- rolled by the server only
 damage = max(MinHitDamage, round(raw × (1 + critDamage if crit)))
 ```
+- `levelDamage`: the Player Level bonus, +3 per level above 1 (see "Level bonuses" below)
 - `flatBonus`: +`ZenBuffFlatDamage` (10) during the Zen buff, otherwise 0
-- `damageBoost`: Damage store boost (0.03 / 0.05 / 0.10)
-- `critChance`: `BaseCritChance` (5 %) + `ZenBuffCritChance` (5 %) during the Zen buff
-- `critDamage`: `BaseCritDamage` (+50 %) + Mystery Hammer crit damage + Crit Damage store boost
+- `damageBoost`: Damage store boost (0.03 / 0.05 / 0.10) **plus** a Mystery Hammer's bonus damage
+  (0.15-0.25) **plus** the equipped pet's Damage buff (docs/PETS.md); they add up (e.g. +5 % boost
+  and +20 % hammer = ×1.25)
+- `critChance`: `BaseCritChance` (5 %) + the Player Level bonus (+0.05 percentage points per level
+  above 1) + `ZenBuffCritChance` (5 %) during the Zen buff
+- `critDamage`: `BaseCritDamage` (+50 %) + Mystery Hammer crit damage + Crit Damage store boost +
+  the equipped pet's Crit Damage buff
 - Crits show a bigger orange "CRIT! -N" number.
 - `hammer.Damage`: `HammerConfig`
 - `boss.DamageTakenMultiplier`: `BossConfig` (higher = boss is easier to hurt)
@@ -60,13 +65,23 @@ Each player has their own Stress Meter, saved with their data. It starts at `Sta
 The server owns it (`StressService`); clients only display it.
 
 ```
-each accepted hit:   stress -= damage x StressReliefPerDamage
+each accepted hit:   stress -= min(hammer.Damage x StressReliefPerDamage, StressReliefMaxPerHit)
 qualifying defeat:   stress -= DefeatStressRelief
 passive:             each accepted boss hit starts a StressIdleDelay (15 s) grace period;
                      after it, stress += StressRegenStep (5) every StressRegenInterval (5 s)
                      until the next accepted hit (hit at 0 s -> rises at 20, 25, 30 s...)
 always:              clamped to 0..MaxStress, rounded to hundredths
 ```
+
+**Relief per hit (rebalanced 2026-10-08):** relief used to be the hit's *final* damage × 0.1. Crits,
+Damage boosts, the Mystery bonus, pets and above all the Player Level bonus therefore drained stress
+in a few seconds: a Level 30 player with a boosted Mystery Hammer relieved 16+ per hit, full to 0 in
+about 3 s. Now it comes from the equipped **hammer's own damage** × 0.1, capped at
+`StressReliefMaxPerHit` (2.5). Squeaky Hammer: 1 per hit (about 45 s of steady hitting from full to
+Zen). Best hammers and the Mystery Hammer: 2.5 (about 18 s). Crits, boosts, pets, events, level,
+boss toughness and admin damage never change it, so damage and stress relief stay separate. Rapid
+clicking can't go faster than the server's hit cooldown (0.45 s), and the defeat bonus
+(`DefeatStressRelief` 5) is unchanged.
 
 **Passive stress (changed 2026-10-07; was 120 s of no hits):** only a hit the server has accepted
 and applied (`CombatService`, after cooldown, reach, unlock, hammer and boss checks) restarts the
@@ -228,7 +243,7 @@ show "Defeat <previous> N more times to unlock!".
 | Lightning Hammer (2026-10-07) | 30 | 3500 coins | white-blue head with yellow bolts; small blue glow, the odd spark |
 | Cosmic Hammer (2026-10-07) | 31 | 5000 coins | deep-space head with a glowing planet ring and stars; drifting star specks |
 | Stress Crusher (2026-10-07) | 32 | 8000 coins | heavy industrial head, diamond plate, hazard stripes, square steel shaft |
-| Mystery Hammer (Robux, docs/STORE.md) | 20-35 rolled | 199 R$ | gold head, purple bands and neon caps; soft purple glints |
+| Mystery Hammer (Robux, docs/STORE.md) | 35 base, +15-25 % damage and +5-10 % crit damage rolled once | 199 R$ | gold head, purple bands and neon caps; soft purple glints |
 
 **Hammer vending machine (2026-10-07):** a blue-and-orange "HAMMER STORE" vending machine stands
 in the lobby beside the stairs (`ArenaConfig.StoreMachine`, `Lib/StoreMachineBuilder`,
@@ -242,7 +257,9 @@ the client). About 55 parts, no lights or particles; specs keep it clear of the 
 landing, the walk from the spawn, the entrance, the leaderboard and every lobby part.
 
 A bought hammer is equipped immediately; any owned hammer can be re-equipped. Pricier hammers always
-hit harder, and every coin hammer stays below the Mystery Hammer's best roll (both spec-enforced).
+hit harder, and every coin hammer stays below the Mystery Hammer's fixed base damage (both
+spec-enforced). During a **Hammer Shop sale** event (docs/EVENTS.md) prices drop by the sale percent
+(at least 1 coin); the server charges its own price.
 
 ### Hammer looks (2026-10-07)
 Looks are data (`Config/HammerStyleConfig`), built by `Shared/HammerModel` for the held Tool (server,
@@ -273,6 +290,35 @@ above every head. Existing players start with XP equal to their score (schema v4
 | 5 | 9,600 |
 | 10 | 48,600 |
 
+### Level bonuses (2026-10-08)
+Every level above 1 makes the character permanently stronger (`GameConfig.LevelDamagePerLevel`,
+`LevelCritChancePerLevel`, `Shared/LevelRules`):
+
+| Level | Base damage bonus | Crit chance |
+|---|---|---|
+| 1 | +0 | 5.00 % |
+| 2 | +3 | 5.05 % |
+| 5 | +12 | 5.20 % |
+| 10 | +27 | 5.45 % |
+| 50 | +147 | 7.45 % |
+
+- **Base damage:** the hammer has no base damage of its own, so the bonus is added to the
+  equipped hammer's damage before every percent bonus. With a Squeaky Hammer at Level 10 that's
+  10 + 27 = 37 per normal hit on a ×1 boss. The hammers themselves are unchanged, including the
+  Mystery Hammer's fixed 35 (35 + 27, then its +15-25 %).
+- **Crit:** the chance a hit crits, +0.0005 per level (0.05 percentage points, not 5 %). Crit
+  *damage* bonuses (Mystery Hammer, Crit Damage boosts, pets) are separate and still add up.
+- **Never stored, never awarded twice.** The bonus is worked out from the Player Level, and the
+  level from the saved XP, every time a hit is calculated (`BuffService.statsFor`). Leaving,
+  rejoining, respawning or equipping can't add it again. A jump of several levels from one reward
+  gives every level's share at once. If an admin lowers a level, the bonus follows it down.
+- **Boosts, pets and events stay separate:** they add on top and stop when they end. XP boosts and
+  XP events only change how much XP is earned, never the level directly.
+- There is no maximum level (the admin panel can set up to 500).
+- **UI:** the Player Panel's Profile shows Base damage (hammer + level bonus) and Crit chance. A
+  "🎉 LEVEL UP! / Level 10 → Level 13 / +9 Base Damage +0.15% Crit" card shows on level-up, one card
+  for levels gained close together (`LevelUpController`).
+
 ### XP bar
 A thin blue bar along the bottom edge of the screen shows progress to the next level
 ("Lv 4   1200 / 4200 XP to Lv 5"). It sits below the how-to-play hint, clear of the Stress Meter,
@@ -292,6 +338,28 @@ A boss's name, HP bar and speech bubble float above it, sized in studs (they shr
 shown up to 60 studs away. They are **not** drawn on top of walls: before, every boss in the building
 showed its label through the walls and they piled up on top of each other. Damage numbers follow the
 same rule.
+
+### Office doors (2026-10-08)
+Each boss office has a sliding door that shows **this player's** access
+(`Controllers/OfficeDoorController`, `Lib/OfficeDoors`):
+- **Same rule as the fight:** a door is open exactly when `ProgressionRules.unlockStatus` says the
+  player may fight that boss (previous-boss defeats, Senior Level 10, admin unlocks). It uses the
+  saved progress the server sends in `Profile.Sync`. There is no second requirement system.
+- **Per player:** doors are built on each client, so a Level 10 and a Level 50 player in the same
+  server see different doors. One player's unlock never opens anyone else's door.
+- **Locked:** two solid panels block that player's character, with a small sign beside the doorway:
+  "🔒 Requires Level 10" or "🔒 Beat Deadline Boss x1".
+- **Unlocked:** the panels slide into the wall (0.45 s tween) and the sign says "✓ AVAILABLE", or
+  "✓ BEATEN x3" once beaten. This happens as soon as the unlock arrives (a defeat, a level-up, an
+  admin unlock), with no rejoin. Joining sets every door from the first sync, and respawning
+  changes nothing.
+- **Closing again** (only when an admin lowers a level or removes an admin unlock) waits until the
+  player has left that office and its doorway, so nobody is shut in.
+- **Not the security:** the server refuses every hit on a boss the player hasn't unlocked
+  (`CombatService` → `ProgressionRules.isBossUnlocked`), so deleting or going around a door gives
+  nothing. Bosses stay shared server objects; nothing is duplicated per player.
+- **Cost:** doors update only when progress changes. There is no per-frame check, only a 1 s check
+  while a door is waiting to close.
 
 ### Admin-created bosses
 Admins can place extra bosses anywhere (docs/ADMIN.md). They're open to every player, take normal

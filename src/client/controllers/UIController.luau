@@ -18,6 +18,7 @@ local GameConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild
 local GameplayController = require(script.Parent.GameplayController)
 local LevelRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("LevelRules"))
 local ProgressController = require(script.Parent.ProgressController)
+local Responsive = require(script.Parent.Parent.Lib.Responsive)
 
 local UIController = {}
 
@@ -31,6 +32,8 @@ local TOAST_COLOR = Color3.fromRGB(255, 230, 80)
 local TOAST_SECONDS = 2.5
 local SAVED_SECONDS = 2
 local SHOUT_SECONDS = 4.5
+-- On phones the how-to-play line fades after this long, freeing the bottom of the screen.
+local PHONE_HINT_SECONDS = 20
 -- A boss's short line to this player (BossVisualController) shows this long.
 local LOCAL_LINE_SECONDS = 2
 -- Boss name/HP/shout label: size in studs, and how far away it still shows
@@ -112,6 +115,7 @@ local function buildHud(): (ScreenGui, Frame)
 	stressConstraint.MinSize = Vector2.new(200, 24)
 	stressConstraint.MaxSize = Vector2.new(480, 36)
 	stressConstraint.Parent = stressBar
+	Responsive.capText(stressLabel, 22)
 
 	-- The fill eases to each new value (hits and passive rises) instead of
 	-- jumping; one short tween per change, replacing the previous one.
@@ -141,6 +145,7 @@ local function buildHud(): (ScreenGui, Frame)
 	scoreLabel.Position = UDim2.new(0.5, 0, 0, 48)
 	scoreLabel.Size = UDim2.new(0.6, 0, 0, 26)
 	scoreLabel.Text = "Lv 1   Score: 0   Coins: 0   Zen Lv 0"
+	Responsive.capText(scoreLabel, 22)
 	task.spawn(function()
 		local leaderstats = localPlayer:WaitForChild("leaderstats")
 		local score = leaderstats:WaitForChild("Score")
@@ -174,6 +179,7 @@ local function buildHud(): (ScreenGui, Frame)
 	buffsLabel.Size = UDim2.new(0.7, 0, 0, 22)
 	buffsLabel.TextColor3 = Color3.fromRGB(150, 230, 255)
 	buffsLabel.Text = ""
+	Responsive.capText(buffsLabel, 18)
 	task.spawn(function()
 		local receivedAt = os.clock()
 		local lastSnapshot = ProgressController.get()
@@ -233,6 +239,7 @@ local function buildHud(): (ScreenGui, Frame)
 	xpConstraint.MinSize = Vector2.new(180, 14)
 	xpConstraint.MaxSize = Vector2.new(440, 18)
 	xpConstraint.Parent = xpBar
+	Responsive.capText(xpLabel, 14, 9)
 	local function refreshXp(): ()
 		local snapshot = ProgressController.get()
 		if snapshot == nil then
@@ -264,6 +271,12 @@ local function buildHud(): (ScreenGui, Frame)
 	hint.Text = if UserInputService.TouchEnabled
 		then "Walk up to a boss and tap to swing your hammer! Tap Sprint to run."
 		else "Walk up to a boss and click to swing your hammer! Hold Shift to sprint."
+	Responsive.capText(hint, 20)
+	if Responsive.formFactor() == "Phone" then
+		task.delay(PHONE_HINT_SECONDS, function()
+			TweenService:Create(hint, TweenInfo.new(1), { TextTransparency = 1 }):Play()
+		end)
+	end
 
 	-- "Progress saved" note, bottom-left, shown briefly after each save.
 	local saved = makeLabel("Saved", gui)
@@ -274,6 +287,7 @@ local function buildHud(): (ScreenGui, Frame)
 	saved.TextColor3 = Color3.fromRGB(150, 230, 150)
 	saved.Text = "Progress saved"
 	saved.Visible = false
+	Responsive.capText(saved, 18)
 	savedLabel = saved
 
 	-- Short-lived tips (e.g. "Get closer to the boss!"), just above the hint.
@@ -283,7 +297,9 @@ local function buildHud(): (ScreenGui, Frame)
 	toast.Size = UDim2.new(0.5, 0, 0, 32)
 	toast.TextColor3 = TOAST_COLOR
 	toast.TextStrokeTransparency = 0.3
+	toast.TextWrapped = true
 	toast.Visible = false
+	Responsive.capText(toast, 24)
 	toastLabel = toast
 
 	-- Victory Card, centre, hidden until a boss you fought is defeated.
@@ -301,13 +317,19 @@ local function buildHud(): (ScreenGui, Frame)
 	cardConstraint.MinSize = Vector2.new(260, 90)
 	cardConstraint.MaxSize = Vector2.new(560, 180)
 	cardConstraint.Parent = card
+	-- Phones get a wider, taller card so its several lines stay readable.
+	Responsive.onChanged(function()
+		card.Size = if Responsive.formFactor() == "Phone"
+			then UDim2.fromScale(0.62, 0.36)
+			else UDim2.fromScale(0.45, 0.18)
+	end)
 	local padding = Instance.new("UIPadding")
 	padding.PaddingLeft = UDim.new(0, 12)
 	padding.PaddingRight = UDim.new(0, 12)
 	padding.PaddingTop = UDim.new(0, 8)
 	padding.PaddingBottom = UDim.new(0, 8)
 	padding.Parent = card
-	makeLabel("Text", card)
+	Responsive.capText(makeLabel("Text", card), 26)
 
 	gui.Parent = localPlayer:WaitForChild("PlayerGui")
 	return gui, card
@@ -540,6 +562,10 @@ local function showVictoryCard(card: Frame, payload: unknown): ()
 	local buffDrop = data.BuffDropText
 	if typeof(buffDrop) == "string" and #buffDrop <= 60 then
 		table.insert(lines, "BONUS DROP: " .. buffDrop .. "!")
+	end
+	local eventDrop = data.EventDropText
+	if typeof(eventDrop) == "string" and #eventDrop <= 160 then
+		table.insert(lines, "EVENT DROP: " .. eventDrop .. ", in your Bag!")
 	end
 	local unlocked = data.UnlockedBossIds
 	if typeof(unlocked) == "table" then

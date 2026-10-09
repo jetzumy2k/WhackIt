@@ -127,6 +127,34 @@
             "$className": "RemoteEvent"
           },
 
+          "Announce": {
+            "$className": "RemoteEvent"
+          },
+
+          "Events": {
+            "$className": "RemoteEvent"
+          },
+
+          "SpawnEgg": {
+            "$className": "RemoteEvent"
+          },
+
+          "Reward": {
+            "$className": "RemoteEvent"
+          },
+
+          "History": {
+            "$className": "RemoteEvent"
+          },
+
+          "HistoryResult": {
+            "$className": "RemoteEvent"
+          },
+
+          "Bypass": {
+            "$className": "RemoteEvent"
+          },
+
           "State": {
             "$className": "RemoteEvent"
           }
@@ -144,6 +172,42 @@
           "$className": "Folder",
 
           "Toast": {
+            "$className": "RemoteEvent"
+          },
+
+          "Announcement": {
+            "$className": "RemoteEvent"
+          }
+        },
+
+        "Pets": {
+          "$className": "Folder",
+
+          "Equip": {
+            "$className": "RemoteEvent"
+          },
+
+          "Incubate": {
+            "$className": "RemoteEvent"
+          },
+
+          "ChooseEgg": {
+            "$className": "RemoteEvent"
+          },
+
+          "Hatched": {
+            "$className": "RemoteEvent"
+          }
+        },
+
+        "Events": {
+          "$className": "Folder",
+
+          "State": {
+            "$className": "RemoteEvent"
+          },
+
+          "Notice": {
             "$className": "RemoteEvent"
           }
         }

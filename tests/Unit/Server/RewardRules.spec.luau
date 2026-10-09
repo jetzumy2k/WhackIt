@@ -115,5 +115,13 @@ return function()
 			custom.Custom = true
 			expect(RewardRules.dropsBuff(custom, 0.999999, 0)).to.equal(true)
 		end)
+
+		it("drops from an event boss only by the normal chance, like an office boss", function()
+			local eventBoss = table.clone(boss(100, 10, 10)) :: any
+			eventBoss.Custom = true
+			eventBoss.Event = true
+			expect(RewardRules.dropsBuff(eventBoss, 0.999999, 0.1)).to.equal(false)
+			expect(RewardRules.dropsBuff(eventBoss, 0.05, 0.1)).to.equal(true)
+		end)
 	end)
 end

@@ -58,6 +58,15 @@ return function()
 			expect(damage).to.equal(44) -- (10 + 10) x 1.1 x 2
 		end)
 
+		it("adds level damage to the hammer before every percent bonus", function()
+			local stats = CombatRules.baseStats(35) -- a Mystery Hammer's fixed 35
+			stats.LevelDamage = 27 -- Level 10
+			stats.DamageBonus = 0.2 -- +20 % hammer bonus
+			local damage = CombatRules.hitDamage(stats, bossWith(1), 1)
+			expect(damage).to.equal(74) -- round((35 + 27) x 1.2) = round(74.4)
+			expect(CombatRules.baseStats(35).LevelDamage).to.equal(0)
+		end)
+
 		it("never crits with 0 crit chance", function()
 			local stats = CombatRules.baseStats(10)
 			stats.CritChance = 0

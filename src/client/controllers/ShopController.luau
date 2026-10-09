@@ -5,6 +5,10 @@
 	damage and price, and a Buy / Equip / Equipped button. Display only:
 	clicking sends the hammer id; the server checks coins and ownership and
 	answers with a fresh Profile.Sync, which redraws the panel.
+
+	During a Hammer Shop sale (docs/EVENTS.md) rows show the sale price, and
+	Buy also sends the price shown: the server charges its own price and
+	refuses if that is higher than what the player saw.
 ]]
 
 local Players = game:GetService("Players")
@@ -12,8 +16,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local HammerConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("HammerConfig"))
 local StoreConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("StoreConfig"))
+local EventRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("EventRules"))
 local HammerModel = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("HammerModel"))
+local EventController = require(script.Parent.EventController)
 local ProgressController = require(script.Parent.ProgressController)
+local Responsive = require(script.Parent.Parent.Lib.Responsive)
 
 local ShopController = {}
 
@@ -38,7 +45,9 @@ local openPanel: (() -> ())? = nil
 type Row = {
 	Hammer: HammerConfig.HammerDefinition,
 	IsMystery: boolean, -- a Robux Mystery Hammer (always owned, rolled stats)
+	BonusPercent: number,
 	CritPercent: number,
+	Price: number, -- the price shown on the Buy button (sale included)
 	Status: TextLabel,
 	Button: TextButton,
 }
@@ -56,6 +65,7 @@ local function label(name: string, parent: Instance): TextLabel
 	text.TextScaled = true
 	text.TextXAlignment = Enum.TextXAlignment.Left
 	text.Parent = parent
+	Responsive.capText(text, 22)
 	return text
 end
 
@@ -68,6 +78,7 @@ local function button(name: string, parent: Instance): TextButton
 	clickable.AutoButtonColor = true
 	clickable.Parent = parent
 	corner(clickable)
+	Responsive.capText(clickable, 20)
 	return clickable
 end
 
@@ -121,15 +132,25 @@ local function buildRow(hammer: HammerConfig.HammerDefinition, order: number, li
 
 	local status = label("Status", row)
 	status.Position = UDim2.fromOffset(textLeft, 34)
-	status.Size = UDim2.new(0.55, -textLeft, 0, 22)
+	status.Size = UDim2.new(0.55, -textLeft, 0, 24)
 	status.TextTransparency = 0.25
+	status.TextWrapped = true
+	Responsive.capText(status, 16)
 
 	local action = button("Action", row)
 	action.AnchorPoint = Vector2.new(1, 0.5)
 	action.Position = UDim2.new(1, -10, 0.5, 0)
 	action.Size = UDim2.new(0.35, 0, 0, MIN_TOUCH_SIZE)
 
-	return { Hammer = hammer, IsMystery = false, CritPercent = 0, Status = status, Button = action }
+	return {
+		Hammer = hammer,
+		IsMystery = false,
+		BonusPercent = 0,
+		CritPercent = 0,
+		Price = hammer.Price,
+		Status = status,
+		Button = action,
+	}
 end
 
 local function refreshRow(row: Row): ()
@@ -140,7 +161,12 @@ local function refreshRow(row: Row): ()
 	local coins = if snapshot then snapshot.Coins else 0
 
 	row.Status.Text = if row.IsMystery
-		then string.format("Damage %d   +%d%% crit damage", hammer.Damage, row.CritPercent)
+		then string.format(
+			"Damage %d   +%d%% damage   +%d%% crit damage",
+			hammer.Damage,
+			row.BonusPercent,
+			row.CritPercent
+		)
 		else string.format("Damage %d   %s", hammer.Damage, hammer.Description)
 	if equipped then
 		row.Button.Text = "Equipped"
@@ -150,12 +176,19 @@ local function refreshRow(row: Row): ()
 		row.Button.Text = "Equip"
 		row.Button.BackgroundColor3 = EQUIP_COLOR
 		row.Button.Active = true
-	elseif coins >= hammer.Price then
-		row.Button.Text = string.format("Buy %d", hammer.Price)
+	end
+	if equipped or owned then
+		return
+	end
+	local percent = EventController.discountPercent(hammer.Id)
+	row.Price = EventRules.discountedPrice(hammer.Price, percent)
+	local sale = if percent > 0 then string.format(" (-%d%%)", percent) else ""
+	if coins >= row.Price then
+		row.Button.Text = string.format("Buy %d%s", row.Price, sale)
 		row.Button.BackgroundColor3 = BUY_COLOR
 		row.Button.Active = true
 	else
-		row.Button.Text = string.format("Need %d", hammer.Price)
+		row.Button.Text = string.format("Need %d%s", row.Price, sale)
 		row.Button.BackgroundColor3 = DISABLED_COLOR
 		row.Button.Active = false
 	end
@@ -175,12 +208,8 @@ function ShopController.start(): ()
 	gui.ResetOnSpawn = false
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-	local open = button("OpenShop", gui)
-	open.Text = "Hammers"
-	open.BackgroundColor3 = EQUIP_COLOR
-	open.AnchorPoint = Vector2.new(1, 1)
-	open.Position = UDim2.new(1, -16, 1, -72)
-	open.Size = UDim2.fromOffset(140, MIN_TOUCH_SIZE + 4)
+	-- HUD button in the shared column (Lib/Responsive), lowest of the four.
+	local open = Responsive.dockButton("OpenShop", "🔨", "Hammers", EQUIP_COLOR, 4)
 
 	local panel = Instance.new("Frame")
 	panel.Name = "Panel"
@@ -195,11 +224,13 @@ function ShopController.start(): ()
 	sizeLimit.MinSize = Vector2.new(300, 260)
 	sizeLimit.MaxSize = Vector2.new(560, 480)
 	sizeLimit.Parent = panel
+	Responsive.fitPopup(panel, sizeLimit, Vector2.new(0.6, 0.65))
 
 	local title = label("Title", panel)
 	title.Position = UDim2.fromOffset(16, 10)
 	title.Size = UDim2.new(1, -90, 0, 34)
 	title.Text = "Hammers"
+	Responsive.capText(title, 30)
 
 	local close = button("Close", panel)
 	close.Text = "X"
@@ -234,7 +265,7 @@ function ShopController.start(): ()
 			if ProgressController.ownsHammer(hammer.Id) then
 				equipRemote:FireServer(hammer.Id)
 			else
-				buyRemote:FireServer(hammer.Id)
+				buyRemote:FireServer(hammer.Id, row.Price)
 			end
 		end)
 	end
@@ -263,6 +294,7 @@ function ShopController.start(): ()
 			}
 			local row = buildRow(look, 100 + #rows, list)
 			row.IsMystery = true
+			row.BonusPercent = owned.BonusDamagePercent
 			row.CritPercent = owned.CritDamagePercent
 			table.insert(rows, row)
 			row.Button.Activated:Connect(function()
@@ -280,6 +312,7 @@ function ShopController.start(): ()
 		end
 	end
 	ProgressController.Changed:Connect(refresh)
+	EventController.Changed:Connect(refresh)
 	refresh()
 
 	open.Activated:Connect(function()

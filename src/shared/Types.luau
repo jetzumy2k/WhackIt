@@ -30,6 +30,7 @@ export type BossDefeated = {
 	LastHit: boolean, -- the player landed the defeating hit (bonus included)
 	BossName: string, -- display name (custom bosses aren't in BossConfig)
 	BuffDropText: string?, -- the store boost this player got (custom bosses always, office bosses by chance)
+	EventDropText: string?, -- items won from active drop events (docs/EVENTS.md), in the Bag
 	AdminDamage: boolean, -- the player hit with admin-set damage, so got no reward
 }
 
@@ -39,6 +40,14 @@ export type ZenAchieved = {
 	DisplayName: string,
 	ZenLevel: number,
 	BonusCoins: number,
+}
+
+-- One owned Mystery Hammer in Profile.Sync (Shared/HammerRules).
+export type MysteryHammer = {
+	Id: string,
+	Damage: number, -- base damage (fixed)
+	BonusDamagePercent: number,
+	CritDamagePercent: number,
 }
 
 -- Profile.Sync (server -> one player): their own progression, for the UI only.
@@ -54,11 +63,29 @@ export type ProfileSnapshot = {
 	-- Active store buffs: kind ("Xp" | "Damage" | "CritDamage") -> percent and play-time left.
 	Buffs: { [string]: { Percent: number, SecondsLeft: number } },
 	-- Owned Mystery Hammers with their rolled stats.
-	MysteryHammers: { { Id: string, Damage: number, CritDamagePercent: number } },
+	MysteryHammers: { MysteryHammer },
 	-- Bosses an admin unlocked for this player.
 	AdminUnlocks: { string },
 	-- Unused store items by product key (Shared/BagRules).
 	Bag: { [string]: number },
+	-- Owned pets (docs/PETS.md), the equipped one ("" = none) and the egg
+	-- incubating now (what will hatch is not sent until it hatches).
+	Pets: { OwnedPet },
+	EquippedPetId: string,
+	Incubation: IncubationView?,
+}
+
+export type OwnedPet = {
+	Id: string,
+	Species: string,
+	Rarity: string,
+	Buffs: { { Kind: string, Percent: number } },
+}
+
+export type IncubationView = {
+	Rarity: string,
+	EndsAt: number, -- unix seconds
+	IncubatorIndex: number, -- 0 when no incubator here shows it (all busy)
 }
 
 return {}

@@ -244,7 +244,7 @@ function CustomBossRules.dropOptions(products: { StoreConfig.Product }): { Drop 
 	local live: { [string]: boolean } = {}
 	local anyLive = false
 	for _, product in products do
-		if product.Kind ~= "MysteryHammer" and product.ProductId ~= 0 then
+		if StoreConfig.BuffKinds[product.Kind] and product.ProductId ~= 0 then
 			live[product.Kind .. ":" .. product.Percent] = true
 			anyLive = true
 		end
@@ -252,7 +252,7 @@ function CustomBossRules.dropOptions(products: { StoreConfig.Product }): { Drop 
 	local options: { Drop } = {}
 	for _, product in products do
 		if
-			product.Kind ~= "MysteryHammer"
+			StoreConfig.BuffKinds[product.Kind]
 			and product.Seconds == CustomBossConfig.BuffDropSeconds
 			and (not anyLive or live[product.Kind .. ":" .. product.Percent])
 		then

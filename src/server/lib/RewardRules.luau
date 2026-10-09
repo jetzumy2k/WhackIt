@@ -9,7 +9,8 @@
 	  * only players with at least MinRewardDamageShare "qualify": their defeat
 	    counts toward unlocks and they get the stress bonus;
 	  * qualifying players may get a store boost: always from a custom boss,
-	    otherwise with the current drop chance (Shared/DropRateRules).
+	    otherwise (office and event bosses) with the current drop chance
+	    (Shared/DropRateRules).
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -69,7 +70,7 @@ function RewardRules.dropsBuff(
 	roll: number,
 	chance: number
 ): boolean
-	if boss.Custom then
+	if boss.Custom and not boss.Event then
 		return true
 	end
 	return roll < chance

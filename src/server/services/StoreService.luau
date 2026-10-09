@@ -178,7 +178,11 @@ local function onRequestPurchase(player: Player, raw: unknown): ()
 		sendState(player)
 		return
 	end
-	if product.Kind == "MysteryHammer" and mysteryAllowed[player] ~= true then
+	-- Paid random items (the Mystery Hammer, pet eggs) only where allowed.
+	if
+		(product.Kind == "MysteryHammer" or product.Kind == "Egg")
+		and mysteryAllowed[player] ~= true
+	then
 		sendState(player)
 		return
 	end

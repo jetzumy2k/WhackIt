@@ -30,6 +30,9 @@ export type BossDefinition = {
 	UnlockAfterAllBosses: boolean?,
 	-- Admin-created bosses only (Shared/CustomBossRules): never in List/ById.
 	Custom: boolean?,
+	-- Event bosses only (Shared/EventRules): also Custom; they drop store
+	-- boosts by the normal office chance, not always like custom bosses.
+	Event: boolean?,
 	LookId: string?, -- the BossConfig boss whose model, colours and shouts it borrows
 }
 

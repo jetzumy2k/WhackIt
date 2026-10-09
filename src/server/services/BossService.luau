@@ -12,6 +12,10 @@
 	changes, and setCustomBosses() spawns, replaces or removes them. A custom
 	boss with RespawnMode "Once" is not respawned after its defeat; listeners
 	of onOnceBossDefeated (CustomBossService) record that for every server.
+	Event bosses (EventService, docs/EVENTS.md) work the same way through
+	setEventBosses(), as a separate set: syncing one set never touches the
+	other, and neither ever touches an office boss. An event boss that is
+	removed (its event ended) disappears at once, even mid-fight.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -52,6 +56,8 @@ local liveBosses: { [string]: LiveBoss } = {}
 local nextInstanceNumber = 0
 -- Custom boss id -> what should be spawned for it right now.
 local customSpawns: { [string]: CustomSpawn } = {}
+-- Event boss id -> what should be spawned for it right now (EventService).
+local eventSpawns: { [string]: CustomSpawn } = {}
 local onceDefeatedCallbacks: { (bossId: string) -> () } = {}
 
 local function newInstanceId(): string
@@ -89,13 +95,16 @@ local function buildModel(
 		model:SetAttribute(Attributes.BossName, state.Definition.DisplayName)
 		model:SetAttribute(Attributes.BossLook, state.Definition.LookId)
 	end
+	if state.Definition.Event then
+		model:SetAttribute(Attributes.EventBoss, true)
+	end
 
 	return model, body
 end
 
 -- The definition for a spawn: an office boss, or a custom boss still wanted.
 local function definitionFor(spawn: ArenaConfig.BossSpawn): BossConfig.BossDefinition?
-	local custom = customSpawns[spawn.BossId]
+	local custom = customSpawns[spawn.BossId] or eventSpawns[spawn.BossId]
 	if custom then
 		return if custom.Spawn == spawn and not custom.Spent then custom.Definition else nil
 	end
@@ -136,24 +145,24 @@ local function despawnBossId(bossId: string): ()
 	end
 end
 
--- Makes the spawned custom bosses match `wanted` (by Definition.Id): new ones
--- spawn, removed ones disappear, changed ones respawn fresh.
-function BossService.setCustomBosses(wanted: { CustomSpawn }): ()
+-- Makes one set of runtime bosses match `wanted` (by Definition.Id): new
+-- ones spawn, removed ones disappear, changed ones respawn fresh.
+local function syncSpawns(spawns: { [string]: CustomSpawn }, wanted: { CustomSpawn }): ()
 	local wantedById: { [string]: CustomSpawn } = {}
 	for _, entry in wanted do
 		wantedById[entry.Definition.Id] = entry
 	end
-	for bossId, current in customSpawns do
+	for bossId, current in spawns do
 		local wantedEntry = wantedById[bossId]
 		if wantedEntry == nil or wantedEntry.Signature ~= current.Signature then
-			customSpawns[bossId] = nil
+			spawns[bossId] = nil
 			despawnBossId(bossId)
 		end
 	end
 	for bossId, entry in wantedById do
-		local current = customSpawns[bossId]
+		local current = spawns[bossId]
 		if current == nil then
-			customSpawns[bossId] = entry
+			spawns[bossId] = entry
 			spawnBoss(entry.Spawn)
 		else
 			-- Spent only ever turns on: a stale load can't bring a beaten boss back.
@@ -162,19 +171,36 @@ function BossService.setCustomBosses(wanted: { CustomSpawn }): ()
 	end
 end
 
+function BossService.setCustomBosses(wanted: { CustomSpawn }): ()
+	syncSpawns(customSpawns, wanted)
+end
+
+-- The event bosses that should exist right now (EventService). Ids must not
+-- clash with custom boss ids (EventConfig.BossIdPrefix).
+function BossService.setEventBosses(wanted: { CustomSpawn }): ()
+	syncSpawns(eventSpawns, wanted)
+end
+
 -- Where every boss stands (office and custom), for spacing checks.
 -- Called with the boss id when a "Once" custom boss is defeated in this server.
 function BossService.onOnceBossDefeated(callback: (bossId: string) -> ()): ()
 	table.insert(onceDefeatedCallbacks, callback)
 end
 
-function BossService.spawnPositions(): { Vector3 }
+-- Event bosses are left out with `withoutEvents` (EventService places them
+-- around everything else).
+function BossService.spawnPositions(withoutEvents: boolean?): { Vector3 }
 	local positions: { Vector3 } = {}
 	for _, spawn in ArenaConfig.BossSpawns do
 		table.insert(positions, spawn.Position)
 	end
 	for _, entry in customSpawns do
 		table.insert(positions, entry.Spawn.Position)
+	end
+	if not withoutEvents then
+		for _, entry in eventSpawns do
+			table.insert(positions, entry.Spawn.Position)
+		end
 	end
 	return positions
 end

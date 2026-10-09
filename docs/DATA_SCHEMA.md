@@ -13,10 +13,10 @@ validation live in `src/server/lib/PlayerDataSchema.luau`; storage settings in
 | Session locking | ProfileStore | One server owns a profile at a time, so progress can't be duplicated by joining two servers |
 | Auto-save | ProfileStore | Periodic, plus on leave (`EndSession`) and server shutdown |
 
-## Schema v6 (current)
+## Schema v8 (current)
 ```lua
 type PlayerData = {
-    SchemaVersion: number,        -- 6
+    SchemaVersion: number,        -- 8
     Score: number,                -- lifetime score (integer, 0..2^50); shown in leaderstats
     Stress: number,               -- Stress Meter, 0..GameConfig.MaxStress, carries over between sessions
     TotalHits: number,            -- accepted hammer hits (integer, 0..2^50)
@@ -33,7 +33,9 @@ type PlayerData = {
     Xp: number,                   -- drives Player Level; boosted by XP buffs (Score never is)
     Buffs: {[kind]: {Percent: number, SecondsLeft: number}}, -- "Xp" | "Damage" | "CritDamage"; play time left
     ProcessedPurchases: {string}, -- last 200 Robux PurchaseIds, so a receipt is granted only once
-    MysteryHammers: {[id]: {Damage: number, CritDamagePercent: number}}, -- "mystery_<n>", rolled at purchase
+    MysteryHammers: {[id]: {Damage: number, BonusDamagePercent: number, CritDamagePercent: number}},
+                                  -- "mystery_<n>"; Damage is the fixed base (35), the two % are rolled once
+                                  -- when opened (BonusDamagePercent since v7)
     NextMysteryNumber: number,    -- next Mystery Hammer id number
     -- v5 (docs/ADMIN.md)
     AdminUnlocks: {[string]: true}, -- bosses an admin unlocked for this player (known BossConfig ids only)
@@ -41,6 +43,13 @@ type PlayerData = {
     Bag: {[productKey]: number},  -- unused store items: StoreConfig keys only, whole counts 1..100,000
     ClaimedGifts: {string},       -- last 200 gift ids put in the Bag, so an inbox gift lands once
     PendingGift: {RecipientUserId: number, ProductKey: string}?, -- the gift being bought right now
+    -- v8 (docs/PETS.md)
+    Pets: {[petId]: {Species: string, Rarity: string, Buffs: {{Kind: string, Percent: number}}, CreatedAt: number}},
+                                  -- "pet_<n>"; buffs fixed when the egg went in, never rerolled
+    NextPetNumber: number,        -- next pet id number (never reused)
+    EquippedPetId: string,        -- "" = no pet out; must be an owned pet
+    Incubation: {EggKey, Rarity, StartedAt, EndsAt, IncubatorIndex, Pet}?, -- egg incubating now (unix
+                                  -- seconds) and the pet it will hatch (never sent to the client early)
 }
 ```
 New players start from `PlayerDataSchema.template()`: `StartingScore`, `StartingStress`, `StartingCoins`,
@@ -55,10 +64,13 @@ zero counters, `DefaultHammerId`, nothing bought, no defeats.
 | v4 | `Xp = Score` (Player Level is unchanged), `Buffs = {}`, `ProcessedPurchases = {}`, `MysteryHammers = {}`, `NextMysteryNumber = 1` |
 | v5 | `AdminUnlocks = {}` |
 | v6 | `Bag = {}`, `ClaimedGifts = {}` (earlier purchases were already used) |
+| v8 | Pets (2026-10-08): `Pets = {}`, `NextPetNumber = 1`, `EquippedPetId = ""`, `Incubation = nil`. Eggs are ordinary Bag items (`egg_common`, `egg_rare`, `egg_mythical`). |
+| v7 | Mystery Hammers (2026-10-08): each saved hammer without `BonusDamagePercent` gets `StoreConfig.Mystery.LegacyBonusDamagePercent` (15); `sanitize` then sets `Damage` to the fixed base (35). Old hammers rolled 20-35 damage, so every one ends up at least as strong. The crit roll is kept. The bump also stops older servers, which would drop the new field, from loading and saving this data. |
 
 Sanitizing v4: unknown buff kinds are dropped and buff values clamped. Purchase ids must be strings.
-Mystery Hammers are paid for, so out-of-range stats are **clamped, never deleted**. An equipped
-Mystery Hammer must be one the player owns.
+Mystery Hammers are paid for, so out-of-range stats are **clamped, never deleted** (`HammerRules.clampRoll`:
+base damage fixed at 35, bonus 15-25 %, crit 5-10 %; a missing or broken bonus gets the legacy 15 %).
+An equipped Mystery Hammer must be one the player owns.
 
 Who writes what (server only): `SessionService.addScore` → `Score`; `SessionService.addCoins` /
 `trySpendCoins` → `Coins`; `SessionService.setEquippedHammer` → `EquippedHammerId`; `StressService.relieve`
@@ -71,9 +83,10 @@ Sanitizing v5: `AdminUnlocks` keeps only known boss ids with value `true`.
 Sanitizing v6: `Bag` keeps known product keys with counts of at least 1 (rounded down);
 `PendingGift` is dropped unless it names a giftable product and a whole, positive UserId.
 
-Writers for v6: `PurchaseService` → `Bag` (bought items), `PendingGift` (cleared after a gift);
-`StoreService` → `PendingGift`; `BagService` → `Bag` (Use / Open); `GiftService` → `Bag`,
-`ClaimedGifts`; `RewardService` → `Bag` (custom-boss drops).
+Writers for v6: `PurchaseService` → `Bag` (bought items; a bundle as its separate boosts),
+`PendingGift` (cleared after a gift); `StoreService` → `PendingGift`; `BagService` → `Bag` (Use /
+Open), `MysteryHammers` (opened); `GiftService` → `Bag`, `ClaimedGifts`; `RewardService` → `Bag`
+(boss drops and event drops).
 
 Gift inboxes are **not** player data: DataStore `GiftInbox`, key `Inbox_<UserId>`, a list of
 `{ GiftId, ProductKey, FromUserId, FromName }` validated by `Shared/BagRules.parseInbox`.
@@ -83,6 +96,20 @@ Admin-created bosses are **not** player data: they live in their own DataStore `
 Each record also has `RespawnMode` (`"Continuous"` or `"Once"`) and `Defeated` (true only for a
 beaten `"Once"` boss); records saved before 2026-10-07 have neither and load as `"Continuous"`, not
 defeated.
+
+Sanitizing v8: every pet with a known rarity and at least one valid buff is kept (buffs clamped to
+0-25 %, at most 2, a species no longer in the config kept as is); `EquippedPetId` must name an owned
+pet; `NextPetNumber` is raised past every used id; a broken `Incubation` is dropped and **its egg goes
+back into the Bag**. Writers: `PetService` → `Pets`, `NextPetNumber`, `EquippedPetId`, `Incubation`,
+`Bag` (eggs into incubators, world eggs claimed).
+
+Player history and the admin audit log are **not** player data either: DataStore `PlayerHistory`,
+keys `Player_<UserId>` (last 200 entries) and `Admin_<YYYYMMDD>` (up to 500 per UTC day), written
+in batches by `Services/HistoryService` (docs/ADMIN.md "History tab"). The player profile schema is
+unchanged (still v8).
+
+Events are **not** player data: DataStore `Events`, key `Global`, validated by
+`Shared/EventRules.parseStore` on every load (docs/EVENTS.md).
 
 Office boss drop rates are **not** player data either: DataStore `DropRates`, key `Global`, one
 `DropRateRules.Settings` table validated by `Shared/DropRateRules.parse` on every load. No saved value

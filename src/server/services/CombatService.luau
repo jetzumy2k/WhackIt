@@ -99,6 +99,9 @@ local function rewardContributors(live: BossService.LiveBoss): ()
 			BuffDropText = if grant and grant.BuffDrop
 				then RewardService.dropText(grant.BuffDrop)
 				else nil,
+			EventDropText = if grant and #grant.EventDrops > 0
+				then table.concat(grant.EventDrops, ", ")
+				else nil,
 			AdminDamage = state.AdminBoosted[userId] == true,
 		}
 		CombatRemotes.BossDefeated:FireClient(player, payload)
@@ -133,7 +136,8 @@ local function onHammerHit(player: Player, rawBossInstanceId: unknown): ()
 		return explainDrop(player, "data not loaded")
 	end
 	if
-		not ProgressionRules.isBossUnlocked(
+		not BuffService.hasBossBypass(player)
+		and not ProgressionRules.isBossUnlocked(
 			live.State.Definition.Id,
 			data.BossDefeats,
 			LevelRules.levelFor(data.Xp),
@@ -164,7 +168,7 @@ local function onHammerHit(player: Player, rawBossInstanceId: unknown): ()
 		)
 	end
 
-	local stats = BuffService.statsFor(player)
+	local stats, hammer = BuffService.statsFor(player)
 	if stats == nil then
 		return RemoteController.reject(player, REMOTE_NAME, "no equipped hammer")
 	end
@@ -193,7 +197,8 @@ local function onHammerHit(player: Player, rawBossInstanceId: unknown): ()
 	-- grace period restart (never on clicks, swings or misses).
 	StressService.resetStressTimer(player)
 
-	StressService.relieve(player, StressRules.reliefForHit(result.Applied))
+	-- From the hammer, not the hit: crits and bonuses don't speed up relief.
+	StressService.relieve(player, StressRules.reliefForHit(if hammer then hammer.Damage else 0))
 
 	local feedback: Types.CombatFeedback = {
 		BossInstanceId = bossInstanceId,

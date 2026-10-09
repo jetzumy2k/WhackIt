@@ -103,10 +103,13 @@ function ProgressionRules.unlockedBossIds(
 	return ids
 end
 
+-- `price` is what the server charges right now (a Hammer Shop sale event
+-- may lower it, Shared/EventRules); the hammer's normal price when omitted.
 function ProgressionRules.checkPurchase(
 	hammerId: string,
 	coins: number,
-	owned: OwnedHammers
+	owned: OwnedHammers,
+	price: number?
 ): PurchaseCheck
 	local hammer = HammerConfig.ById[hammerId]
 	if hammer == nil then
@@ -115,7 +118,7 @@ function ProgressionRules.checkPurchase(
 	if ProgressionRules.ownsHammer(hammerId, owned) then
 		return "AlreadyOwned"
 	end
-	if coins < hammer.Price then
+	if coins < (price or hammer.Price) then
 		return "NotEnoughCoins"
 	end
 	return "Ok"

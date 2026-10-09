@@ -7,10 +7,20 @@ local StressRules = require(ReplicatedStorage.Shared.StressRules)
 
 return function()
 	describe("StressRules.reliefForHit", function()
-		it("scales with damage", function()
+		it("grows a little with the hammer's own damage", function()
 			expect(StressRules.reliefForHit(10)).to.equal(10 * GameConfig.StressReliefPerDamage)
 			expect(StressRules.reliefForHit(20) > StressRules.reliefForHit(10)).to.equal(true)
 		end)
+
+		it(
+			"is capped per hit, so huge damage (crits, level, boosts) can't drain stress fast",
+			function()
+				expect(StressRules.reliefForHit(35)).to.equal(GameConfig.StressReliefMaxPerHit)
+				expect(StressRules.reliefForHit(5000)).to.equal(GameConfig.StressReliefMaxPerHit)
+				-- From full to Zen takes at least 40 hits.
+				expect(GameConfig.MaxStress / GameConfig.StressReliefMaxPerHit >= 40).to.equal(true)
+			end
+		)
 
 		it("never returns negative relief", function()
 			expect(StressRules.reliefForHit(-5)).to.equal(0)

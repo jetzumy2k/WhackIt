@@ -6,6 +6,12 @@
 	purchase is checked and applied atomically: rapid double-clicks can't buy
 	twice or spend coins twice.
 
+	The price is the server's: the hammer's price less any active Hammer Shop
+	sale (EventService.hammerPrice). The client may also send the price it
+	showed; if the server's price is higher (the sale just ended) the purchase
+	is refused rather than charging more than the player saw. A lower client
+	price changes nothing: it can only make the server refuse.
+
 	After every request the player gets a fresh Profile.Sync, so the shop UI
 	always shows the server's truth even when a request was refused.
 ]]
@@ -13,6 +19,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
+local EventService = require(script.Parent.EventService)
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
 local HammerRules = require(ReplicatedStorage.Shared.HammerRules)
 local HammerService = require(script.Parent.HammerService)
@@ -45,16 +52,27 @@ local function equip(player: Player, hammerId: string): ()
 	HammerService.reequip(player)
 end
 
-local function onBuy(player: Player, raw: unknown): ()
+local function onBuy(player: Player, raw: unknown, rawShownPrice: unknown): ()
 	local hammerId = readHammerId(player, "BuyHammer", raw)
 	local data = PlayerDataService.get(player)
 	if hammerId == nil or data == nil then
 		return
 	end
+	local shownPrice = if rawShownPrice == nil
+		then math.huge
+		else Validate.integer(rawShownPrice, 0, 2 ^ 31)
+	if shownPrice == nil then
+		return RemoteController.reject(player, "BuyHammer", "bad shown price")
+	end
 
-	-- Not enough coins / already owned are normal UI races, not abuse: refuse quietly.
-	if ProgressionRules.checkPurchase(hammerId, data.Coins, data.OwnedHammers) == "Ok" then
-		local price = HammerConfig.ById[hammerId].Price
+	-- Not enough coins / already owned / price went up are normal UI races,
+	-- not abuse: refuse quietly (the Sync below redraws the shop).
+	local price = EventService.hammerPrice(hammerId)
+	if
+		price <= shownPrice
+		and ProgressionRules.checkPurchase(hammerId, data.Coins, data.OwnedHammers, price)
+			== "Ok"
+	then
 		if SessionService.trySpendCoins(player, price) then
 			data.OwnedHammers[hammerId] = true
 			equip(player, hammerId) -- a new hammer is put straight into your hand
@@ -81,7 +99,7 @@ end
 function ShopService.init(): ()
 	RemoteController.bind(ShopRemotes.BuyHammer, {
 		name = "BuyHammer",
-		maxArgs = 1,
+		maxArgs = 2,
 		rateLimit = RemoteLimits.Shop,
 	}, onBuy)
 	RemoteController.bind(ShopRemotes.EquipHammer, {

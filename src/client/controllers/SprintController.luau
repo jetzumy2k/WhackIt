@@ -21,6 +21,8 @@ local Workspace = game:GetService("Workspace")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("GameConfig"))
 
+local Responsive = require(script.Parent.Parent.Lib.Responsive)
+
 local SprintController = {}
 
 local HOLD_KEYS: { [Enum.KeyCode]: boolean } = {
@@ -87,12 +89,20 @@ local function buildTouchButton(): ()
 	clickable.Text = "Sprint"
 	clickable.TextColor3 = Color3.new(1, 1, 1)
 	clickable.Font = Enum.Font.FredokaOne
-	clickable.TextScaled = true
 	clickable.BackgroundColor3 = BUTTON_OFF
-	-- Above the jump button area, clear of the Store / Hammers buttons.
+	-- Just left of Roblox's jump button, where the right thumb already is
+	-- (the HUD button column sits top-right on touch screens, Lib/Responsive).
 	clickable.AnchorPoint = Vector2.new(1, 1)
-	clickable.Position = UDim2.new(1, -170, 1, -128)
-	clickable.Size = UDim2.fromOffset(96, MIN_TOUCH_SIZE + 4)
+	Responsive.onChanged(function()
+		if Responsive.formFactor() == "Phone" then
+			clickable.Position = UDim2.new(1, -104, 1, -24)
+			clickable.Size = UDim2.fromOffset(88, MIN_TOUCH_SIZE)
+		else
+			clickable.Position = UDim2.new(1, -170, 1, -100)
+			clickable.Size = UDim2.fromOffset(96, MIN_TOUCH_SIZE + 4)
+		end
+	end)
+	Responsive.capText(clickable, 20)
 	clickable.Parent = gui
 	Instance.new("UICorner").Parent = clickable
 	clickable.Activated:Connect(function()

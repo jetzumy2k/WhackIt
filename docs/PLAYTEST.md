@@ -332,3 +332,176 @@ Watch the Stress bar (top). "Hit" means a hit that lands (damage number appears)
 | 212 | Reset your character with a panel open | Panel stays usable; reopening works; no duplicate panels or buttons |
 | 213 | Two players | Each has their own panels; admin tools only for admins |
 | 214 | Output | No errors or infinite-yield warnings |
+
+## Responsive UI, announcements, bundles, Mystery Hammer, events (2026-10-08)
+Unit specs first: open `build/tests.rbxl` in Studio and press Run (F8). New and changed specs:
+`Client/Responsive`, `Shared/AnnouncementRules`, `Shared/EventRules`, `Shared/BagRules`,
+`Shared/HammerRules`, `Server/PlayerDataSchema` (v7), `Server/RewardRules`, `Config/StoreConfig`,
+`Config/HammerConfig`.
+
+### Responsive UI (docs/UI.md)
+| # | Check | Expected |
+|---|---|---|
+| 215 | Device emulator: 1920x1080, 1600x900, 1366x768 | Hammers / Store / Bag / Admin buttons bottom-right as before; HUD unchanged |
+| 216 | Small desktop window (about 800x450) | Popups fill most of the window; Admin / Player panels use the top tab strip and a slim header; nothing off screen |
+| 217 | Tablet landscape and portrait | Button column top-right (below the score lines in portrait), clear of the jump button; Sprint left of the jump button |
+| 218 | Phone landscape (e.g. iPhone 14) | Button column top-right, 4 buttons above the jump button; Sprint next to jump; Victory Card readable; hint fades after 20 s |
+| 219 | Phone portrait | Column starts under the score / boost lines; popups 96 % wide; Store tabs scroll sideways |
+| 220 | Every popup and panel on a phone: Store (each tab), Hammers, Bag, Player Panel (each tab), Admin (each tab) | No text bigger than its row, no clipped buttons ("Moderate", "Remove unlock" fit), long notes wrap and grow, everything reachable by scrolling |
+| 221 | Rotate the emulated phone with a panel open | Layout follows within a moment; nothing duplicated |
+
+### Announcements
+| # | Check | Expected |
+|---|---|---|
+| 222 | Admin → Announce: "Welcome to Whack It Out!", 10 sec, SEND (2 players) | Both see "📢 ANNOUNCEMENT" top-centre; it closes after 10 s or on OK; admin gets a toast; server log `[Admin] … announced` |
+| 223 | Send again within 10 s | Toast "Wait N s…"; nothing shown to players |
+| 224 | 200-character message; then 201 characters | First shows (wrapped, card grows); second refused with a toast |
+| 225 | Message with line breaks, `<b>bold</b>` and extra spaces | One line, tags shown as typed, spaces collapsed |
+| 226 | Non-admin (in Studio set `StoreAdminConfig.StudioTesterIsAdmin = false` first: Studio testers are admins otherwise), client command bar: `game.ReplicatedStorage.Remotes.Admin.Announce:FireServer("hi", 10)` | Nothing shown; server log `[Remote] rejected Admin.Announce … not an admin` |
+| 227 | Phone emulator | Card fits the width, text readable, OK tappable |
+
+### Bundles (needs Developer Products created and their ids in `StoreConfig`)
+| # | Check | Expected |
+|---|---|---|
+| 228 | Before ids are set | Store → Bundles says "Coming soon." |
+| 229 | Buy Beginner Bundle (Studio test purchase) | Toast "Beginner Bundle: 9 boosts added to your Bag"; Bag shows 3 each of +10 % XP, +5 % Damage, +5 % Crit Damage (30 min) |
+| 230 | Buy it again | Bag counts become 6 each; nothing else changes |
+| 231 | Use one 5-hour boost from a Stress Reliever Package, then another of the same kind | First runs 5 h; the second adds 5 h (existing rule); the others stay in the Bag |
+| 232 | Leave and rejoin after buying | Bag contents are still there |
+| 233 | Cancel the purchase prompt | Nothing granted |
+
+### Mystery Hammer
+| # | Check | Expected |
+|---|---|---|
+| 234 | Store → Mystery tab | Odds: base damage 35 always, bonus damage +15-25 % (1 in 11 each), crit +5-10 % |
+| 235 | Open a Mystery Hammer from the Bag | Toast "35 damage, +N% damage, +M% crit damage"; 15 ≤ N ≤ 25, 5 ≤ M ≤ 10; equipped |
+| 236 | Equip another hammer and back, reset, rejoin | Same N and M every time (Hammers panel, Player Panel) |
+| 237 | Hit the Deadline Boss with no boosts | Normal hits = round(35 × (1 + N/100)); crits bigger by the base +50 % plus M % |
+| 238 | Data from before (Studio: a v6 profile with `MysteryHammers = { mystery_1 = { Damage = 22, CritDamagePercent = 9 } }`) | Loads as 35 damage, +15 % damage, +9 % crit; still equipped |
+
+### Events (docs/EVENTS.md)
+| # | Check | Expected |
+|---|---|---|
+| 239 | Admin → Events: 2x XP, Start now, 30 minutes | All players get "🎉 EVENT STARTED! 2X EXPERIENCE"; the "🎉 1 EVENT" chip appears; Player Panel → Events shows it with a ticking countdown |
+| 240 | Beat a boss during 2x XP | XP gained is twice what it is without the event (with the same boosts); score and coins unchanged |
+| 241 | Add a 3x XP event too | XP is 3x, not 6x |
+| 242 | Outdoor Boss Event: Production Bug, Garden Path, 3 | Three "🎉 Production Bug (Event)" bosses on the garden cross walk; normal HP, hits, crits, stress, rewards; they respawn after defeat; office bosses unchanged |
+| 243 | Stop that event | Its bosses vanish at once (office and custom bosses stay); "EVENT ENDED" notice |
+| 244 | Boss Drop Event: all bosses, Beginner Bundle, 100 % | Every qualifying player gets "EVENT DROP: Beginner Bundle, in your Bag!" and 9 boosts; a player under 10 % damage gets nothing; one drop per defeat |
+| 245 | Drop event for one boss | Only that boss (and its outdoor event copies) drops |
+| 246 | Hammer Shop Sale 20 %, all hammers | Shop shows "Buy 80 (-20%)" for a 100-coin hammer; buying charges 80 |
+| 247 | Sale on selected hammers | Only those show the sale price |
+| 248 | Let a sale end with the shop open, then click an old sale price | Purchase refused (no coins taken); the shop redraws with full prices |
+| 249 | Schedule an event 2 minutes ahead for 2 minutes | Listed as SCHEDULED, starts and ends on its own with notices; moves to history |
+| 250 | Two servers (published game) | An event created in one starts in the other within seconds |
+| 251 | Restart a server during an event | The event is still running after the restart (no "started" notice for it) |
+| 252 | Non-admin (`StudioTesterIsAdmin = false` in Studio) fires `Remotes.Admin.Events:FireServer({ Action = "Create", Type = "XpBoost", DurationSeconds = 1800, Config = { Multiplier = 5 } })` | Rejected and logged; no event |
+| 253 | Admin sends bad values (Multiplier 10, chance 500, discount 100, end before start) | Refused with a toast; nothing saved |
+| 254 | Studio without API access | Toast "Saved for this server only"; the event works in that server |
+| 255 | Output during all of the above | No errors or infinite-yield warnings |
+
+## Pets, eggs and incubators (2026-10-08, docs/PETS.md)
+Specs first (Studio, `build/tests.rbxl`, F8): `Shared/PetRules`, `Config/PetConfig`,
+`Server/IncubatorBuilder`, `Client/PetVisual`, `Server/PlayerDataSchema` (v8), `Config/StoreConfig`,
+`Shared/BagRules`.
+
+| # | Check | Expected |
+|---|---|---|
+| 256 | Walk out to the lawn east of the Front Plaza | Six incubators under the "🐾 PET INCUBATION CENTER" sign; each shows "🥚 INCUBATOR n / Empty"; nothing blocks the walkway |
+| 257 | Admin → Events → World eggs: spawn a Common, then a Rare egg; walk to each spawn spot (markers in Workspace.PetCenter.OutdoorEggSpawnPoints) | "🥚 NEW EGG FOUND!" card for everyone (no location); the egg floats clearly above the walkway (never sunk into it) with a white outline, sparkles and a 🥚 marker within ~60 studs; it bobs gently |
+| 258 | Two players press Claim Egg at the same moment | One gets "You found a Rare Egg!" and the egg in their Bag; the other only sees "<name> found the Rare Egg!"; the egg is gone |
+| 259 | With one kind of egg, press E at an incubator | Egg appears in the pod; display "🥚 RARE EGG / Incubating... 01:00" counting down with a bar and "Owner: <you>"; toast says it keeps going |
+| 260 | Walk far away, open menus, reset your character | Countdown keeps going (Player Panel → Pets shows the same time); never resets |
+| 261 | Wait for 00:00 | Egg shakes, sparkles pop, the pet appears in the pod; "✨ EGG HATCHED! Your 🐰 Rabbit is ready!" with its buffs; a first pet is equipped automatically and starts following; the incubator frees after ~5 s |
+| 262 | Another player tries the busy incubator | No prompt is offered on it |
+| 263 | Hold two kinds of egg, press E | A picker asks which egg; Cancel closes it |
+| 264 | Bag → Incubate, standing far from the incubators | Toast pointing to the Pet Incubation Center; the egg stays in the Bag |
+| 265 | Start an egg, leave at 00:30, rejoin 10 s later | The egg is back in an incubator with ~00:20 left, not 01:00 |
+| 266 | Start an egg, leave, rejoin after 2 minutes | It hatches immediately on join (card shown), exactly one new pet |
+| 267 | Player Panel → 🐾 Pets with several pets | Equipped pet first with "✓ EQUIPPED"; EQUIP another: the old one stays listed, the new one follows |
+| 268 | Tap ✓ EQUIPPED | Pet goes away; no pet buffs |
+| 269 | Note a Rare pet's random buff; equip, unequip, reset, rejoin | The buff never changes |
+| 270 | Hit the Deadline Boss with a +6 % Damage pet and nothing else (Squeaky Hammer) | Non-crit hits 11 (10 × 1.06 rounds to 11); with a Monkey (+10 % crit damage) crits are 10 × 1.6 = 16 |
+| 271 | Defeat a boss with a +6 % XP pet | XP gained is 1.06x what it is without the pet (same boosts); with a 2x XP event too, ×2 on top |
+| 272 | Two players: A equips a Dog, B a Dragon | Each pet follows its owner on both screens; A's buffs don't change when B's pet is near |
+| 273 | Walk through doors, stand next to a boss, a store machine, NPCs, an incubator | The pet never blocks, pushes or gets hit; boss hits work as before |
+| 274 | Store → Eggs (once products exist; Studio test purchases) | Odds shown; buying puts the egg in the Bag; a restricted account (PolicyService) sees no Eggs tab |
+| 275 | Boss Drop Event with Common Egg at 100 % | Qualifying players get "EVENT DROP: Common Egg, in your Bag!" |
+| 276 | Mobile emulator: Pets tab, egg picker, hatch card, incubator display | Readable, buttons tappable, nothing off screen |
+| 277 | Non-admin fires `Remotes.Admin.SpawnEgg:FireServer("Mythical")`; anyone fires `Remotes.Pets.Equip:FireServer("pet_999")` and `Remotes.Pets.Incubate:FireServer("egg_mythical", 1)` without owning one | Rejected or ignored; no egg, no pet, nothing equipped |
+| 278 | Leave the game with a pet out | Its model disappears for everyone; no errors |
+| 279 | Output during all of the above | No errors, infinite-yield warnings or duplicate pets |
+
+## Pet looks and movement (2026-10-08, docs/PETS.md "Looks and movement")
+Specs first: `Client/PetMotion`, `Client/PetVisual`, `Config/PetConfig`.
+
+| # | Check | Expected |
+|---|---|---|
+| 280 | Equip a Dog and stand still | Beside and behind you, breathing; every few seconds it looks around or at you; after ~6 s it may sit; tail wags; one Dog only |
+| 281 | Walk, then sprint, then stop | Legs step in time with the ground (no sliding), faster strides when sprinting; it stops near you and settles facing your way |
+| 282 | Walk in circles and turn around sharply | The pet turns smoothly toward where it goes; never walks sideways or backwards, never spins or jitters |
+| 283 | Outdoors: grass, paths, the steps down from the lobby, a slope | Feet on the ground everywhere: no floating, sinking or falling |
+| 284 | Rabbit, then Beetle/Ladybug | Rabbit moves in hops with ears back; bugs scuttle on six legs with antennae swaying |
+| 285 | Butterfly, then Dragon, then Phoenix | Fly beside you at their height with a gentle bob, bank into turns; Butterfly flutters lightly and drifts a little; Dragon beats slowly and swings its tail; Phoenix fans its tail feathers; they hover when you stop |
+| 286 | Hit a boss with a pet out | The pet gives a short happy reaction; boss damage is the same as without the reaction (only its buff counts) |
+| 287 | Glitter: Common, Rare and Mythical pets side by side | A few tiny sparkles on each, a little more for rarer ones; never covering the pet, no glow or flashes |
+| 288 | Ride the Executive Elevator / reset / respawn | The pet reappears beside you; still one pet, no leftover models or sparkles in Workspace.ClientPets |
+| 289 | Equip another pet, then put it away | The old model disappears at once; nothing left in Workspace.ClientPets afterwards |
+| 290 | 2 players: A with a Dog, B with a Dragon | Each follows its own owner on both screens |
+| 291 | Team test with 5-10 clients, all with pets, near each other | Smooth movement; check the MicroProfiler / Stats: no big frame time from pets (one Heartbeat, one BulkMoveTo); far pets update less |
+| 292 | Phone emulator | Pets still animate; glitter is sparser |
+| 293 | Output | No errors or warnings from PetController / PetVisual / PetMotion |
+
+## Level bonuses and office doors (2026-10-08, docs/GAMEPLAY_RULES.md)
+Specs first: `Shared/LevelRules`, `Shared/CombatRules`, `Client/OfficeDoors`.
+
+| # | Check | Expected |
+|---|---|---|
+| 294 | New Level 1 player: Player Panel → Profile | Base damage = hammer damage (Squeaky 10); Crit chance 5.00 %; level bonus +0 |
+| 295 | Admin → Players → Set level 2, then 3 | Card "🎉 LEVEL UP! Level 1 → Level 2 / +3 Base Damage +0.05% Crit", then another; Profile shows 13 / 5.05 %, then 16 / 5.10 % |
+| 296 | Set level 13 from 10 in one step | One card: "Level 10 → Level 13 / +9 Base Damage +0.15% Crit" |
+| 297 | Hit the Deadline Boss at Level 10 with the Squeaky Hammer, no boosts | Normal hits 37 (10 + 27) |
+| 298 | Leave and rejoin; reset your character | Same Base damage and Crit chance; no level-up card |
+| 299 | Level 10 with a Mystery Hammer (+20 %), a +6 % Damage pet and a +5 % Damage boost | Normal hit on the Deadline Boss = round((35 + 27) × 1.31) = 81; let the boost run out: round(62 × 1.26) = 78; level part unchanged |
+| 300 | 2x XP event | XP from defeats doubles; Base damage and Crit chance don't change until a real level-up |
+| 301 | New Level 1 player walks the corridors | Deadline Boss door open "✓ AVAILABLE"; the other ground offices closed "🔒 Beat … x1"; Senior offices closed "🔒 Requires Level 10" |
+| 302 | Walk into a closed door | Can't pass it |
+| 303 | Beat the Deadline Boss | Meeting Master's door slides open within a moment; no rejoin |
+| 304 | Two players: Level 1 and Level 12 (with the ground bosses beaten) | Each sees their own doors; the Level 1 player's Senior doors stay closed while the other walks in |
+| 305 | Exploit: delete your door in the client Explorer and walk in to a locked boss | Hits do nothing; Studio Output "[Combat] hit … is locked for this player" |
+| 306 | Admin removes your admin unlock while you stand inside that office | Door stays open until you walk out, then closes |
+| 307 | Respawn; rejoin | Doors show the same states; no duplicate doors in Workspace.ClientDoors |
+| 308 | Output | No errors from OfficeDoorController / LevelUpController |
+
+## GUI, stress, admin rewards and history, bypass, events, pets (2026-10-08, second pass)
+Specs first: `Shared/StressRules`, `Shared/EventRules`, `Shared/PetRules`, `Client/Responsive`.
+
+| # | Check | Expected |
+|---|---|---|
+| 309 | Desktop 1920x1080 / 1366x768 | Top-left ☰ Menu with 🎵 Music beside it; bottom-right column 🛡️ Admin (admins), 🎒 Bag, 🛒 Store, 🔨 Hammers, each icon + label; all work as before |
+| 310 | Phone landscape and portrait | Same buttons as compact icon tiles with tiny captions, clear of the jump button and the HUD lines; panel text noticeably smaller than before but readable; nothing clipped; tabs scroll |
+| 311 | Mute music | Button shows 🔇 Muted; unmute shows 🎵 Music |
+| 312 | Hit the Deadline Boss from 100 stress with the Squeaky Hammer, no boosts | About 1 stress per hit (~100 hits to Zen) |
+| 313 | Same with a Mystery Hammer at a high level with Damage boost and pet; land crits | Never more than 2.5 per hit; crits relieve the same as normal hits |
+| 314 | Two players hitting the same boss | Each loses stress at their own hammer's rate |
+| 315 | Admin → Players → Turn bypass ON (Level 1 admin) | Every office door opens; Senior bosses and the CEO (elevator) can be hit; Profile unchanged; OFF closes them again (after you leave the office) |
+| 316 | Non-admin fires `Remotes.Admin.Bypass:FireServer(true)` (`StudioTesterIsAdmin = false` in Studio) | Rejected and logged; doors stay closed; hits on locked bosses do nothing |
+| 317 | Admin → Rewards: 500 coins, 10,000 XP, 2 Rare Eggs, a hammer, a Dragon to another player, reason "Event compensation" | Confirm dialog each time; the target gets each with a toast; Coins/XP/Bag/Hammers/Pets update at once |
+| 318 | Reward a hammer the player already owns | Toast "already owns…"; History shows the entry as FAILED |
+| 319 | Non-admin fires `Remotes.Admin.Reward:FireServer({ UserId = <own id>, Kind = "Coins", Amount = 99999 })` | Rejected and logged; no coins |
+| 320 | Admin → History → that player → LOAD | The rewards (admin, target, amount, reason, status), purchases, boosts used, eggs, pets, with dates; filters and pages work |
+| 321 | Admin → History → Admin log → Today | Every admin action of today (rewards, events, bypass, set level...) |
+| 322 | Rejoin / restart the server, LOAD again (published game) | The same entries (saved within ~30 s) |
+| 323 | Create an XP event, then Edit it (change the multiplier), SAVE CHANGES | The running event changes; history later shows its planned and actual end |
+| 324 | Schedule an event, then Start now | It starts at once with the "EVENT STARTED" notice |
+| 325 | Outdoor Boss Event running → Stop → [Cancel] | Nothing happens |
+| 326 | … → Stop → [Confirm] | Bosses vanish at once, "EVENT ENDED"; history status Stopped, by you, at that time |
+| 327 | Another event → Force remove → Confirm | Same, status Removed; in a server whose DataStore fails it still ends there with a "retry" toast |
+| 328 | Egg Hunt: Rare, every 2 min, up to 3, start now for 30 min | "EVENT STARTED Rare Egg Hunt"; a Rare egg appears at once and every 2 min, at most 3 unclaimed; one claim each |
+| 329 | Schedule a Mythical Egg Hunt 3 minutes ahead | It starts on time on its own; Mythical eggs appear |
+| 330 | Stop the hunt with eggs still out | Its unclaimed eggs vanish; normal 2-hour eggs (if any) stay |
+| 331 | Delete an entry in Event history | Gone after Confirm |
+| 332 | Player Panel → 🐾 Pets with several pets | Pet details card (name, rarity colour, type, buffs, status) and a card grid; tap a card: details switch; hover on desktop previews |
+| 333 | EQUIP PET / UNEQUIP PET in the details card | Pet appears / disappears at once; owned list unchanged; damage and XP bonuses follow (only the equipped pet's) |
+| 334 | Equip, respawn, rejoin, switch pets several times; hit a boss | Damage the same every time for the same pet (no stacked buffs) |
+| 335 | Output | No errors from AdminController, AdminService, HistoryService, EventService, PetService |

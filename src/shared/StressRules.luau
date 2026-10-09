@@ -11,9 +11,15 @@ local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 
 local StressRules = {}
 
--- Relief scales with damage, so stronger hammers relieve stress faster.
-function StressRules.reliefForHit(damage: number): number
-	return math.max(0, damage * GameConfig.StressReliefPerDamage)
+-- Relief for one accepted hit, from the equipped hammer's own damage (not the
+-- hit's final damage): a better hammer relieves a little faster, but crits,
+-- boosts, pets, events and level bonuses never multiply it. Capped per hit.
+function StressRules.reliefForHit(hammerDamage: number): number
+	return math.clamp(
+		hammerDamage * GameConfig.StressReliefPerDamage,
+		0,
+		GameConfig.StressReliefMaxPerHit
+	)
 end
 
 -- Clamped to [0, MaxStress] and rounded to hundredths so repeated fractional

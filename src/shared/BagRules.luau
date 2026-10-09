@@ -5,7 +5,10 @@
 	The Bag holds store items the player hasn't used yet, counted by StoreConfig
 	product key ("xp_10_30m", "mystery_hammer"). Bought items, gifts and
 	custom-boss drops all go into the Bag; the player uses them when they like.
-	Boosts are giftable; the Mystery Hammer (a paid random item) is not.
+	Boosts are giftable; the Mystery Hammer and pet eggs (paid random items)
+	and bundles are not. Eggs wait here until they go into an incubator
+	(PetService, docs/PETS.md). A bundle is never kept whole: grant() puts its contents in the
+	Bag as separate boosts (3 x 30-min XP is three items, not one 90-min one).
 
 	A gift waits in the recipient's gift inbox (GiftService) until a server
 	that owns their data claims it into their Bag. Inbox entries are validated
@@ -40,13 +43,16 @@ function BagRules.product(key: string): StoreConfig.Product?
 end
 
 function BagRules.isGiftable(product: StoreConfig.Product): boolean
-	return product.Kind ~= "MysteryHammer"
+	return StoreConfig.BuffKinds[product.Kind] == true
 end
 
--- "+10% XP boost (30 min)" or "Mystery Hammer".
+-- "+10% XP boost (30 min)", "Mystery Hammer" or "Beginner Bundle".
 function BagRules.itemText(product: StoreConfig.Product): string
 	if product.Kind == "MysteryHammer" then
 		return StoreConfig.Mystery.DisplayName
+	end
+	if product.Kind == "Bundle" or product.Kind == "Egg" then
+		return product.DisplayName or product.Key
 	end
 	local minutes = product.Seconds // 60
 	local length = if minutes >= 60
@@ -62,6 +68,39 @@ end
 
 function BagRules.add(bag: Bag, key: string, count: number): ()
 	bag[key] = math.min((bag[key] or 0) + count, BagRules.MAX_COUNT)
+end
+
+-- Puts `count` of a product in the Bag: a bundle as its separate boosts,
+-- anything else as itself. Never yields, so callers can grant and record a
+-- purchase in one step. Returns how many Bag items were added.
+function BagRules.grant(bag: Bag, product: StoreConfig.Product, count: number): number
+	local contents = product.Contents
+	if product.Kind == "Bundle" and contents then
+		local added = 0
+		for _, item in contents do
+			BagRules.add(bag, item.Key, item.Count * count)
+			added += item.Count * count
+		end
+		return added
+	end
+	BagRules.add(bag, product.Key, count)
+	return count
+end
+
+-- "3x +10% XP boost (30 min)" lines for a bundle's contents (empty otherwise).
+function BagRules.contentsLines(product: StoreConfig.Product): { string }
+	local lines: { string } = {}
+	local contents = product.Contents
+	if contents == nil then
+		return lines
+	end
+	for _, item in contents do
+		local boost = StoreConfig.ByKey[item.Key]
+		if boost then
+			table.insert(lines, string.format("%dx %s", item.Count, BagRules.itemText(boost)))
+		end
+	end
+	return lines
 end
 
 -- Removes one; returns false (and changes nothing) when there is none.

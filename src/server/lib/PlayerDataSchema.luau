@@ -17,6 +17,8 @@ local BossConfig = require(ReplicatedStorage.Config.BossConfig)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
 local HammerRules = require(ReplicatedStorage.Shared.HammerRules)
+local PetConfig = require(ReplicatedStorage.Config.PetConfig)
+local PetRules = require(ReplicatedStorage.Shared.PetRules)
 local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
 local StoreConfig = require(ReplicatedStorage.Config.StoreConfig)
 
@@ -38,7 +40,8 @@ export type PlayerData = {
 	Xp: number, -- drives Player Level; boosted by XP buffs (Score stays unboosted)
 	Buffs: { [string]: { Percent: number, SecondsLeft: number } }, -- "Xp" | "Damage" | "CritDamage"
 	ProcessedPurchases: { string }, -- recent Robux PurchaseIds, so a receipt is granted once
-	MysteryHammers: { [string]: { Damage: number, CritDamagePercent: number } }, -- "mystery_<n>"
+	-- "mystery_<n>" -> rolled stats (Shared/HammerRules); BonusDamagePercent since v7.
+	MysteryHammers: { [string]: HammerRules.MysteryRoll },
 	NextMysteryNumber: number,
 	-- v5
 	AdminUnlocks: { [string]: boolean }, -- bosses an admin unlocked for this player
@@ -47,6 +50,11 @@ export type PlayerData = {
 	ClaimedGifts: { string }, -- recent GiftIds already put in the Bag, so a gift lands once
 	-- The gift the player is buying right now (set before the purchase prompt).
 	PendingGift: PendingGift?,
+	-- v8 (docs/PETS.md)
+	Pets: { [string]: PetRules.Pet }, -- "pet_<n>" -> species, rarity, buffs (fixed at hatch)
+	NextPetNumber: number,
+	EquippedPetId: string, -- "" = no pet out
+	Incubation: PetRules.Incubation?, -- the egg incubating now, with what will hatch
 }
 
 export type PendingGift = {
@@ -62,7 +70,7 @@ export type Migration = (data: RawData) -> ()
 
 local PlayerDataSchema = {}
 
-PlayerDataSchema.CURRENT_VERSION = 6
+PlayerDataSchema.CURRENT_VERSION = 8
 
 -- Upper bound for counters; far beyond legitimate play, small enough to stay
 -- an exact integer and to keep leaderboard values sane.
@@ -109,6 +117,32 @@ PlayerDataSchema.MIGRATIONS = table.freeze({
 		data.Bag = {}
 		data.ClaimedGifts = {}
 	end,
+	[7] = function(data: RawData)
+		-- v6 -> v7: Mystery Hammers get fixed base damage plus a damage bonus.
+		-- Hammers opened before (20-35 damage) keep their crit roll, move to
+		-- the base damage and get LegacyBonusDamagePercent; sanitize() then
+		-- clamps everything. The version bump also stops older servers, which
+		-- would drop the new field, from loading (and saving over) this data.
+		local hammers = data.MysteryHammers
+		if typeof(hammers) ~= "table" then
+			return
+		end
+		for _, entry in hammers :: { [unknown]: unknown } do
+			if typeof(entry) == "table" then
+				local roll = entry :: { [string]: unknown }
+				if roll.BonusDamagePercent == nil then
+					roll.BonusDamagePercent = StoreConfig.Mystery.LegacyBonusDamagePercent
+				end
+			end
+		end
+	end,
+	[8] = function(data: RawData)
+		-- v7 -> v8: pets. Nobody has pets or an egg incubating yet.
+		data.Pets = {}
+		data.NextPetNumber = 1
+		data.EquippedPetId = ""
+		data.Incubation = nil
+	end,
 }) :: { [number]: Migration }
 
 -- Most recent purchase ids remembered for duplicate-receipt protection. Roblox
@@ -140,6 +174,10 @@ function PlayerDataSchema.template(): PlayerData
 		Bag = {},
 		ClaimedGifts = {},
 		PendingGift = nil,
+		Pets = {},
+		NextPetNumber = 1,
+		EquippedPetId = "",
+		Incubation = nil,
 	}
 end
 
@@ -318,7 +356,7 @@ function PlayerDataSchema.sanitize(data: RawData): ()
 
 	-- Mystery Hammers were paid for: keep every valid id, clamping odd stats
 	-- back into range rather than deleting a purchase.
-	local mystery: { [string]: { Damage: number, CritDamagePercent: number } } = {}
+	local mystery: { [string]: HammerRules.MysteryRoll } = {}
 	local rawMystery = data.MysteryHammers
 	if typeof(rawMystery) == "table" then
 		for hammerId, entry in rawMystery :: { [unknown]: unknown } do
@@ -328,10 +366,13 @@ function PlayerDataSchema.sanitize(data: RawData): ()
 				and typeof(entry) == "table"
 			then
 				local raw = entry :: { [string]: unknown }
-				local damage, crit = raw.Damage, raw.CritDamagePercent
+				local damage, crit, bonus =
+					raw.Damage, raw.CritDamagePercent, raw.BonusDamagePercent
 				if isFiniteNumber(damage) and isFiniteNumber(crit) then
 					mystery[hammerId] = HammerRules.clampRoll({
 						Damage = damage :: number,
+						-- Missing or broken -> the legacy bonus (HammerRules.clampRoll).
+						BonusDamagePercent = if isFiniteNumber(bonus) then bonus :: number else nil,
 						CritDamagePercent = crit :: number,
 					})
 				end
@@ -339,6 +380,51 @@ function PlayerDataSchema.sanitize(data: RawData): ()
 		end
 	end
 	data.MysteryHammers = mystery
+
+	-- Pets are the player's: every valid one is kept, buffs clamped (never
+	-- rerolled). The equipped one must be owned.
+	local pets: { [string]: PetRules.Pet } = {}
+	local rawPets = data.Pets
+	local petCount = 0
+	if typeof(rawPets) == "table" then
+		for petId, entry in rawPets :: { [unknown]: unknown } do
+			if typeof(petId) == "string" and PetRules.isPetId(petId) then
+				local pet = PetRules.parsePet(entry)
+				if pet and petCount < PetConfig.MaxPets * 2 then
+					pets[petId] = pet
+					petCount += 1
+				end
+			end
+		end
+	end
+	data.Pets = pets
+	data.NextPetNumber = math.max(1, counter(data.NextPetNumber, defaults.NextPetNumber))
+	-- Never hand out an id that is already used.
+	for petId in pets do
+		local number = tonumber(string.sub(petId, 5)) or 0
+		if number >= (data.NextPetNumber :: number) then
+			data.NextPetNumber = number + 1
+		end
+	end
+	local equippedPet = data.EquippedPetId
+	data.EquippedPetId = if typeof(equippedPet) == "string" and pets[equippedPet]
+		then equippedPet
+		else ""
+
+	-- A broken incubation gives its egg back rather than losing it.
+	if data.Incubation ~= nil then
+		local incubation = PetRules.parseIncubation(data.Incubation)
+		if incubation == nil then
+			local rawIncubation = data.Incubation
+			local eggKey = if typeof(rawIncubation) == "table"
+				then (rawIncubation :: { [string]: unknown }).EggKey
+				else nil
+			if typeof(eggKey) == "string" and PetRules.eggRarity(eggKey) then
+				BagRules.add(data.Bag :: BagRules.Bag, eggKey, 1)
+			end
+		end
+		data.Incubation = incubation
+	end
 
 	-- Must be a hammer the player actually owns.
 	local hammerId = data.EquippedHammerId

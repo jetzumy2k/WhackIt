@@ -11,13 +11,20 @@
 
 export type BuffKind = "Xp" | "Damage" | "CritDamage"
 
+-- One line of a bundle: `Count` of the boost product `Key`.
+export type BundleItem = { Key: string, Count: number }
+
 export type Product = {
 	Key: string, -- stable id, e.g. "xp_10_1h"
-	Kind: BuffKind | "MysteryHammer",
-	Percent: number, -- buff strength (0 for the hammer)
-	Seconds: number, -- buff duration in play time (0 for the hammer)
+	Kind: BuffKind | "MysteryHammer" | "Bundle" | "Egg",
+	Percent: number, -- buff strength (0 for the hammer and bundles)
+	Seconds: number, -- buff duration in play time (0 for the hammer and bundles)
 	SuggestedPrice: number, -- Robux, display only
 	ProductId: number, -- Creator Hub Developer Product id; 0 = not set up yet
+	DisplayName: string?, -- bundles and eggs
+	Rarity: string?, -- eggs only: what it hatches (Config/PetConfig)
+	-- Bundles only: what one purchase puts in the Bag, as separate items.
+	Contents: { BundleItem }?,
 }
 
 local DURATIONS = {
@@ -71,10 +78,59 @@ local PRODUCT_IDS: { [string]: number } = {
 	crit_10_1h = 3716806791,
 	crit_10_5h = 3716806871,
 	mystery_hammer = 3716807628,
+	-- Bundles (2026-10-08): create these two in the Creator Hub, then paste the ids.
+	beginner_bundle = 3717164451,
+	stress_reliever_package = 3717164753,
+	-- Pet eggs (2026-10-08): paid random items, like the Mystery Hammer.
+	egg_common = 3717165483,
+	egg_rare = 3717165621,
+	egg_mythical = 3717165777,
+}
+
+-- Pet eggs (docs/PETS.md): each waits in the Bag until it's put in an
+-- incubator. What hatches is random (Config/PetConfig.EggOdds), so they are
+-- offered only to players allowed paid random items, with the odds shown.
+-- The same keys are used for eggs found outside or dropped by bosses.
+local EGGS = {
+	{ Key = "egg_common", DisplayName = "Common Egg", Rarity = "Common", SuggestedPrice = 49 },
+	{ Key = "egg_rare", DisplayName = "Rare Egg", Rarity = "Rare", SuggestedPrice = 149 },
+	{
+		Key = "egg_mythical",
+		DisplayName = "Mythical Egg",
+		Rarity = "Mythical",
+		SuggestedPrice = 399,
+	},
+}
+
+-- Bundles (docs/STORE.md "Bundles"): one purchase puts every item below into
+-- the Bag as separate boosts, used one at a time like any bought boost (time
+-- of the same kind adds up when used, as always). Contents must be boost keys.
+local BUNDLES = {
+	{
+		Key = "beginner_bundle",
+		DisplayName = "Beginner Bundle",
+		SuggestedPrice = 99,
+		Contents = {
+			{ Key = "xp_10_30m", Count = 3 },
+			{ Key = "dmg_5_30m", Count = 3 },
+			{ Key = "crit_5_30m", Count = 3 },
+		},
+	},
+	{
+		Key = "stress_reliever_package",
+		DisplayName = "Stress Reliever Package",
+		SuggestedPrice = 599,
+		Contents = {
+			{ Key = "xp_10_5h", Count = 3 },
+			{ Key = "dmg_5_5h", Count = 3 },
+			{ Key = "crit_5_5h", Count = 3 },
+		},
+	},
 }
 
 local KIND_PREFIX: { [string]: string } = { Xp = "xp", Damage = "dmg", CritDamage = "crit" }
 local KIND_ORDER = { "Xp", "Damage", "CritDamage" }
+local BUFF_KINDS: { [string]: boolean } = { Xp = true, Damage = true, CritDamage = true }
 
 local products: { Product } = {}
 for _, kind in KIND_ORDER do
@@ -103,6 +159,44 @@ table.insert(products, {
 	ProductId = PRODUCT_IDS.mystery_hammer or 0,
 })
 
+local buffKeys: { [string]: boolean } = {}
+for _, product in products do
+	if BUFF_KINDS[product.Kind] then
+		buffKeys[product.Key] = true
+	end
+end
+for _, bundle in BUNDLES do
+	local contents: { BundleItem } = {}
+	for _, item in bundle.Contents do
+		assert(buffKeys[item.Key], bundle.Key .. " contains unknown boost " .. item.Key)
+		assert(item.Count >= 1 and item.Count % 1 == 0, bundle.Key .. " has a bad count")
+		table.insert(contents, table.freeze({ Key = item.Key, Count = item.Count }))
+	end
+	table.insert(products, {
+		Key = bundle.Key,
+		Kind = "Bundle",
+		Percent = 0,
+		Seconds = 0,
+		SuggestedPrice = bundle.SuggestedPrice,
+		ProductId = PRODUCT_IDS[bundle.Key] or 0,
+		DisplayName = bundle.DisplayName,
+		Contents = table.freeze(contents),
+	})
+end
+
+for _, egg in EGGS do
+	table.insert(products, {
+		Key = egg.Key,
+		Kind = "Egg",
+		Percent = 0,
+		Seconds = 0,
+		SuggestedPrice = egg.SuggestedPrice,
+		ProductId = PRODUCT_IDS[egg.Key] or 0,
+		DisplayName = egg.DisplayName,
+		Rarity = egg.Rarity,
+	})
+end
+
 local byKey: { [string]: Product } = {}
 local byProductId: { [number]: Product } = {}
 for _, product in products do
@@ -121,14 +215,21 @@ local StoreConfig = table.freeze({
 	Products = table.freeze(products),
 	ByKey = table.freeze(byKey),
 	ByProductId = table.freeze(byProductId),
+	-- Kinds that are timed boosts (not the Mystery Hammer or a bundle).
+	BuffKinds = table.freeze(BUFF_KINDS),
 
-	-- Mystery Hammer rolls (uniform, whole numbers). Shown to players as odds
-	-- before they buy, as Roblox requires for paid random items.
+	-- Mystery Hammer (redesigned 2026-10-08): fixed base damage plus two
+	-- bonuses rolled once when it's opened (uniform, whole percents). Shown to
+	-- players as odds before they buy, as Roblox requires for paid random items.
 	Mystery = table.freeze({
-		DamageMin = 20,
-		DamageMax = 35,
+		BaseDamage = 35,
+		BonusDamageMinPercent = 15,
+		BonusDamageMaxPercent = 25,
 		CritDamageMinPercent = 5,
 		CritDamageMaxPercent = 10,
+		-- Hammers opened before the bonus existed (they rolled 20-35 damage)
+		-- get the fixed base damage and this bonus (PlayerDataSchema v7).
+		LegacyBonusDamagePercent = 15,
 		DisplayName = "Mystery Hammer",
 		HeadColor = Color3.fromRGB(255, 200, 60),
 		HandleColor = Color3.fromRGB(120, 70, 200),

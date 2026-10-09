@@ -9,24 +9,66 @@ local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
 local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
+local PetConfig = require(ReplicatedStorage.Config.PetConfig)
 local Types = require(ReplicatedStorage.Shared.Types)
 
 local SyncRemote = ReplicatedStorage.Remotes.Profile.Sync
 
 local ProgressService = {}
 
-local function mysteryList(
-	data: PlayerDataService.PlayerData
-): { { Id: string, Damage: number, CritDamagePercent: number } }
-	local list = {}
+-- Which incubator in this server shows a player's egg (PetService sets it;
+-- 0 = none here, e.g. all busy). Kept here so the snapshot needs no require cycle.
+local shownIncubator: { [number]: number? } = {}
+
+function ProgressService.setIncubatorShown(userId: number, index: number?): ()
+	shownIncubator[userId] = index
+end
+
+local function mysteryList(data: PlayerDataService.PlayerData): { Types.MysteryHammer }
+	local list: { Types.MysteryHammer } = {}
 	for hammerId, roll in data.MysteryHammers do
-		table.insert(
-			list,
-			{ Id = hammerId, Damage = roll.Damage, CritDamagePercent = roll.CritDamagePercent }
-		)
+		table.insert(list, {
+			Id = hammerId,
+			Damage = roll.Damage,
+			BonusDamagePercent = roll.BonusDamagePercent,
+			CritDamagePercent = roll.CritDamagePercent,
+		})
 	end
 	table.sort(list, function(a, b)
 		return a.Id < b.Id
+	end)
+	return list
+end
+
+-- Owned pets for the UI: equipped first, then rarest, then oldest.
+local function petList(data: PlayerDataService.PlayerData): { Types.OwnedPet }
+	local list: { Types.OwnedPet } = {}
+	for petId, pet in data.Pets do
+		local buffs: { { Kind: string, Percent: number } } = {}
+		for _, buff in pet.Buffs do
+			local kind: string = buff.Kind
+			table.insert(buffs, { Kind = kind, Percent = buff.Percent })
+		end
+		table.insert(
+			list,
+			{ Id = petId, Species = pet.Species, Rarity = pet.Rarity, Buffs = buffs }
+		)
+	end
+	local function rank(pet: Types.OwnedPet): number
+		local info = PetConfig.RarityInfo[pet.Rarity]
+		return if info then info.Order else 0
+	end
+	table.sort(list, function(a, b)
+		local aOn, bOn = a.Id == data.EquippedPetId, b.Id == data.EquippedPetId
+		if aOn ~= bOn then
+			return aOn
+		end
+		if rank(a) ~= rank(b) then
+			return rank(a) > rank(b)
+		end
+		local aNumber = tonumber(string.sub(a.Id, 5)) or 0
+		local bNumber = tonumber(string.sub(b.Id, 5)) or 0
+		return aNumber < bNumber
 	end)
 	return list
 end
@@ -40,7 +82,11 @@ local function adminUnlockList(data: PlayerDataService.PlayerData): { string }
 	return list
 end
 
-function ProgressService.snapshot(data: PlayerDataService.PlayerData): Types.ProfileSnapshot
+-- `shownIndex`: the incubator in this server showing the player's egg (0 = none).
+function ProgressService.snapshot(
+	data: PlayerDataService.PlayerData,
+	shownIndex: number?
+): Types.ProfileSnapshot
 	local ownedIds: { string } = {}
 	for _, hammer in HammerConfig.List do
 		if ProgressionRules.ownsHammer(hammer.Id, data.OwnedHammers) then
@@ -64,13 +110,23 @@ function ProgressService.snapshot(data: PlayerDataService.PlayerData): Types.Pro
 		MysteryHammers = mysteryList(data),
 		AdminUnlocks = adminUnlockList(data),
 		Bag = table.clone(data.Bag),
+		Pets = petList(data),
+		EquippedPetId = data.EquippedPetId,
+		-- Only the egg's rarity and timing: what hatches stays on the server.
+		Incubation = if data.Incubation
+			then {
+				Rarity = data.Incubation.Rarity,
+				EndsAt = data.Incubation.EndsAt,
+				IncubatorIndex = shownIndex or 0,
+			}
+			else nil,
 	}
 end
 
 function ProgressService.sync(player: Player): ()
 	local data = PlayerDataService.get(player)
 	if data then
-		SyncRemote:FireClient(player, ProgressService.snapshot(data))
+		SyncRemote:FireClient(player, ProgressService.snapshot(data, shownIncubator[player.UserId]))
 	end
 end
 

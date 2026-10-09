@@ -11,10 +11,12 @@ end
 
 return function()
 	describe("BagRules items", function()
-		it("lets every boost be gifted, but not the Mystery Hammer", function()
+		it("lets every boost be gifted, but not the Mystery Hammer, a bundle or an egg", function()
 			for _, product in StoreConfig.Products do
-				expect(BagRules.isGiftable(product)).to.equal(product.Kind ~= "MysteryHammer")
+				local boost = StoreConfig.BuffKinds[product.Kind] == true
+				expect(BagRules.isGiftable(product)).to.equal(boost)
 			end
+			expect(BagRules.isGiftable(StoreConfig.ByKey.egg_rare)).to.equal(false)
 		end)
 
 		it("describes items for players", function()
@@ -24,6 +26,70 @@ return function()
 			expect(BagRules.itemText(StoreConfig.ByKey.mystery_hammer)).to.equal(
 				StoreConfig.Mystery.DisplayName
 			)
+			expect(BagRules.itemText(StoreConfig.ByKey.beginner_bundle)).to.equal("Beginner Bundle")
+		end)
+	end)
+
+	describe("BagRules.grant (bundles)", function()
+		it(
+			"puts the Beginner Bundle in the Bag as 3 x 30-minute XP, Damage and Crit boosts",
+			function()
+				local bag: BagRules.Bag = {}
+				local added = BagRules.grant(bag, StoreConfig.ByKey.beginner_bundle, 1)
+				expect(added).to.equal(9)
+				expect(bag.beginner_bundle).to.equal(nil)
+				local kinds: { [string]: number } = {}
+				for key, count in bag do
+					local product = StoreConfig.ByKey[key]
+					expect(product.Seconds).to.equal(30 * 60)
+					kinds[product.Kind] = (kinds[product.Kind] or 0) + count
+				end
+				expect(kinds.Xp).to.equal(3)
+				expect(kinds.Damage).to.equal(3)
+				expect(kinds.CritDamage).to.equal(3)
+			end
+		)
+
+		it(
+			"puts the Stress Reliever Package in as three separate 5-hour boosts of each kind",
+			function()
+				local bag: BagRules.Bag = {}
+				BagRules.grant(bag, StoreConfig.ByKey.stress_reliever_package, 1)
+				local kinds: { [string]: number } = {}
+				for key, count in bag do
+					local product = StoreConfig.ByKey[key]
+					-- Separate 5-hour items, never one 15-hour boost.
+					expect(product.Seconds).to.equal(5 * 60 * 60)
+					kinds[product.Kind] = (kinds[product.Kind] or 0) + count
+				end
+				expect(kinds.Xp).to.equal(3)
+				expect(kinds.Damage).to.equal(3)
+				expect(kinds.CritDamage).to.equal(3)
+			end
+		)
+
+		it(
+			"adds to what is already in the Bag, so a second bundle never overwrites the first",
+			function()
+				local bag: BagRules.Bag = { xp_10_30m = 2, mystery_hammer = 1 }
+				BagRules.grant(bag, StoreConfig.ByKey.beginner_bundle, 1)
+				BagRules.grant(bag, StoreConfig.ByKey.beginner_bundle, 1)
+				expect(bag.xp_10_30m).to.equal(2 + 6)
+				expect(bag.mystery_hammer).to.equal(1)
+			end
+		)
+
+		it("grants a plain item as itself", function()
+			local bag: BagRules.Bag = {}
+			expect(BagRules.grant(bag, StoreConfig.ByKey.dmg_3_1h, 2)).to.equal(2)
+			expect(bag.dmg_3_1h).to.equal(2)
+		end)
+
+		it("lists a bundle's contents for the store", function()
+			local lines = BagRules.contentsLines(StoreConfig.ByKey.beginner_bundle)
+			expect(#lines).to.equal(3)
+			expect(string.sub(lines[1], 1, 3)).to.equal("3x ")
+			expect(#BagRules.contentsLines(StoreConfig.ByKey.xp_10_30m)).to.equal(0)
 		end)
 	end)
 

@@ -13,8 +13,11 @@
 	  * quick open/close animation (UIScale 0.94 <-> 1, ~0.12 s);
 	  * optional keyboard shortcut (ignored while typing in a text box).
 	Pieces: buttons (hover, press, selected and disabled states), collapsible
-	section cards, rows, text, stat tiles. Text uses fixed, readable sizes and
-	wraps instead of scaling down.
+	section cards, rows, text, stat tiles. Paragraph text uses fixed, readable
+	sizes and wraps; button and row captions shrink to fit their box (never
+	grow past their normal size, Lib/Responsive) instead of clipping.
+	Short windows (phones in landscape) get a slimmer header and tab strip so
+	more of the page shows.
 
 	Nothing here runs per frame: hover/press tweens only play on input, and
 	layout only reacts to size changes.
@@ -23,6 +26,8 @@
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
+
+local Responsive = require(script.Parent.Responsive)
 
 local PanelKit = {}
 
@@ -50,9 +55,12 @@ PanelKit.TEXT_SIZE = 17
 PanelKit.SMALL_SIZE = 15
 PanelKit.ROW_HEIGHT = 46 -- comfortable to tap
 local HEADER_HEIGHT = 64
+local SHORT_HEADER_HEIGHT = 48
 local SIDEBAR_WIDTH = 176
 local TOPNAV_HEIGHT = 48
+local SHORT_TOPNAV_HEIGHT = 42
 local COMPACT_BELOW = 640 -- window width (px) under which the nav moves to the top
+local SHORT_BELOW = 440 -- window height (px) under which the header and tabs slim down
 local SMALL_SCREEN_BELOW = 900 -- screen width (px) under which the window fills more of it
 local OPEN_SECONDS = 0.12
 
@@ -115,6 +123,14 @@ end
 
 -- Text --------------------------------------------------------------------
 
+-- Caption size for a button or one-line label: it shrinks to fit its box but
+-- never grows past `size`.
+-- `object` is a TextLabel or TextButton.
+function PanelKit.setTextSize(object: GuiObject, size: number): ()
+	(object :: TextLabel).TextSize = size
+	Responsive.capText(object, size)
+end
+
 -- A text line that wraps and grows downward (never shrinks to fit).
 function PanelKit.text(parent: Instance, content: string, kind: string?): TextLabel
 	local label = Instance.new("TextLabel")
@@ -124,10 +140,18 @@ function PanelKit.text(parent: Instance, content: string, kind: string?): TextLa
 	label.Size = UDim2.fromScale(1, 0)
 	label.AutomaticSize = Enum.AutomaticSize.Y
 	label.Font = if kind == "Heading" or kind == "Value" then PanelKit.FONT_BOLD else PanelKit.FONT
-	label.TextSize = if kind == "Value"
-		then 22
-		elseif kind == "Muted" then PanelKit.SMALL_SIZE
-		else PanelKit.TEXT_SIZE
+	-- Phones read slightly smaller text (Responsive.textScale), never below 12.
+	label.TextSize = math.max(
+		12,
+		math.floor(
+			(
+				if kind == "Value"
+					then 22
+					elseif kind == "Muted" then PanelKit.SMALL_SIZE
+					else PanelKit.TEXT_SIZE
+			) * Responsive.textScale()
+		)
+	)
 	label.TextColor3 = if kind == "Muted"
 		then C.Muted
 		elseif kind == "Heading" then C.Heading
@@ -172,11 +196,11 @@ function PanelKit.button(parent: Instance, content: string, color: Color3?): Tex
 	button.Size = UDim2.new(1, 0, 0, PanelKit.ROW_HEIGHT)
 	button.AutoButtonColor = false
 	button.Font = PanelKit.FONT_BOLD
-	button.TextSize = PanelKit.TEXT_SIZE
 	button.TextColor3 = C.Text
 	button.TextWrapped = true
 	button.Text = content
 	button.Parent = parent
+	PanelKit.setTextSize(button, PanelKit.TEXT_SIZE)
 	corner(button, 8)
 	local scale = Instance.new("UIScale")
 	scale.Parent = button
@@ -259,7 +283,7 @@ function PanelKit.section(
 	header.BackgroundTransparency = 1
 	local headerText = header :: TextLabel
 	headerText.Font = PanelKit.FONT_BOLD
-	headerText.TextSize = 18
+	headerText.TextSize = math.floor(18 * Responsive.textScale())
 	headerText.TextColor3 = C.Heading
 	headerText.TextXAlignment = Enum.TextXAlignment.Left
 	headerText.TextTruncate = Enum.TextTruncate.AtEnd
@@ -313,7 +337,7 @@ function PanelKit.statTile(
 	name.BackgroundTransparency = 1
 	name.Size = UDim2.new(1, 0, 0, 18)
 	name.Font = PanelKit.FONT
-	name.TextSize = PanelKit.SMALL_SIZE
+	name.TextSize = math.max(12, math.floor(PanelKit.SMALL_SIZE * Responsive.textScale()))
 	name.TextColor3 = C.Muted
 	name.TextXAlignment = Enum.TextXAlignment.Left
 	name.Text = labelText
@@ -324,7 +348,7 @@ function PanelKit.statTile(
 	valueLabel.Position = UDim2.fromOffset(0, 22)
 	valueLabel.Size = UDim2.new(1, 0, 1, -22)
 	valueLabel.Font = PanelKit.FONT_BOLD
-	valueLabel.TextSize = 24
+	PanelKit.setTextSize(valueLabel, 24)
 	valueLabel.TextColor3 = accent or C.Text
 	valueLabel.TextXAlignment = Enum.TextXAlignment.Left
 	valueLabel.TextTruncate = Enum.TextTruncate.AtEnd
@@ -439,7 +463,7 @@ function PanelKit.window(options: WindowOptions, parent: Instance): Window
 	close.AnchorPoint = Vector2.new(1, 0.5)
 	close.Position = UDim2.new(1, -14, 0.5, 2)
 	close.Size = UDim2.fromOffset(44, 44)
-	close.TextSize = 20
+	PanelKit.setTextSize(close, 20)
 
 	-- Navigation (sidebar or top strip) and the scrolling content.
 	local nav = Instance.new("ScrollingFrame")
@@ -469,27 +493,40 @@ function PanelKit.window(options: WindowOptions, parent: Instance): Window
 
 	local navButtons: { [string]: TextButton } = {}
 
-	local function layoutFor(compact: boolean): ()
+	-- `compact`: tabs on top instead of a sidebar. `short`: a slimmer header
+	-- (no subtitle) and tab strip, for windows with little height.
+	local function layoutFor(compact: boolean, short: boolean): ()
+		local headerHeight = if short then SHORT_HEADER_HEIGHT else HEADER_HEIGHT
+		local topnavHeight = if short then SHORT_TOPNAV_HEIGHT else TOPNAV_HEIGHT
+		header.Size = UDim2.new(1, 0, 0, headerHeight)
+		title.Position = UDim2.fromOffset(20, if short then 9 else 10)
+		title.TextSize = if short then 22 else 26
+		subtitle.Visible = not short
+		close.Size = if short then UDim2.fromOffset(40, 40) else UDim2.fromOffset(44, 44)
 		if compact then
-			nav.Position = UDim2.fromOffset(0, HEADER_HEIGHT)
-			nav.Size = UDim2.new(1, 0, 0, TOPNAV_HEIGHT + 12)
+			nav.Position = UDim2.fromOffset(0, headerHeight)
+			nav.Size = UDim2.new(1, 0, 0, topnavHeight + 12)
 			nav.ScrollingDirection = Enum.ScrollingDirection.X
 			navLayout.FillDirection = Enum.FillDirection.Horizontal
-			content.Position = UDim2.fromOffset(0, HEADER_HEIGHT + TOPNAV_HEIGHT + 12)
-			content.Size = UDim2.new(1, 0, 1, -(HEADER_HEIGHT + TOPNAV_HEIGHT + 12))
+			content.Position = UDim2.fromOffset(0, headerHeight + topnavHeight + 12)
+			content.Size = UDim2.new(1, 0, 1, -(headerHeight + topnavHeight + 12))
 		else
-			nav.Position = UDim2.fromOffset(0, HEADER_HEIGHT)
-			nav.Size = UDim2.new(0, SIDEBAR_WIDTH, 1, -HEADER_HEIGHT)
+			nav.Position = UDim2.fromOffset(0, headerHeight)
+			nav.Size = UDim2.new(0, SIDEBAR_WIDTH, 1, -headerHeight)
 			nav.ScrollingDirection = Enum.ScrollingDirection.Y
 			navLayout.FillDirection = Enum.FillDirection.Vertical
-			content.Position = UDim2.fromOffset(SIDEBAR_WIDTH, HEADER_HEIGHT)
-			content.Size = UDim2.new(1, -SIDEBAR_WIDTH, 1, -HEADER_HEIGHT)
+			content.Position = UDim2.fromOffset(SIDEBAR_WIDTH, headerHeight)
+			content.Size = UDim2.new(1, -SIDEBAR_WIDTH, 1, -headerHeight)
 		end
 		for _, button in navButtons do
 			button.Size = if compact
-				then UDim2.fromOffset(math.max(96, 14 + #button.Text * 9), TOPNAV_HEIGHT - 4)
+				then UDim2.fromOffset(math.max(96, 14 + #button.Text * 9), topnavHeight - 4)
 				else UDim2.new(1, 0, 0, PanelKit.ROW_HEIGHT)
 		end
+	end
+	local function relayout(): ()
+		local size = frame.AbsoluteSize
+		layoutFor(size.X > 0 and size.X < COMPACT_BELOW, size.Y > 0 and size.Y < SHORT_BELOW)
 	end
 
 	-- Fits the window to the screen: a share of it, bigger on small screens.
@@ -501,9 +538,7 @@ function PanelKit.window(options: WindowOptions, parent: Instance): Window
 			else UDim2.fromScale(0.62, 0.78)
 		limit.MinSize = Vector2.new(math.min(320, screen.X - 16), math.min(300, screen.Y - 16))
 	end
-	frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-		layoutFor(frame.AbsoluteSize.X < COMPACT_BELOW)
-	end)
+	frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(relayout)
 	local function watchCamera(camera: Camera?): ()
 		if camera then
 			camera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
@@ -515,7 +550,7 @@ function PanelKit.window(options: WindowOptions, parent: Instance): Window
 		fit()
 	end)
 	fit()
-	layoutFor(false)
+	layoutFor(false, false)
 
 	local openCallbacks: { () -> () } = {}
 	local closing = 0
@@ -584,7 +619,7 @@ function PanelKit.window(options: WindowOptions, parent: Instance): Window
 				end)
 				navButtons[tab.Id] = button
 			end
-			layoutFor(frame.AbsoluteSize.X > 0 and frame.AbsoluteSize.X < COMPACT_BELOW)
+			relayout()
 		end,
 		selectTab = function(_self: Window, id: string): ()
 			for tabId, button in navButtons do

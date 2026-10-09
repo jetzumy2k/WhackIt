@@ -13,6 +13,7 @@ local CombatRules = {}
 -- Everything that shapes one hit, gathered by the server (BuffService).
 export type HitStats = {
 	HammerDamage: number,
+	LevelDamage: number, -- character base damage from Player Level (Shared/LevelRules)
 	FlatBonus: number, -- e.g. the Zen buff's +10
 	DamageBonus: number, -- fraction, e.g. 0.05 for a +5 % damage boost
 	CritChance: number, -- 0..1
@@ -23,6 +24,7 @@ export type HitStats = {
 function CombatRules.baseStats(hammerDamage: number): HitStats
 	return {
 		HammerDamage = hammerDamage,
+		LevelDamage = 0,
 		FlatBonus = 0,
 		DamageBonus = 0,
 		CritChance = GameConfig.BaseCritChance,
@@ -40,7 +42,7 @@ function CombatRules.hitDamage(
 	critRoll: number
 ): (number, boolean)
 	local isCrit = critRoll < stats.CritChance
-	local raw = (stats.HammerDamage + stats.FlatBonus)
+	local raw = (stats.HammerDamage + stats.LevelDamage + stats.FlatBonus)
 		* (1 + stats.DamageBonus)
 		* boss.DamageTakenMultiplier
 	if isCrit then
