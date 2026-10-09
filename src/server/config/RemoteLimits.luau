@@ -25,6 +25,12 @@ local RemoteLimits = table.freeze({
 		RefillPerSecond = 1,
 	}),
 
+	-- Settings switches: a few quick toggles are fine; sustained spam is not.
+	Settings = table.freeze({
+		Capacity = 5,
+		RefillPerSecond = 1,
+	}),
+
 	-- At most one rejection warning per player every 5 seconds, so a flooding
 	-- client can't flood the server log too.
 	RejectLog = table.freeze({

@@ -142,6 +142,17 @@ on the Executive Floor without access.
 | Effect | `EquippedHammerId` saved; the held Tool is swapped (`HammerService.reequip`). Damage follows the saved id |
 | Response | `Profile.Sync` |
 
+## `Settings.Set`: client -> server (2026-10-09)
+| | |
+|---|---|
+| Purpose | Turn a player setting on or off (docs/UI.md "Settings") |
+| Arguments | `key: string, value: boolean`; `maxArgs` 2 |
+| Validation | `SettingsRules.parseChange`: `Validate.id` (≤ 32 characters) and a key listed in `Config/SettingsConfig`; `Validate.boolean` → otherwise `reject` |
+| Rate limit | `RemoteLimits.Settings`: burst 5, refill 1/s |
+| Server checks | data loaded (otherwise ignored) |
+| Effect | `Settings[key] = value`, saved with the profile. Settings are cosmetic: none changes damage, rewards or access |
+| Response | `Profile.Sync` |
+
 ## `Store.RequestPurchase`: client -> server
 | | |
 |---|---|
@@ -213,8 +224,8 @@ change. Display only.
 | | |
 |---|---|
 | Purpose | The player's own progression for the UI (HUD, shop, locked bosses) |
-| Payload | `Types.ProfileSnapshot`: `{ Coins, OwnedHammerIds, EquippedHammerId, BossDefeats, UnlockedBossIds, ZenLevel, Level, Xp, Buffs, MysteryHammers, AdminUnlocks, Bag }` |
-| When | on data load, after every reward, purchase and equip request |
+| Payload | `Types.ProfileSnapshot`: `{ Coins, OwnedHammerIds, EquippedHammerId, BossDefeats, UnlockedBossIds, ZenLevel, Level, Xp, Buffs, MysteryHammers, AdminUnlocks, Bag, Pets, EquippedPetId, Incubation, Settings }` |
+| When | on data load, after every reward, purchase, equip and `Settings.Set` request |
 | Client handling | display only; parsed defensively (`ProgressController`) |
 
 ## `Leaderboard.Snapshot`: server -> all clients (2026-10-07)

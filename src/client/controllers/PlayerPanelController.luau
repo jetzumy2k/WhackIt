@@ -16,7 +16,9 @@
 	             pet you own with Equip (-> Pets.Equip, checked by the server)
 	  Game       Hammer Shop, Robux Store, Bag (the existing panels), and the
 	             Admin Panel for admins
-	  Help       how to play, controls, music setting
+	  Settings   on/off switches saved with your data (SettingsController ->
+	             Settings.Set, checked by the server) and the music switch
+	  Help       how to play, controls
 
 	Stats update in place (text only) while the Profile page is open; the
 	other pages are rebuilt only when opened or when your profile changes.
@@ -33,6 +35,8 @@ local HammerConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChi
 local LevelRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("LevelRules"))
 local PetConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("PetConfig"))
 local PetRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PetRules"))
+local SettingsConfig =
+	require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("SettingsConfig"))
 local Types = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Types"))
 local StoreConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("StoreConfig"))
 
@@ -45,6 +49,7 @@ local LeaderboardController = require(script.Parent.LeaderboardController)
 local PanelKit = require(script.Parent.Parent.Lib.PanelKit)
 local Responsive = require(script.Parent.Parent.Lib.Responsive)
 local ProgressController = require(script.Parent.ProgressController)
+local SettingsController = require(script.Parent.SettingsController)
 local ShopController = require(script.Parent.ShopController)
 local StoreController = require(script.Parent.StoreController)
 
@@ -52,12 +57,14 @@ local PlayerPanelController = {}
 
 local ACCENT = Color3.fromRGB(70, 140, 230)
 local TOGGLE_KEY = Enum.KeyCode.M
+local GAMEPAD_TOGGLE_KEY = Enum.KeyCode.ButtonY
 local TABS = {
 	{ Id = "Profile", Label = "Profile" },
 	{ Id = "Hammers", Label = "Hammers" },
 	{ Id = "Pets", Label = "🐾 Pets" },
 	{ Id = "Events", Label = "Events" },
 	{ Id = "Game", Label = "Game" },
+	{ Id = "Settings", Label = "Settings" },
 	{ Id = "Help", Label = "Help" },
 }
 -- How a pet moves, as its "type" in the description (Config/PetConfig).
@@ -101,6 +108,7 @@ function PlayerPanelController.start(): ()
 		Accent = ACCENT,
 		DisplayOrder = 5,
 		Key = TOGGLE_KEY,
+		GamepadKey = GAMEPAD_TOGGLE_KEY,
 	}, playerGui)
 	local content = window.Content
 	local equipRemote =
@@ -119,6 +127,7 @@ function PlayerPanelController.start(): ()
 	open.Activated:Connect(function()
 		window:toggle()
 	end)
+	PanelKit.tooltip(open, "Menu  (M, or Y on a controller)")
 
 	local activeTab = "Profile"
 	-- Profile values updated in place: tile name -> value label.
@@ -126,6 +135,10 @@ function PlayerPanelController.start(): ()
 	local boostsText: TextLabel? = nil
 	local rankText: TextLabel? = nil
 	local levelText: TextLabel? = nil
+	local levelBar: PanelKit.ProgressBar? = nil
+	-- Settings page: setting key -> its switch, updated in place so a
+	-- gamepad selection stays where it is.
+	local settingToggles: { [string]: PanelKit.Toggle } = {}
 	-- Events page: countdown label -> the event's end (server time).
 	local eventCountdowns: { [TextLabel]: number } = {}
 	-- Pets page: the incubating egg's countdown label and end (server time).
@@ -158,6 +171,12 @@ function PlayerPanelController.start(): ()
 				"XP",
 				string.format("%s / %s", thousands(snapshot.Xp - floor), thousands(nextAt - floor))
 			)
+			if levelBar then
+				levelBar.set(
+					(snapshot.Xp - floor) / math.max(1, nextAt - floor),
+					string.format("Lv %d  →  Lv %d", level, level + 1)
+				)
+			end
 			set("Zen", "Zen Lv " .. snapshot.ZenLevel)
 			-- Character stats: the equipped hammer plus the permanent level bonus
 			-- (display only; boosts, pets and events add on top when hitting).
@@ -225,6 +244,7 @@ function PlayerPanelController.start(): ()
 			string.format("%s (@%s)", localPlayer.DisplayName, localPlayer.Name)
 		)
 		local grid = PanelKit.grid(you.Body, 170, 74)
+		levelBar = PanelKit.progressBar(you.Body, C.Primary)
 		tiles.Level = PanelKit.statTile(grid, "Level", "-", C.Heading)
 		tiles.XP = PanelKit.statTile(grid, "XP to next level", "-")
 		tiles.Score = PanelKit.statTile(grid, "Score", "-")
@@ -255,7 +275,7 @@ function PlayerPanelController.start(): ()
 	local function hammersPage(): ()
 		local snapshot = ProgressController.get()
 		if snapshot == nil then
-			PanelKit.text(content, "Your hammers are still loading...", "Muted")
+			PanelKit.notice(content, "Loading", "Your hammers are still loading...")
 			return
 		end
 		local owned: { [string]: boolean } = {}
@@ -374,7 +394,7 @@ function PlayerPanelController.start(): ()
 	local function petsPage(): ()
 		local snapshot = ProgressController.get()
 		if snapshot == nil then
-			PanelKit.text(content, "Your pets are still loading...", "Muted")
+			PanelKit.notice(content, "Loading", "Your pets are still loading...")
 			return
 		end
 
@@ -425,8 +445,7 @@ function PlayerPanelController.start(): ()
 		end
 
 		if #snapshot.Pets == 0 then
-			local empty = PanelKit.section(content, "🐾 My pets", false, true)
-			PanelKit.text(empty.Body, "No pets yet. Hatch an egg to get your first one!", "Muted")
+			PanelKit.notice(content, "Empty", "No pets yet. Hatch an egg to get your first one!")
 			return
 		end
 
@@ -525,11 +544,10 @@ function PlayerPanelController.start(): ()
 	local function eventsPage(): ()
 		local active = EventController.active()
 		if #active == 0 then
-			local none = PanelKit.section(content, "🎉 Active events", false, true)
-			PanelKit.text(
-				none.Body,
-				"No events right now. Admins announce them here when they start: XP boosts, outdoor bosses, boss drops and Hammer Shop sales.",
-				"Muted"
+			PanelKit.notice(
+				content,
+				"Empty",
+				"No events right now. Admins announce them here when they start: XP boosts, outdoor bosses, boss drops and Hammer Shop sales."
 			)
 			return
 		end
@@ -611,27 +629,41 @@ function PlayerPanelController.start(): ()
 			{
 				"Computer: click to swing, Shift to sprint, E to use, M for this menu.",
 				"Phone / tablet: tap to swing, the Sprint button to run.",
-				"Controller: R2 to swing, L3 to sprint.",
+				"Controller: R2 to swing, L3 to sprint, Y for this menu, B to close a panel.",
 			}
 		do
 			PanelKit.text(controls.Body, line)
 		end
-		local settings = PanelKit.section(content, "Settings", true, true)
-		if AudioController.hasMusic() then
-			local function label(): string
-				return if AudioController.isMuted() then "Music: Off" else "Music: On"
-			end
-			local toggle = PanelKit.button(settings.Body, label(), C.Neutral)
-			toggle.Activated:Connect(function()
-				AudioController.setMuted(not AudioController.isMuted())
-				toggle.Text = label()
-			end)
-		else
-			PanelKit.text(
-				settings.Body,
-				"No game settings yet. Roblox's own settings are in the Roblox menu.",
-				"Muted"
+		PanelKit.text(content, "Reduced motion and music are on the Settings page.", "Muted")
+	end
+
+	local function settingsPage(): ()
+		local motion = PanelKit.section(content, "Comfort", false, true)
+		PanelKit.text(motion.Body, "Saved with your progress, on every server.", "Muted")
+		for _, setting in SettingsConfig.List do
+			settingToggles[setting.Key] = PanelKit.toggle(
+				motion.Body,
+				setting.Label,
+				setting.Description,
+				SettingsController.get(setting.Key),
+				function(value: boolean)
+					SettingsController.set(setting.Key, value)
+				end
 			)
+		end
+		local sound = PanelKit.section(content, "Sound", false, true)
+		if AudioController.hasMusic() then
+			PanelKit.toggle(
+				sound.Body,
+				"Music",
+				"Background music. This one is kept on this device only.",
+				not AudioController.isMuted(),
+				function(value: boolean)
+					AudioController.setMuted(not value)
+				end
+			)
+		else
+			PanelKit.text(sound.Body, "There is no background music yet.", "Muted")
 		end
 	end
 
@@ -642,8 +674,9 @@ function PlayerPanelController.start(): ()
 		window:clear()
 		table.clear(tiles)
 		table.clear(eventCountdowns)
+		table.clear(settingToggles)
 		eggCountdown = nil
-		boostsText, rankText, levelText = nil, nil, nil
+		boostsText, rankText, levelText, levelBar = nil, nil, nil, nil
 		window:selectTab(activeTab)
 		if activeTab == "Profile" then
 			profilePage()
@@ -655,6 +688,8 @@ function PlayerPanelController.start(): ()
 			petsPage()
 		elseif activeTab == "Game" then
 			gamePage()
+		elseif activeTab == "Settings" then
+			settingsPage()
 		else
 			helpPage()
 		end
@@ -680,6 +715,11 @@ function PlayerPanelController.start(): ()
 	EventController.Changed:Connect(function()
 		if activeTab == "Events" then
 			render()
+		end
+	end)
+	SettingsController.Changed:Connect(function()
+		for key, toggle in settingToggles do
+			toggle.set(SettingsController.get(key))
 		end
 	end)
 	-- Countdowns tick only while the Events page is open.

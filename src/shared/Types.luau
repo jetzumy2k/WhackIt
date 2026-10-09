@@ -73,6 +73,8 @@ export type ProfileSnapshot = {
 	Pets: { OwnedPet },
 	EquippedPetId: string,
 	Incubation: IncubationView?,
+	-- On/off player settings (Config/SettingsConfig, Shared/SettingsRules).
+	Settings: { [string]: boolean },
 }
 
 export type OwnedPet = {

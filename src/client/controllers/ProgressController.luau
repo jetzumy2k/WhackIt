@@ -11,6 +11,8 @@ local CustomBossRules =
 	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CustomBossRules"))
 local ProgressionRules =
 	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ProgressionRules"))
+local SettingsRules =
+	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SettingsRules"))
 local Types = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Types"))
 
 local ProgressController = {}
@@ -187,6 +189,7 @@ local function parse(payload: unknown): Types.ProfileSnapshot?
 		Pets = parsePets(data.Pets),
 		EquippedPetId = if typeof(data.EquippedPetId) == "string" then data.EquippedPetId else "",
 		Incubation = parseIncubation(data.Incubation),
+		Settings = SettingsRules.sanitize(data.Settings),
 	}
 end
 

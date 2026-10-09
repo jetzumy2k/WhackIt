@@ -49,6 +49,58 @@ screen-size rules live in two places: `Lib/Responsive` for HUD buttons, popups a
 - Notes in the Store and Bag grow taller when their text wraps onto more lines.
 - Text shown from other players or admins (announcements, event names) has `RichText` off.
 
+## Design tokens (2026-10-09, `Lib/UiTokens`)
+Colours, fonts, text sizes, row height, corner radii, spacing and motion durations have names, so
+new screens match the old ones. They are the values PanelKit always used (`PanelKit.Colors` *is*
+`UiTokens.Color`), so no existing screen changed. Full list: `docs/UI_UX_DESIGN_SPEC.md` §1.
+
+## PanelKit pieces (2026-10-09)
+Besides windows, sections, rows, buttons, text, stat tiles and grids:
+| Piece | Use |
+|---|---|
+| `toggle(parent, label, description, value, onChange)` | an On / Off switch row (Settings page); `set` corrects it without calling `onChange` |
+| `progressBar(parent, accent)` | a bar with text over it; eases to each value (instant with Reduced motion). The Profile page's "Lv 4 → Lv 5" bar |
+| `notice(parent, kind, message, actionLabel?, onAction?)` | 📭 Empty, ⏳ Loading, ⚠️ Error or 🔒 Locked card with at most one button (loading pages, no pets, no events) |
+| `tooltip(object, text)` | a hint above a control: on hover, while selected with a gamepad, and for 2 s after a touch long-press. Use on unclipped controls (HUD buttons); the Menu button has one |
+| `confirmDialog(window, accent)` | "Are you sure?" with [Cancel] [Confirm]; the Admin panel's confirmations use it |
+
+## Settings (2026-10-09)
+Player Panel → **Settings**. Each switch is saved with the player's data (`Settings`, schema v9) and
+follows them to every server; a change shows at once and the server's next sync confirms it
+(`SettingsController` → `Settings.Set`, docs/REMOTE_CONTRACTS.md). Settings are cosmetic.
+| Setting | Default | Effect |
+|---|---|---|
+| Reduced motion | Off | see below |
+| Music | On | the existing music switch (kept on this device only, as before); shown only when there is music |
+
+Adding a setting: an entry in `Config/SettingsConfig` and the code that reads it
+(`SettingsController.get(key)`). Saved data needs no migration.
+
+### Reduced motion
+On when the player's switch is on **or** Roblox's own Reduced Motion setting is on
+(`GuiService.ReducedMotionEnabled`). Then:
+- Player and Admin panels, dialogs and notification cards appear and disappear without zooming;
+- the Stress bar and progress bars jump to their new value;
+- hits don't shake the camera, and sprinting doesn't zoom the camera out.
+
+Unchanged: button hover feedback, hit sparkles and floating damage numbers (small and short), and the
+slow decorative loops (vending machine, NPCs) and the short egg-hatching wobble. Nothing in the game is shown by motion alone.
+Code asks `UiTokens.reducedMotion()` or wraps a `TweenInfo` in `UiTokens.motion(info)`.
+
+## Gamepad (2026-10-09, `Lib/GamepadNav`)
+| Button | Does |
+|---|---|
+| Y | opens / closes the Player Panel |
+| D-pad / left stick | moves between controls in an open panel |
+| A | presses the selected control |
+| B | closes the panel opened last (a confirm dialog first, as Cancel) |
+
+When a panel opens with a gamepad in use, its first control is selected, never its close X. In
+a confirm dialog **Cancel** is selected first, so pressing A by habit never confirms. When a page is
+rebuilt the selection moves back to the panel's first control, and switches update in place so the
+selection stays put. Covered: the Player and Admin panels, the Hammer Shop, the Store (and its gift
+picker) and the Bag. Mouse, touch and keyboard players never get a selection highlight.
+
 ## Checking a layout
 Studio → Test → **Device** emulator, then each of: 1920x1080, 1600x900, 1366x768, a small window, a
 tablet (landscape and portrait) and a phone (landscape and portrait). Look for overlap, clipping,

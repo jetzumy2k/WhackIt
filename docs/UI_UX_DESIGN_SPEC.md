@@ -23,7 +23,11 @@ so existing screens don't change.
 | `Motion.Open` / `Hover` | 0.12 s / 0.08 s | panel scale-in, button feedback |
 | `Motion.Card` | show 0.22 s Back-Out, hide 0.15 s Quad-In | notification and result cards |
 
-New tokens (Phase 1): `Space` 4/8/12/16/24 px; `Radius` 6/10/16 px; `Layer` z-order (HUD 1, Chip 5,
+Implemented in Phase 1 (2026-10-09): `Color`, `Font`, `Text`, `Size`, `Radius` (Button 8, Tile 10,
+Card 12, Window 16), `Space` (4/8/12/16/24) and `Motion`. The remaining tokens below come with the
+first screen that uses them (Phase 2a).
+
+Planned: `Layer` z-order (HUD 1, Chip 5,
 Panel 10, Modal 20, Notice 30, Toast 40); `Color.Gold/Silver/Bronze` for rankings (copied from the
 Hall of Calm board); `Color.Valid/Invalid` for furniture previews (Good / Danger at 50 % transparency).
 

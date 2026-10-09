@@ -19,6 +19,7 @@ local GameplayController = require(script.Parent.GameplayController)
 local LevelRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("LevelRules"))
 local ProgressController = require(script.Parent.ProgressController)
 local Responsive = require(script.Parent.Parent.Lib.Responsive)
+local UiTokens = require(script.Parent.Parent.Lib.UiTokens)
 
 local UIController = {}
 
@@ -118,7 +119,8 @@ local function buildHud(): (ScreenGui, Frame)
 	Responsive.capText(stressLabel, 22)
 
 	-- The fill eases to each new value (hits and passive rises) instead of
-	-- jumping; one short tween per change, replacing the previous one.
+	-- jumping (it jumps with Reduced motion); one short tween per change,
+	-- replacing the previous one.
 	local stressTween: Tween? = nil
 	local function refreshStress(): ()
 		local stress = localPlayer:GetAttribute(Attributes.Stress)
@@ -129,7 +131,9 @@ local function buildHud(): (ScreenGui, Frame)
 		end
 		local tween = TweenService:Create(
 			stressFill,
-			TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+			UiTokens.motion(
+				TweenInfo.new(UiTokens.Motion.Bar, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+			),
 			{ Size = UDim2.fromScale(ratio, 1) }
 		)
 		stressTween = tween

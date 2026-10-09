@@ -570,65 +570,13 @@ function AdminController.start(): ()
 		end)
 	end
 
-	-- A button that needs a second click within CONFIRM_SECONDS.
 	-- A small "Are you sure?" dialog over the panel: [Cancel] [Confirm].
-	local dialog = Instance.new("Frame")
-	dialog.Name = "ConfirmDialog"
-	dialog.AnchorPoint = Vector2.new(0.5, 0.5)
-	dialog.Position = UDim2.fromScale(0.5, 0.5)
-	dialog.Size = UDim2.fromScale(0.8, 0)
-	dialog.AutomaticSize = Enum.AutomaticSize.Y
-	dialog.BackgroundColor3 = PanelKit.Colors.Header
-	dialog.ZIndex = 20
-	dialog.Visible = false
-	dialog.Parent = window.Frame
-	corner(dialog)
-	local dialogLimit = Instance.new("UISizeConstraint")
-	dialogLimit.MaxSize = Vector2.new(420, math.huge)
-	dialogLimit.Parent = dialog
-	local dialogStroke = Instance.new("UIStroke")
-	dialogStroke.Color = DANGER_COLOR
-	dialogStroke.Thickness = 2
-	dialogStroke.Parent = dialog
-	local dialogPadding = Instance.new("UIPadding")
-	dialogPadding.PaddingLeft = UDim.new(0, 14)
-	dialogPadding.PaddingRight = UDim.new(0, 14)
-	dialogPadding.PaddingTop = UDim.new(0, 12)
-	dialogPadding.PaddingBottom = UDim.new(0, 12)
-	dialogPadding.Parent = dialog
-	local dialogLayout = Instance.new("UIListLayout")
-	dialogLayout.Padding = UDim.new(0, 10)
-	dialogLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	dialogLayout.Parent = dialog
-	local dialogText = PanelKit.text(dialog, "", "Heading")
-	dialogText.ZIndex = 21
-	local dialogRow = PanelKit.row(dialog)
-	dialogRow.ZIndex = 21
-	local dialogCancel = PanelKit.button(dialogRow, "Cancel", PanelKit.Colors.Neutral)
-	dialogCancel.Size = UDim2.new(0.5, -4, 1, 0)
-	dialogCancel.ZIndex = 22
-	local dialogConfirm = PanelKit.button(dialogRow, "Confirm", DANGER_COLOR)
-	dialogConfirm.Size = UDim2.new(0.5, -4, 1, 0)
-	dialogConfirm.ZIndex = 22
-	local pendingConfirm: (() -> ())? = nil
-	dialogCancel.Activated:Connect(function()
-		pendingConfirm = nil
-		dialog.Visible = false
-	end)
-	dialogConfirm.Activated:Connect(function()
-		local action = pendingConfirm
-		pendingConfirm = nil
-		dialog.Visible = false
-		if action then
-			action()
-		end
-	end)
+	local confirmDialog = PanelKit.confirmDialog(window, DANGER_COLOR)
 	local function askConfirm(message: string, action: () -> ()): ()
-		dialogText.Text = message
-		pendingConfirm = action
-		dialog.Visible = true
+		confirmDialog.ask(message, "Confirm", action)
 	end
 
+	-- A button that needs a second click within CONFIRM_SECONDS.
 	local function confirmButton(clickable: TextButton, action: () -> ()): ()
 		local armedAt = 0
 		local original = clickable.Text

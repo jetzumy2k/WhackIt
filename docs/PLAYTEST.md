@@ -505,3 +505,26 @@ Specs first: `Shared/StressRules`, `Shared/EventRules`, `Shared/PetRules`, `Clie
 | 333 | EQUIP PET / UNEQUIP PET in the details card | Pet appears / disappears at once; owned list unchanged; damage and XP bonuses follow (only the equipped pet's) |
 | 334 | Equip, respawn, rejoin, switch pets several times; hit a boss | Damage the same every time for the same pet (no stacked buffs) |
 | 335 | Output | No errors from AdminController, AdminService, HistoryService, EventService, PetService |
+
+## GUI foundation: settings, reduced motion, gamepad (2026-10-09, major update Phase 1)
+Specs first: `Client/UiTokens`, `Client/GamepadNav`, `Client/PanelKit`, `Shared/SettingsRules`,
+`Config/SettingsConfig`, `Server/PlayerDataSchema` (v9). For the gamepad rows, plug in a controller
+(or use Studio's controller emulator).
+
+| # | Check | Expected |
+|---|---|---|
+| 336 | Open every panel (Player Panel pages, Admin Panel, Hammer Shop, Store, Bag) on desktop and phone | Looks exactly as before: same colours, fonts, sizes and corners |
+| 337 | Player Panel → Profile | A blue "Lv N → Lv N+1" bar under the stat tiles, filled to your XP progress; it moves when you earn XP |
+| 338 | Player Panel → Settings | "Comfort" card with **Reduced motion** (Off) and its description; "Sound" card (music switch, or "no background music yet") |
+| 339 | Turn Reduced motion On, then open/close the Player Panel, get a notification card, hit a boss, sprint | Panel and card appear and vanish with no zoom; no camera shake on hits; no zoom-out while sprinting; the Stress bar jumps instead of easing |
+| 340 | Rejoin (API access on) or a second server | Reduced motion is still On; turn it Off again: everything animates as before |
+| 341 | Help page | Controls list "Y for this menu, B to close a panel"; a line points to the Settings page |
+| 342 | Pets page with no pets; Events page with no events | 📭 cards with the same sentences as before |
+| 343 | Hover the ☰ Menu button (desktop); long-press it (phone) | Tooltip "Menu (M, or Y on a controller)"; on phone it hides after ~2 s |
+| 344 | Controller: press Y | Player Panel opens with a tab selected (not the X); D-pad moves; A presses; switching tabs keeps a selection |
+| 345 | Controller: Settings page → A on Reduced motion | It flips On/Off and the selection stays on the switch |
+| 346 | Controller: open the Hammer Shop, Store, Bag (via Player Panel → Game) | The first control (not Close) is selected; B closes the panel |
+| 347 | Controller: Admin Panel → an action with a confirm (e.g. Stop event) | **Cancel** is selected first; B cancels; Confirm still works |
+| 348 | Mouse and touch players | Never see a selection highlight |
+| 349 | Command bar / exploit: `Remotes.Settings.Set:FireServer("ReducedMotion", "yes")`, `("Coins", true)`, 20 times in a row | Rejected and logged (at most once per 5 s); nothing saved; rate limit holds |
+| 350 | Output | No errors from PanelKit, GamepadNav, SettingsController, SettingsService, PlayerPanelController |

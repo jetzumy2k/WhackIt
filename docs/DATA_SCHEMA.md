@@ -13,10 +13,10 @@ validation live in `src/server/lib/PlayerDataSchema.luau`; storage settings in
 | Session locking | ProfileStore | One server owns a profile at a time, so progress can't be duplicated by joining two servers |
 | Auto-save | ProfileStore | Periodic, plus on leave (`EndSession`) and server shutdown |
 
-## Schema v8 (current)
+## Schema v9 (current)
 ```lua
 type PlayerData = {
-    SchemaVersion: number,        -- 8
+    SchemaVersion: number,        -- 9
     Score: number,                -- lifetime score (integer, 0..2^50); shown in leaderstats
     Stress: number,               -- Stress Meter, 0..GameConfig.MaxStress, carries over between sessions
     TotalHits: number,            -- accepted hammer hits (integer, 0..2^50)
@@ -50,6 +50,8 @@ type PlayerData = {
     EquippedPetId: string,        -- "" = no pet out; must be an owned pet
     Incubation: {EggKey, Rarity, StartedAt, EndsAt, IncubatorIndex, Pet}?, -- egg incubating now (unix
                                   -- seconds) and the pet it will hatch (never sent to the client early)
+    -- v9 (docs/UI.md "Settings")
+    Settings: {[key]: boolean},   -- on/off player settings (Config/SettingsConfig), e.g. ReducedMotion
 }
 ```
 New players start from `PlayerDataSchema.template()`: `StartingScore`, `StartingStress`, `StartingCoins`,
@@ -65,6 +67,7 @@ zero counters, `DefaultHammerId`, nothing bought, no defeats.
 | v5 | `AdminUnlocks = {}` |
 | v6 | `Bag = {}`, `ClaimedGifts = {}` (earlier purchases were already used) |
 | v8 | Pets (2026-10-08): `Pets = {}`, `NextPetNumber = 1`, `EquippedPetId = ""`, `Incubation = nil`. Eggs are ordinary Bag items (`egg_common`, `egg_rare`, `egg_mythical`). |
+| v9 | Settings (2026-10-09): `Settings = {}`; sanitize fills every known setting with its default (`ReducedMotion = false`). |
 | v7 | Mystery Hammers (2026-10-08): each saved hammer without `BonusDamagePercent` gets `StoreConfig.Mystery.LegacyBonusDamagePercent` (15); `sanitize` then sets `Damage` to the fixed base (35). Old hammers rolled 20-35 damage, so every one ends up at least as strong. The crit roll is kept. The bump also stops older servers, which would drop the new field, from loading and saving this data. |
 
 Sanitizing v4: unknown buff kinds are dropped and buff values clamped. Purchase ids must be strings.
@@ -103,10 +106,16 @@ pet; `NextPetNumber` is raised past every used id; a broken `Incubation` is drop
 back into the Bag**. Writers: `PetService` → `Pets`, `NextPetNumber`, `EquippedPetId`, `Incubation`,
 `Bag` (eggs into incubators, world eggs claimed).
 
+Sanitizing v9: `Settings` is rebuilt by `SettingsRules.sanitize`: every setting in `Config/SettingsConfig`
+is present (its default when missing or not a boolean); settings this server doesn't know are **kept**
+if their key is id-like (≤ 32 characters) and their value a boolean, at most 32 of them, so a newer
+server's setting survives a rolling update. **Adding a setting needs no migration.** Writer:
+`SettingsService` → `Settings` (via `Settings.Set`).
+
 Player history and the admin audit log are **not** player data either: DataStore `PlayerHistory`,
 keys `Player_<UserId>` (last 200 entries) and `Admin_<YYYYMMDD>` (up to 500 per UTC day), written
-in batches by `Services/HistoryService` (docs/ADMIN.md "History tab"). The player profile schema is
-unchanged (still v8).
+in batches by `Services/HistoryService` (docs/ADMIN.md "History tab"). They did not change the profile
+schema (v8 at the time).
 
 Events are **not** player data: DataStore `Events`, key `Global`, validated by
 `Shared/EventRules.parseStore` on every load (docs/EVENTS.md).

@@ -630,4 +630,40 @@ return function()
 			expect((data.Bag :: { [string]: number }).egg_mythical).to.equal(2)
 		end)
 	end)
+
+	describe("PlayerDataSchema v9 (settings)", function()
+		it("gives existing players the default settings and touches nothing else", function()
+			local data = validData()
+			data.SchemaVersion = 8
+			expect((PlayerDataSchema.prepare(data))).to.equal(true)
+			expect(data.SchemaVersion).to.equal(PlayerDataSchema.CURRENT_VERSION)
+			local settings = data.Settings :: { [string]: boolean }
+			expect(settings.ReducedMotion).to.equal(false)
+			expect(data.Coins).to.equal(250)
+			expect(data.Xp).to.equal(1500)
+		end)
+
+		it("starts new players with the default settings", function()
+			expect(PlayerDataSchema.template().Settings.ReducedMotion).to.equal(false)
+		end)
+
+		it("keeps saved settings, including ones a newer server added", function()
+			local data = validData()
+			data.Settings = { ReducedMotion = true, FutureSwitch = false }
+			PlayerDataSchema.prepare(data)
+			PlayerDataSchema.prepare(data) -- loading again changes nothing
+			local settings = data.Settings :: { [string]: boolean }
+			expect(settings.ReducedMotion).to.equal(true)
+			expect(settings.FutureSwitch).to.equal(false)
+		end)
+
+		it("repairs broken settings instead of failing", function()
+			for _, broken in { "on", 5, { ReducedMotion = "yes" } } :: { unknown } do
+				local data = validData()
+				data.Settings = broken
+				expect((PlayerDataSchema.prepare(data))).to.equal(true)
+				expect((data.Settings :: { [string]: boolean }).ReducedMotion).to.equal(false)
+			end
+		end)
+	end)
 end
