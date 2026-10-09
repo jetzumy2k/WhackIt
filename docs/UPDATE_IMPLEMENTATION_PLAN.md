@@ -137,8 +137,8 @@ no editing others' rooms) and the migration of a v8 profile.
 ## 5. Phase 4: Recreation Center and pickleball
 
 **Status (2026-10-10):** 🟡 implemented on branch `feat/phase4-pickleball` (docs/PICKLEBALL.md), schema
-**v12**; `scripts/check.ps1` passes; Studio specs and the playtest (`docs/PLAYTEST.md` "Pickleball",
-393–422) not run yet. D4–D6 accepted by the owner. Changes from the plan below:
+**v12**; `scripts/check.ps1` passes; Studio specs **693 passed, 0 failed** (2026-10-10); the playtest
+(`docs/PLAYTEST.md` "Pickleball", 393–422) not run yet. D4–D6 accepted by the owner. Changes from the plan below:
 - **Split into 4a and 4b.** 4a (this branch): challenges, matches, rules, rewards, supplies, the Elo
   rating with its season reset. 4b (next): the seasonal leaderboard (ordered store per season) and
   the top-10 season prizes. v12 already saves `SeasonId` and `SeasonClaims`, so 4b needs no migration.
