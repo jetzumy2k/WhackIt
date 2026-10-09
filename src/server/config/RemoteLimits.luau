@@ -31,6 +31,18 @@ local RemoteLimits = table.freeze({
 		RefillPerSecond = 1,
 	}),
 
+	-- Office furniture edits (place, move, remove): quick rearranging is fine.
+	Office = table.freeze({
+		Capacity = 8,
+		RefillPerSecond = 3,
+	}),
+
+	-- Office travel and privacy (teleports, friend look-ups): rare actions.
+	OfficeTravel = table.freeze({
+		Capacity = 3,
+		RefillPerSecond = 0.5,
+	}),
+
 	-- At most one rejection warning per player every 5 seconds, so a flooding
 	-- client can't flood the server log too.
 	RejectLog = table.freeze({

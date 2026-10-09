@@ -711,6 +711,7 @@ return function()
 			local template = PlayerDataSchema.template()
 			expect(template.LevelRewardsClaimed).to.equal(1)
 			expect(template.Cosmetics.Trail).to.equal("")
+			expect(template.Cosmetics.Office).to.equal("")
 		end)
 
 		it("repairs broken reward fields", function()
@@ -722,6 +723,69 @@ return function()
 			local looks = data.Cosmetics :: { Trail: string, Glow: string }
 			expect(looks.Trail).to.equal("")
 			expect(looks.Glow).to.equal("ocean")
+		end)
+	end)
+
+	describe("PlayerDataSchema v11 (offices)", function()
+		local FurnitureRules = require(ReplicatedStorage.Shared.FurnitureRules)
+
+		it("gives existing players a furnished office, Public, and touches nothing else", function()
+			local data = validData()
+			data.SchemaVersion = 10
+			expect((PlayerDataSchema.prepare(data))).to.equal(true)
+			local layout = data.OfficeLayout :: FurnitureRules.Layout
+			expect(#layout).to.equal(#FurnitureRules.defaultLayout())
+			expect(data.NextOfficeItemId).to.equal(#layout + 1)
+			expect(data.OfficePrivacy).to.equal("Public")
+			expect((next(data.Furniture :: {}))).to.equal(nil)
+			expect(data.Coins).to.equal(250)
+		end)
+
+		it("starts new players with the same furnished office", function()
+			local template = PlayerDataSchema.template()
+			expect(#template.OfficeLayout).to.equal(#FurnitureRules.defaultLayout())
+			expect(template.OfficePrivacy).to.equal("Public")
+		end)
+
+		it("keeps a saved layout, an emptied office and owned trophies exactly", function()
+			local data = validData()
+			data.Furniture = { trophy_gold = 1 }
+			data.OfficeLayout = {
+				{ Id = 5, Item = "trophy_gold", X = 0, Z = 0, R = 90 },
+				{ Id = 8, Item = "sofa", X = 0, Z = -10, R = 0 },
+			}
+			data.NextOfficeItemId = 12
+			data.OfficePrivacy = "Friends"
+			PlayerDataSchema.prepare(data)
+			PlayerDataSchema.prepare(data) -- loading again changes nothing
+			local layout = data.OfficeLayout :: FurnitureRules.Layout
+			expect(#layout).to.equal(2)
+			expect(layout[1].R).to.equal(90)
+			expect(data.NextOfficeItemId).to.equal(12) -- ids are never reused
+			expect(data.OfficePrivacy).to.equal("Friends")
+			expect((data.Furniture :: FurnitureRules.Owned).trophy_gold).to.equal(1)
+
+			local empty = validData()
+			empty.OfficeLayout = {}
+			PlayerDataSchema.prepare(empty)
+			expect(#(empty.OfficeLayout :: FurnitureRules.Layout)).to.equal(0) -- not refilled
+		end)
+
+		it("drops furniture that isn't valid and repairs broken office fields", function()
+			local data = validData()
+			data.Furniture = "lots"
+			data.OfficeLayout = {
+				{ Id = 1, Item = "trophy_gold", X = 0, Z = 0, R = 0 }, -- not owned any more
+				{ Id = 2, Item = "desk_basic", X = 0, Z = 0, R = 0 },
+			}
+			data.NextOfficeItemId = -4
+			data.OfficePrivacy = "Everyone"
+			expect((PlayerDataSchema.prepare(data))).to.equal(true)
+			local layout = data.OfficeLayout :: FurnitureRules.Layout
+			expect(#layout).to.equal(1)
+			expect(layout[1].Item).to.equal("desk_basic")
+			expect(data.NextOfficeItemId).to.equal(3)
+			expect(data.OfficePrivacy).to.equal("Public")
 		end)
 	end)
 end

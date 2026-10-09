@@ -20,6 +20,12 @@ screen-size rules live in two places: `Lib/Responsive` for HUD buttons, popups a
     🔨 Hammers. On desktop it's bottom-right; on touch screens it's top-right, because Roblox's jump
     button owns the bottom-right corner, and in portrait it starts below the score and boost lines.
     Hidden buttons close the gap.
+- **🏢 Social (2026-10-09):** the last button in the column; opens the Player Panel on its Social page
+  (offices, docs/OFFICES.md).
+- **Office bar and furniture strip (2026-10-09):** in an office, a bar at the bottom centre (above the
+  XP bar) shows whose office it is with ✏️ Edit / 🚪 Lobby (60 % wide on phones). Edit mode swaps it
+  for the furniture strip along the bottom (96 % wide, at most 940 px, 214 px tall); on phones it covers
+  the thumbstick until ✓ Done.
 - **Sprint (touch only):** just left of the jump button.
 - **Popups (Store, Hammers, Bag):** 96 % x 90 % of a phone screen, their normal share elsewhere.
   Their minimum size never exceeds the screen. Store tabs scroll sideways when they don't fit.

@@ -1,9 +1,10 @@
 --!strict
 --[[
 	Level reward looks (docs/GAMEPLAY_RULES.md "Level rewards"): the hammer
-	trail and Zen glow a player picked from the ones their level unlocked.
+	trail, Zen glow and office theme a player picked from the ones their
+	level unlocked (the office theme is painted by OfficeService).
 
-	  * Level.SetCosmetic(kind, id): "Trail" or "Glow", and "" (default) or a
+	  * Level.SetCosmetic(kind, id): "Trail", "Glow" or "Office", and "" (default) or a
 	    LevelRewardConfig id the player's level has unlocked. Saved in
 	    PlayerData.Cosmetics.
 	  * The look in use is published as the TrailStyle / GlowStyle player
@@ -22,6 +23,7 @@ local Attributes = require(ReplicatedStorage.Shared.Attributes)
 local HammerService = require(script.Parent.HammerService)
 local LevelRewardRules = require(ReplicatedStorage.Shared.LevelRewardRules)
 local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
+local OfficeService = require(script.Parent.OfficeService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressService = require(script.Parent.ProgressService)
 local RemoteController = require(ServerScriptService.Controllers.RemoteController)
@@ -49,6 +51,7 @@ local function apply(player: Player): ()
 	if trailChanged then
 		HammerService.reequip(player)
 	end
+	OfficeService.applyTheme(player)
 end
 
 local function onSetCosmetic(player: Player, rawKind: unknown, rawId: unknown): ()
@@ -65,8 +68,10 @@ local function onSetCosmetic(player: Player, rawKind: unknown, rawId: unknown): 
 	if LevelRewardRules.isUnlocked(kind, id, LevelRules.levelFor(data.Xp)) then
 		if kind == "Trail" then
 			data.Cosmetics.Trail = id
-		else
+		elseif kind == "Glow" then
 			data.Cosmetics.Glow = id
+		else
+			data.Cosmetics.Office = id
 		end
 		apply(player)
 	end

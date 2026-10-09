@@ -353,15 +353,15 @@ Levels have a purpose (`Config/LevelRewardConfig`, `Shared/LevelRewardRules`, Pl
 | Level | Unlock | Level | Unlock |
 |---|---|---|---|
 | 5 | title Junior Associate | 55 | Galaxy Trail |
-| 10 | title Associate, the Senior floor | 60 | title Director |
+| 10 | title Associate, the Senior floor, Warm Wood office theme | 60 | title Director, Night Sky office theme |
 | 15 | Mint Trail, Fire Hammer in the shop | 65 | Aurora Glow |
-| 20 | title Senior Associate, Lightning Hammer | 70 | Lava Trail |
+| 20 | title Senior Associate, Lightning Hammer, Executive Desk | 70 | Lava Trail |
 | 25 | Ocean Glow | 75 | title Vice President |
-| 30 | title Team Lead, Cosmic Hammer | 80 | Violet Glow |
+| 30 | title Team Lead, Cosmic Hammer, Aquarium | 80 | Violet Glow |
 | 35 | Sunset Trail | 85 | Ice Trail |
-| 40 | title Manager, Stress Crusher | 90 | Sunburst Glow |
+| 40 | title Manager, Stress Crusher, Garden office theme | 90 | Sunburst Glow, Royal Gold office theme |
 | 45 | Rose Glow | 95 | Prism Trail |
-| 50 | title Senior Manager | 100 | title **Chief Calm Officer**, golden name tag 👑 |
+| 50 | title Senior Manager, Zen Fountain | 100 | title **Chief Calm Officer**, golden name tag 👑, Golden Hammer Statue |
 
 - **Titles** follow the level on their own: the head tag reads "Lv 23 · Senior Associate" (MoodService),
   gold with a crown at Level 100. Level 1 is "Intern".
@@ -374,7 +374,8 @@ Levels have a purpose (`Config/LevelRewardConfig`, `Shared/LevelRewardRules`, Pl
   shows "🔒 Lv 30". Hammers you already own stay yours and can always be equipped.
 - **Career (major update):** these titles *are* the career ranks; there is no separate career level
   (docs/MAJOR_GAME_UPDATE.md §21.4). Quests, pickleball and co-op will give XP.
-- **Later (docs/OFFICES.md, Phase 2a):** office themes and level-reward furniture join the track.
+- **Office rewards (docs/OFFICES.md):** office themes (walls and carpet) are a third look picked on
+  the 🏅 Levels page; level-reward furniture appears in the office editor's "Level rewards" tab.
 
 ### XP bar
 A thin blue bar along the bottom edge of the screen shows progress to the next level
@@ -553,11 +554,13 @@ screens), cards, scrolling content, a quick scale-in/out animation and a close X
 | 🏅 Levels (2026-10-09) | your title and next reward, trail and Zen glow pickers, the whole reward track |
 | Hammers | equipped hammer and its damage; every hammer you own with **Equip** (the existing `Shop.EquipHammer`, server-checked); a link to the Hammer Shop; your Bag's item count and **Open Bag** |
 | Game | shortcuts to the Hammer Shop, the Robux Store, the Bag (the existing panels) and, for admins, the Admin Panel; where things are in the office |
+| 🏢 Social (2026-10-09) | your office (go there, edit, who can visit) and every office in the server to visit (docs/OFFICES.md); also the 🏢 Social HUD button |
 | Settings (2026-10-09) | saved on/off switches (Reduced motion) and the music switch when there is music (docs/UI.md "Settings") |
 | Help | how to play, controls (computer, phone, controller) |
 
-It only shows what already exists and only displays server data; its only remote is
-`Settings.Set` for the Settings page (2026-10-09). The
+It only shows what already exists and only displays server data; its own requests are
+`Settings.Set` (Settings page) and the `Office.*` trips and privacy (Social page, 2026-10-09), all
+checked by the server. The
 existing HUD buttons (Hammers, Store, Bag, Admin, Music) all still work.
 
 ## Lobby lounge NPCs (2026-10-07)

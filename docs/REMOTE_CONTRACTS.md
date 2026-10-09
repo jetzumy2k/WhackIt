@@ -25,6 +25,11 @@ bound every list (for example at most 11 hammer ids in an event).
 Abuse thresholds live in `ServerScriptService.Config.RemoteLimits`, not `ReplicatedStorage`,
 so clients can't read them.
 
+**Naming (2026-10-10):** never name a remote (or its folder) after an Instance member such as
+`Remove`, `Destroy`, `Clone`, `Name` or `Parent`. `Remotes.Office.Remove` returned the deprecated
+`Instance:Remove` method instead of the RemoteEvent, which stopped the server from booting (every
+door stayed locked). `scripts/check.ps1` ("Remote names") now fails on any such clash.
+
 ---
 
 ## `Combat.RequestHammerHit`: client -> server
@@ -101,6 +106,19 @@ so clients can't read them.
 | When | an event starts or ends while this server runs (not for events already running when the server started) |
 | Client handling | display only: the notification card |
 
+## Office (docs/OFFICES.md, 2026-10-09)
+| Remote | Direction | Payload | Server checks / handling |
+|---|---|---|---|
+| `Office.Go` | client -> server | `userId: number?` (nil = own office); `maxArgs` 1, `RemoteLimits.OfficeTravel` (burst 3, 0.5/s) | `Validate.integer` (else rejected); that player is in this server with a room; privacy: Public, Friends (`IsFriendsWithAsync`, cached per pair) or the owner. Otherwise a toast. Teleports to the room's arrival spot (`MovementGuardService.noteTeleport`) |
+| `Office.Return` | client -> server | none; `maxArgs` 0, `RemoteLimits.OfficeTravel` | only if the sender stands in an office room; teleports to the lobby spawn |
+| `Office.Place` | client -> server | `itemKey: string, x: number, z: number, r: number`; `maxArgs` 4, `RemoteLimits.Office` (burst 8, 3/s) | key in `FurnitureConfig` (else rejected); whole x, z within ±20 and r one of 0/90/180/270 (else rejected); sender stands in **their own** room; `FurnitureRules.check` (walls, door, overlaps, 60-item cap, Special items owned). A refusal is a toast + `Profile.Sync`. Adds `{Id = NextOfficeItemId, ...}` to `OfficeLayout`, redraws the room |
+| `Office.Move` | client -> server | `itemId: number, x, z, r`; `maxArgs` 4, `RemoteLimits.Office` | id a whole number (else rejected); same position checks; the entry must exist (else just a re-sync); checked ignoring itself |
+| `Office.RemoveItem` | client -> server | `itemId: number`; `maxArgs` 1, `RemoteLimits.Office` | id a whole number; own room; removes the entry if it exists |
+| `Office.SetPrivacy` | client -> server | `"Public" \| "Friends" \| "Private"`; `maxArgs` 1, `RemoteLimits.OfficeTravel` | one of the three (else rejected). Saved; the directory is re-sent; the guard (every 1 s) sends visitors no longer allowed to the lobby |
+| `Office.Directory` | server -> all clients | `{ SlotCount, Offices = { { UserId, Name, Username, Privacy, Slot } } }` | when an office is assigned or freed or a privacy changes, and to each player when their data loads; display only |
+
+Prompt (no RemoteEvent): each office door's **Back to lobby** (any player in that room).
+
 ## Pets (docs/PETS.md, 2026-10-08)
 | Remote | Direction | Payload | Server checks / handling |
 |---|---|---|---|
@@ -156,7 +174,7 @@ on the Executive Floor without access.
 ## Level (docs/GAMEPLAY_RULES.md "Level rewards", 2026-10-09)
 | Remote | Direction | Payload | Server checks / handling |
 |---|---|---|---|
-| `Level.SetCosmetic` | client -> server | `kind: "Trail" \| "Glow", id: string` (`""` = default); `maxArgs` 2, `RemoteLimits.Settings` | `LevelRewardRules.parseChoice`: known kind and `""` or a known id (else rejected); the player's level unlocks it (else ignored, a UI race). Saves `Cosmetics`, sets `TrailStyle` / `GlowStyle` (re-equips the hammer for a new trail); `Profile.Sync` |
+| `Level.SetCosmetic` | client -> server | `kind: "Trail" \| "Glow" \| "Office", id: string` (`""` = default); `maxArgs` 2, `RemoteLimits.Settings` | `LevelRewardRules.parseChoice`: known kind and `""` or a known id (else rejected); the player's level unlocks it (else ignored, a UI race). Saves `Cosmetics`, sets `TrailStyle` / `GlowStyle` (re-equips the hammer for a new trail), repaints the office for a theme (`OfficeService.applyTheme`); `Profile.Sync` |
 | `Level.LevelUp` | server -> one client | `{ FromLevel, ToLevel, Coins }` | sent when XP reaches levels never rewarded before and their coins are paid (`SessionService.addXp`); display only (the level-up card) |
 
 ## `Store.RequestPurchase`: client -> server
@@ -232,6 +250,8 @@ change. Display only.
 | Purpose | The player's own progression for the UI (HUD, shop, locked bosses) |
 | Payload | `Types.ProfileSnapshot`: `{ Coins, OwnedHammerIds, EquippedHammerId, BossDefeats, UnlockedBossIds, ZenLevel, Level, Xp, Buffs, MysteryHammers, AdminUnlocks, Bag, Pets, EquippedPetId, Incubation, Settings, Cosmetics }` |
 | When | on data load, after every reward, purchase, equip and `Settings.Set` request |
+| Payload | `Types.ProfileSnapshot`: `{ Coins, OwnedHammerIds, EquippedHammerId, BossDefeats, UnlockedBossIds, ZenLevel, Level, Xp, Buffs, MysteryHammers, AdminUnlocks, Bag, Pets, EquippedPetId, Incubation, Settings, Furniture, OfficeLayout, OfficePrivacy }` |
+| When | on data load, after every reward, purchase, equip, `Settings.Set` and `Office.*` edit request |
 | Client handling | display only; parsed defensively (`ProgressController`) |
 
 ## `Leaderboard.Snapshot`: server -> all clients (2026-10-07)

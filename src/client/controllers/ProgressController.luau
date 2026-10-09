@@ -9,6 +9,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Attributes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Attributes"))
 local CustomBossRules =
 	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CustomBossRules"))
+local FurnitureRules =
+	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("FurnitureRules"))
 local ProgressionRules =
 	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ProgressionRules"))
 local LevelRewardRules =
@@ -166,6 +168,7 @@ local function parse(payload: unknown): Types.ProfileSnapshot?
 		return nil
 	end
 
+	local furniture = FurnitureRules.sanitizeOwned(data.Furniture)
 	local defeats: { [string]: number } = {}
 	if typeof(rawDefeats) == "table" then
 		for bossId, count in rawDefeats :: { [unknown]: unknown } do
@@ -193,6 +196,11 @@ local function parse(payload: unknown): Types.ProfileSnapshot?
 		Incubation = parseIncubation(data.Incubation),
 		Settings = SettingsRules.sanitize(data.Settings),
 		Cosmetics = LevelRewardRules.sanitizeCosmetics(data.Cosmetics),
+		Furniture = furniture,
+		OfficeLayout = (FurnitureRules.parseLayout(data.OfficeLayout, furniture)),
+		OfficePrivacy = if FurnitureRules.isPrivacy(data.OfficePrivacy)
+			then data.OfficePrivacy :: string
+			else "Public",
 	}
 end
 

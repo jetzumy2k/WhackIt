@@ -122,6 +122,9 @@ function ProgressService.snapshot(
 			else nil,
 		Settings = table.clone(data.Settings),
 		Cosmetics = table.clone(data.Cosmetics),
+		Furniture = table.clone(data.Furniture),
+		OfficeLayout = table.clone(data.OfficeLayout),
+		OfficePrivacy = data.OfficePrivacy,
 	}
 end
 

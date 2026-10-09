@@ -88,7 +88,7 @@ migration, sanitize rules and specs (`docs/DATA_SCHEMA.md` "Changing the schema"
 |---|---|---|
 | v9 ✅ | 1 GUI foundation (2026-10-09) | `Settings: {[key]: boolean}` (`ReducedMotion`). New on/off settings (`HideChallenges` in Phase 4) are config entries and need **no** migration (`SettingsRules.sanitize`) |
 | v10 ✅ | Levelling rework (2026-10-09) | `LevelRewardsClaimed`, `Cosmetics = {Trail, Glow}`; one-time XP raise so nobody loses a level |
-| v11 | 2a Offices | `Furniture: {[itemKey]: count}` (starter kit: desk, chair, plant); `OfficeLayout: {{Item, X, Z, R}}` (at most 60, positions relative to the room, R in 0/90/180/270); `OfficePrivacy: "Public" \| "Friends" \| "Private"` (not an on/off setting, so its own field) |
+| v11 ✅ | 2a Offices (2026-10-09) | `Furniture: {[itemKey]: count}` (Special items only; Basic furniture is free); `OfficeLayout: {{Id, Item, X, Z, R}}` (at most 60, room-local, R in 0/90/180/270); `NextOfficeItemId`; `OfficePrivacy: "Public" \| "Friends" \| "Private"` |
 | v12 | 4 Pickleball | `Recreation = {Rating, Wins, Losses, Season, DayKey, DayRewarded, DayPairs: {[pairKey]: n}}`; `ProcessedMatches: {string}` (last 200); `SeasonClaims: {string}` (last 20) |
 | v13 | 2b Quests | `Quests` (active, progress, claimed ids per reset window). No `Career` field: career = level titles (§21.4) |
 | later | 5–6 | event objective claims, showcase settings |

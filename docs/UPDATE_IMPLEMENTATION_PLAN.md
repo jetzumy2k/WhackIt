@@ -41,7 +41,7 @@ passes; Studio specs **568 passed, 0 failed** (2026-10-09; the first run's one f
 comparison in the new `UiTokens` spec, fixed); playtest `docs/PLAYTEST.md` 336–350 reported passed by the owner. Deviations from
 the table below, kept small on purpose:
 - **Schema v9 holds only `Settings`** (`ReducedMotion`). `HideChallenges` arrives with Phase 4 as a
-  config entry (no migration needed); `OfficePrivacy` and the furniture fields go in v10 with 2a.
+  config entry (no migration needed); `OfficePrivacy` and the furniture fields go in v11 with 2a (v10 went to the levelling rework).
 - **"🏢 Social" dock button moved to Phase 2a:** with no offices or pickleball yet it would open an
   empty page. The Settings page lives in the Player Panel (Menu / M / Y).
 - **Layer tokens and the ranking / placement colours** are added with the first screen that uses
@@ -75,6 +75,18 @@ unverified) until this is finished; when it resumes, its schema version becomes 
 v10), and its office rewards join the level reward track.
 
 ## 4. Phase 2a: furniture, personal offices, Office Directory
+
+**Status (2026-10-09):** 🟡 implemented on branch `feat/phase2a-offices`, stacked on the levelling
+rework (#13), schema **v11**, with office themes and level-reward furniture on the level track (docs/OFFICES.md);
+`scripts/check.ps1` passes; Studio specs **636 passed, 0 failed**; Studio Play boots clean after
+fixing a remote named `Remove` (2026-10-10, see docs/REMOTE_CONTRACTS.md "Naming"); playtest
+(`docs/PLAYTEST.md` "Personal offices") pending.
+Owner decision: Basic furniture is free and unlimited, Special items (trophies) come from rewards.
+Changes from the plan below: layout entries carry a stable `Id` (so a move or removal can never hit
+the wrong item), the starter furniture is a placed default layout rather than an inventory kit, the
+Office Directory lives on the Player Panel's new Social page (🏢 Social HUD button), and admins can
+reward Special furniture. Still open: the performance baseline (deferred, B4), so the Office Wing's
+cost hasn't been measured yet.
 
 ### 4.1 Rules (`Shared/FurnitureRules`, pure, spec-covered)
 - Room: 40 × 40 studs (P), positions are whole studs relative to the room's centre, rotation is 0/90/180/270.

@@ -49,6 +49,8 @@ local EventService = require(script.Parent.EventService)
 local StoreConfig = require(ReplicatedStorage.Config.StoreConfig)
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
 local HistoryService = require(script.Parent.HistoryService)
+local FurnitureConfig = require(ReplicatedStorage.Config.FurnitureConfig)
+local OfficeService = require(script.Parent.OfficeService)
 local PetConfig = require(ReplicatedStorage.Config.PetConfig)
 local PetService = require(script.Parent.PetService)
 local PetRules = require(ReplicatedStorage.Shared.PetRules)
@@ -792,11 +794,28 @@ local function parseReward(
 				return PetService.grantPet(target, species.Id)
 			end,
 			nil
+	elseif kind == "Furniture" then
+		local key = Validate.id(data.Key, RemoteLimits.MaxIdLength)
+		local item = if key then FurnitureConfig.ByKey[key] else nil
+		local amount = Validate.integer(data.Amount, 1, AdminConfig.MaxRewardItems)
+		if item == nil or item.Tier ~= "Special" or amount == nil then
+			return nil,
+				nil,
+				string.format(
+					"Pick a special furniture item and an amount from 1 to %d.",
+					AdminConfig.MaxRewardItems
+				)
+		end
+		return string.format("%d x %s", amount, item.Name),
+			function()
+				return OfficeService.grantSpecial(target, item.Key, amount)
+			end,
+			nil
 	end
 	return nil, nil, "Pick a reward type."
 end
 
--- `raw` is { UserId, Kind = "Coins" | "Xp" | "Item" | "Hammer" | "Pet",
+-- `raw` is { UserId, Kind = "Coins" | "Xp" | "Item" | "Hammer" | "Pet" | "Furniture",
 -- Key?, Amount?, Reason? }. Players in this server only.
 local function onReward(player: Player, raw: unknown): ()
 	if not isAdmin(player) then

@@ -13,10 +13,10 @@ validation live in `src/server/lib/PlayerDataSchema.luau`; storage settings in
 | Session locking | ProfileStore | One server owns a profile at a time, so progress can't be duplicated by joining two servers |
 | Auto-save | ProfileStore | Periodic, plus on leave (`EndSession`) and server shutdown |
 
-## Schema v10 (current)
+## Schema v11 (current)
 ```lua
 type PlayerData = {
-    SchemaVersion: number,        -- 10
+    SchemaVersion: number,        -- 11
     Score: number,                -- lifetime score (integer, 0..2^50); shown in leaderstats
     Stress: number,               -- Stress Meter, 0..GameConfig.MaxStress, carries over between sessions
     TotalHits: number,            -- accepted hammer hits (integer, 0..2^50)
@@ -54,7 +54,13 @@ type PlayerData = {
     Settings: {[key]: boolean},   -- on/off player settings (Config/SettingsConfig), e.g. ReducedMotion
     -- v10 (docs/GAMEPLAY_RULES.md "Level rewards")
     LevelRewardsClaimed: number,  -- highest level whose level-up coins were paid (1..MaxLevel)
-    Cosmetics: {Trail: string, Glow: string}, -- picked level-reward looks; "" = default
+    Cosmetics: {Trail: string, Glow: string, Office: string}, -- picked level-reward looks
+                                  -- ("" = default); Office since v11 (no migration: sanitize fills it)
+    -- v11 (docs/OFFICES.md)
+    Furniture: {[itemKey]: number}, -- Special furniture owned (Basic furniture is unlimited)
+    OfficeLayout: {{Id, Item, X, Z, R}}, -- placed furniture, room-local whole studs, R 0/90/180/270
+    NextOfficeItemId: number,     -- next layout id (never reused)
+    OfficePrivacy: string,        -- "Public" | "Friends" | "Private"
 }
 ```
 New players start from `PlayerDataSchema.template()`: `StartingScore`, `StartingStress`, `StartingCoins`,
@@ -71,6 +77,7 @@ zero counters, `DefaultHammerId`, nothing bought, no defeats.
 | v6 | `Bag = {}`, `ClaimedGifts = {}` (earlier purchases were already used) |
 | v8 | Pets (2026-10-08): `Pets = {}`, `NextPetNumber = 1`, `EquippedPetId = ""`, `Incubation = nil`. Eggs are ordinary Bag items (`egg_common`, `egg_rare`, `egg_mythical`). |
 | v10 | Level rework (2026-10-09): **no level is lost.** XP is raised to `max(Xp, LevelRules.scoreForLevel(min(oldLevel, 100)))`, where `oldLevel` is the old curve's `floor(sqrt(Xp / 600)) + 1` (`LevelRules.legacyLevelFor`); players at Level 10 or below keep their XP exactly. `LevelRewardsClaimed = that level` (no back-dated coins); `Cosmetics = {}`. XP only ever goes up, so the XP leaderboard keeps every player's order among themselves. |
+| v11 | Offices (2026-10-09): `Furniture = {}`, `OfficePrivacy = "Public"`; no `OfficeLayout` yet, so sanitize gives the starting furniture (`FurnitureConfig.DefaultLayout`: desk, chair, plant). |
 | v9 | Settings (2026-10-09): `Settings = {}`; sanitize fills every known setting with its default (`ReducedMotion = false`). |
 | v7 | Mystery Hammers (2026-10-08): each saved hammer without `BonusDamagePercent` gets `StoreConfig.Mystery.LegacyBonusDamagePercent` (15); `sanitize` then sets `Damage` to the fixed base (35). Old hammers rolled 20-35 damage, so every one ends up at least as strong. The crit roll is kept. The bump also stops older servers, which would drop the new field, from loading and saving this data. |
 
@@ -120,6 +127,13 @@ Sanitizing v10: `LevelRewardsClaimed` a whole number clamped to 1..`MaxLevel`; `
 trail / glow ids (even ones the level no longer unlocks: they just show the default look until it does,
 `LevelRewardRules.sanitizeCosmetics`). Writers: `SessionService.addXp` / `setXp` → `LevelRewardsClaimed`;
 `LevelRewardService` → `Cosmetics`.
+Sanitizing v11: `Furniture` keeps known **Special** keys with whole counts 1..1,000
+(`FurnitureRules.sanitizeOwned`). `OfficeLayout`: missing → the starting layout; otherwise every entry
+is re-checked in saved order (`FurnitureRules.parseLayout`) and dropped if broken, unknown, out of the
+room, in the door, overlapping an earlier one, beyond 60, a duplicate id or not owned; the rest are kept
+exactly (an emptied office stays empty). `NextOfficeItemId` is at least one past every kept id.
+An unknown `OfficePrivacy` → Public. Writers: `OfficeService` → `OfficeLayout`, `NextOfficeItemId`,
+`OfficePrivacy`, `Furniture` (admin rewards via `grantSpecial`).
 
 Player history and the admin audit log are **not** player data either: DataStore `PlayerHistory`,
 keys `Player_<UserId>` (last 200 entries) and `Admin_<YYYYMMDD>` (up to 500 per UTC day), written
