@@ -80,17 +80,22 @@ return function()
 
 	describe("Responsive.capText", function()
 		it("scales text but never past the cap or below the minimum", function()
+			-- capText scales caps by textScale() (0.85 on phones). The test runner's
+			-- viewport may count as a phone, so expect whatever scale is in effect.
+			local function scaled(size: number): number
+				return math.max(Responsive.MIN_TEXT_SIZE, math.floor(size * Responsive.textScale()))
+			end
 			local label = Instance.new("TextLabel")
 			Responsive.capText(label, 20)
 			local cap = label:FindFirstChildOfClass("UITextSizeConstraint")
 			expect(label.TextScaled).to.equal(true)
 			expect(cap).never.to.equal(nil)
-			expect((cap :: UITextSizeConstraint).MaxTextSize).to.equal(20)
+			expect((cap :: UITextSizeConstraint).MaxTextSize).to.equal(scaled(20))
 			expect((cap :: UITextSizeConstraint).MinTextSize).to.equal(Responsive.MIN_TEXT_SIZE)
 			-- Re-capping updates the same constraint instead of adding another.
 			Responsive.capText(label, 14, 9)
 			expect(#label:GetChildren()).to.equal(1)
-			expect((cap :: UITextSizeConstraint).MaxTextSize).to.equal(14)
+			expect((cap :: UITextSizeConstraint).MaxTextSize).to.equal(scaled(14))
 			label:Destroy()
 		end)
 	end)

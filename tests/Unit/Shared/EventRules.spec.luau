@@ -470,7 +470,7 @@ return function()
 		it("validates an egg hunt: tier, interval from the list, eggs at once", function()
 			local hunt = spec({
 				Type = "EggHunt",
-				DurationSeconds = 2 * HOUR,
+				DurationSeconds = HOUR, -- a preset length (EventConfig.Durations)
 				Config = { EggRarity = "Rare", IntervalMinutes = 5, MaxEggs = 5 },
 			}) :: EventRules.Spec
 			expect(hunt).never.to.equal(nil)
