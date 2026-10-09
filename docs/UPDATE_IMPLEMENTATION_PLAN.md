@@ -37,8 +37,8 @@ on pickleball. This plan splits Phase 2 and moves Recreation forward:
 ## 3. Phase 1: GUI foundation
 
 **Status (2026-10-09):** ✅ implemented on branch `feat/phase1-gui-foundation`; `scripts/check.ps1`
-passes; Studio specs 567 passed / 1 failed (a float comparison in the new `UiTokens` spec, fixed;
-re-run pending); playtest `docs/PLAYTEST.md` 336–350 reported passed by the owner. Deviations from
+passes; Studio specs **568 passed, 0 failed** (2026-10-09; the first run's one failure was a float
+comparison in the new `UiTokens` spec, fixed); playtest `docs/PLAYTEST.md` 336–350 reported passed by the owner. Deviations from
 the table below, kept small on purpose:
 - **Schema v9 holds only `Settings`** (`ReducedMotion`). `HideChallenges` arrives with Phase 4 as a
   config entry (no migration needed); `OfficePrivacy` and the furniture fields go in v10 with 2a.
