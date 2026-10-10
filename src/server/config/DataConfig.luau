@@ -16,6 +16,12 @@ local DataConfig = table.freeze({
 	LeaderboardReadInterval = 60, -- seconds between refreshes of the board
 	LeaderboardWriteInterval = 120, -- seconds between saving a player's score to it
 
+	-- Pickleball season board (RecreationRankService): one OrderedDataStore
+	-- per season (<prefix><seasonId>, keyed by UserId, the season's rating),
+	-- and the frozen top 10 of each finished season (key "Season_<id>").
+	RecRatingStorePrefix = "RecRating_",
+	RecSeasonsStoreName = "RecSeasons",
+
 	-- Shown when a player is kicked to protect their data.
 	LoadFailedMessage = "We couldn't load your saved progress. Please rejoin in a moment.",
 	SessionEndedMessage = "Your progress was opened on another server. Please rejoin.",

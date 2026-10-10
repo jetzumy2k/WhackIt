@@ -289,6 +289,10 @@
 
           "Result": {
             "$className": "RemoteEvent"
+          },
+
+          "Season": {
+            "$className": "RemoteEvent"
           }
         },
 

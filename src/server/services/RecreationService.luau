@@ -43,6 +43,7 @@ local PickleballConfig = require(ReplicatedStorage.Config.PickleballConfig)
 local PickleballRules = require(ReplicatedStorage.Shared.PickleballRules)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressService = require(script.Parent.ProgressService)
+local RecreationRankService = require(script.Parent.RecreationRankService)
 local RemoteController = require(ServerScriptService.Controllers.RemoteController)
 local RemoteLimits = require(ServerScriptService.Config.RemoteLimits)
 local SessionService = require(script.Parent.SessionService)
@@ -743,6 +744,7 @@ local function applyRecord(match: Match, player: Player, team: number, won: bool
 		record.TotalLosses += 1
 	end
 	PickleballRules.noteRewarded(record, opponentsOf(match, team))
+	RecreationRankService.noteRecord(player, record)
 	return change
 end
 

@@ -230,3 +230,14 @@ for _, name in { "ScoreLeaderboard", "XpLeaderboard", "CoinsLeaderboard" } do
 end
 ```
 Player Level is derived from XP and is not stored in `PlayerData`.
+
+## Pickleball season stores (Phase 4b, `RecreationRankService`)
+| Store | Key / value | Notes |
+|---|---|---|
+| OrderedDataStore `RecRating_<seasonId>` (`DataConfig.RecRatingStorePrefix`) | `<UserId>` → that season's rating | Only players with `SeasonBoard.MinMatches` (5) rated matches in the season. Written on change at most every 120 s, on leave and at shutdown; top 10 read every 60 s |
+| DataStore `RecSeasons` (`DataConfig.RecSeasonsStoreName`) | `Season_<seasonId>` → `{ SeasonId, FrozenAt, Top = { { UserId, Rating } } }` | A finished season's final top 10, frozen once (`UpdateAsync`, only if missing) 15 min after the season ends. Prizes are paid from it |
+
+Prizes are paid once per season per player: the season id goes into `SeasonClaims` (v12, no migration)
+in the same step as the coins and the item. For a right-to-erasure request also remove the player from
+the season boards (`RecRating_<id>` for the seasons they played: `RemoveAsync("<UserId>")`) and their
+entry from any `RecSeasons` record (`UpdateAsync`, filter `Top`).
