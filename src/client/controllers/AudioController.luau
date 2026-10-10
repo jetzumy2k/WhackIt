@@ -72,7 +72,7 @@ local function buildToggle(): ()
 
 	-- A small utility button beside the Menu button (top-left).
 	local button =
-		Responsive.iconButton(gui, "MusicToggle", "🎵", "Music", Color3.fromRGB(30, 30, 40))
+		Responsive.iconButton(gui, "MusicToggle", "🎵", "Music", Color3.fromRGB(60, 150, 170))
 	button.BackgroundTransparency = 0.2
 	Responsive.onChanged(function()
 		local phone = Responsive.formFactor() == "Phone"

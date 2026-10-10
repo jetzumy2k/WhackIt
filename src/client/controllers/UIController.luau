@@ -16,6 +16,7 @@ local Attributes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild
 local BossConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("BossConfig"))
 local GameConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("GameConfig"))
 local GameplayController = require(script.Parent.GameplayController)
+local HudFormat = require(script.Parent.Parent.Lib.HudFormat)
 local LevelRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("LevelRules"))
 local StressRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("StressRules"))
 local ProgressController = require(script.Parent.ProgressController)
@@ -26,7 +27,6 @@ local UIController = {}
 
 local VICTORY_CARD_SECONDS = 3
 local PANEL_COLOR = Color3.fromRGB(30, 30, 40)
-local STRESS_COLOR = Color3.fromRGB(235, 80, 80)
 local HEALTH_COLOR = Color3.fromRGB(90, 210, 110)
 local XP_COLOR = Color3.fromRGB(110, 150, 255)
 local TEXT_COLOR = Color3.fromRGB(255, 255, 255)
@@ -107,21 +107,75 @@ local function buildHud(): (ScreenGui, Frame)
 	gui.ResetOnSpawn = false
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-	-- Stress Meter, top centre.
-	local stressFill, stressLabel = makeBar("StressBar", STRESS_COLOR, gui)
-	local stressBar = stressFill.Parent :: Frame
-	stressBar.AnchorPoint = Vector2.new(0.5, 0)
-	stressBar.Position = UDim2.new(0.5, 0, 0, 12)
-	stressBar.Size = UDim2.new(0.4, 0, 0, 30)
-	local stressConstraint = Instance.new("UISizeConstraint")
-	stressConstraint.MinSize = Vector2.new(200, 24)
-	stressConstraint.MaxSize = Vector2.new(480, 36)
-	stressConstraint.Parent = stressBar
-	Responsive.capText(stressLabel, 22)
+	-- The top of the HUD (visual overhaul V4a): a Stress Meter card with a
+	-- mood face, a row of stat chips under it, and boost chips under those.
+	local CARD = UiTokens.Color.Window
+	local function pill(name: string, parent: Instance): Frame
+		local frame = Instance.new("Frame")
+		frame.Name = name
+		frame.BackgroundColor3 = CARD
+		frame.BackgroundTransparency = 0.12
+		frame.BorderSizePixel = 0
+		frame.Parent = parent
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(1, 0)
+		corner.Parent = frame
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = Color3.new(1, 1, 1)
+		stroke.Transparency = 0.85
+		stroke.Thickness = 1
+		stroke.Parent = frame
+		return frame
+	end
+	local function text(name: string, parent: Instance, size: number, font: Enum.Font?): TextLabel
+		local label = Instance.new("TextLabel")
+		label.Name = name
+		label.BackgroundTransparency = 1
+		label.TextColor3 = TEXT_COLOR
+		label.Font = font or UiTokens.Font.Bold
+		label.TextSize = math.floor(size * Responsive.textScale())
+		label.Parent = parent
+		return label
+	end
 
-	-- The fill eases to each new value (hits and passive rises) instead of
-	-- jumping (it jumps with Reduced motion); one short tween per change,
-	-- replacing the previous one.
+	-- Stress Meter: mood face, a track with a colour-shifting fill, the value.
+	local meter = pill("StressMeter", gui)
+	meter.AnchorPoint = Vector2.new(0.5, 0)
+	meter.Position = UDim2.new(0.5, 0, 0, 10)
+	meter.Size = UDim2.new(0.34, 0, 0, 40)
+	local meterLimit = Instance.new("UISizeConstraint")
+	meterLimit.MinSize = Vector2.new(240, 36)
+	meterLimit.MaxSize = Vector2.new(460, 40)
+	meterLimit.Parent = meter
+	local mood = text("Mood", meter, 24, UiTokens.Font.Title)
+	mood.Size = UDim2.new(0, 36, 1, 0)
+	mood.Position = UDim2.fromOffset(4, 0)
+	local track = Instance.new("Frame")
+	track.Name = "StressTrack"
+	track.BackgroundColor3 = UiTokens.Color.Field
+	track.BorderSizePixel = 0
+	track.Position = UDim2.new(0, 42, 0.5, -7)
+	track.Size = UDim2.new(1, -112, 0, 14)
+	track.Parent = meter
+	local trackCorner = Instance.new("UICorner")
+	trackCorner.CornerRadius = UDim.new(1, 0)
+	trackCorner.Parent = track
+	local stressFill = Instance.new("Frame")
+	stressFill.Name = "Fill"
+	stressFill.BorderSizePixel = 0
+	stressFill.Size = UDim2.fromScale(1, 1)
+	stressFill.Parent = track
+	local fillCorner = Instance.new("UICorner")
+	fillCorner.CornerRadius = UDim.new(1, 0)
+	fillCorner.Parent = stressFill
+	local stressLabel = text("StressValue", meter, 16)
+	stressLabel.AnchorPoint = Vector2.new(1, 0)
+	stressLabel.Position = UDim2.new(1, -12, 0, 0)
+	stressLabel.Size = UDim2.new(0, 60, 1, 0)
+	stressLabel.TextXAlignment = Enum.TextXAlignment.Right
+
+	-- The fill eases to each new value (it jumps with Reduced motion); one
+	-- short tween per change, replacing the previous one.
 	local stressTween: Tween? = nil
 	local function refreshStress(): ()
 		local stress = localPlayer:GetAttribute(Attributes.Stress)
@@ -135,22 +189,121 @@ local function buildHud(): (ScreenGui, Frame)
 			UiTokens.motion(
 				TweenInfo.new(UiTokens.Motion.Bar, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 			),
-			{ Size = UDim2.fromScale(ratio, 1) }
+			{ Size = UDim2.fromScale(ratio, 1), BackgroundColor3 = HudFormat.stressColor(ratio) }
 		)
 		stressTween = tween
 		tween:Play()
-		stressLabel.Text = string.format("Stress %d / %d", math.ceil(value), GameConfig.MaxStress)
+		mood.Text = HudFormat.moodIcon(value)
+		stressLabel.Text = string.format("%d", math.ceil(value))
 	end
 	localPlayer:GetAttributeChangedSignal(Attributes.Stress):Connect(refreshStress)
 	refreshStress()
 
-	-- Score and coins, under the Stress Meter (from the server's leaderstats).
-	local scoreLabel = makeLabel("Score", gui)
-	scoreLabel.AnchorPoint = Vector2.new(0.5, 0)
-	scoreLabel.Position = UDim2.new(0.5, 0, 0, 48)
-	scoreLabel.Size = UDim2.new(0.6, 0, 0, 26)
-	scoreLabel.Text = "Lv 1   Score: 0   Coins: 0   Zen +0%"
-	Responsive.capText(scoreLabel, 22)
+	-- Stat chips: level, score, coins and the Zen bonus.
+	local stats = Instance.new("Frame")
+	stats.Name = "Stats"
+	stats.AnchorPoint = Vector2.new(0.5, 0)
+	stats.Position = UDim2.new(0.5, 0, 0, 56)
+	stats.Size = UDim2.fromOffset(0, 30)
+	stats.AutomaticSize = Enum.AutomaticSize.X
+	stats.BackgroundTransparency = 1
+	stats.Parent = gui
+	local statsLayout = Instance.new("UIListLayout")
+	statsLayout.FillDirection = Enum.FillDirection.Horizontal
+	statsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	statsLayout.Padding = UDim.new(0, 8)
+	statsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	statsLayout.Parent = stats
+	local function chip(parent: Instance, name: string, icon: string, order: number): TextLabel
+		local frame = pill(name, parent)
+		frame.LayoutOrder = order
+		frame.Size = UDim2.fromOffset(0, 30)
+		frame.AutomaticSize = Enum.AutomaticSize.X
+		local padding = Instance.new("UIPadding")
+		padding.PaddingLeft = UDim.new(0, 10)
+		padding.PaddingRight = UDim.new(0, 12)
+		padding.Parent = frame
+		local layout = Instance.new("UIListLayout")
+		layout.FillDirection = Enum.FillDirection.Horizontal
+		layout.VerticalAlignment = Enum.VerticalAlignment.Center
+		layout.Padding = UDim.new(0, 6)
+		layout.SortOrder = Enum.SortOrder.LayoutOrder
+		layout.Parent = frame
+		local iconLabel = text("Icon", frame, 17, UiTokens.Font.Title)
+		iconLabel.Size = UDim2.fromOffset(20, 30)
+		iconLabel.Text = icon
+		local value = text("Value", frame, 17)
+		value.LayoutOrder = 1
+		value.Size = UDim2.fromOffset(0, 30)
+		value.AutomaticSize = Enum.AutomaticSize.X
+		return value
+	end
+	local levelValue = chip(stats, "LevelChip", "⭐", 1)
+	local scoreValue = chip(stats, "ScoreChip", "🏆", 2)
+	local coinsValue = chip(stats, "CoinsChip", "🪙", 3)
+	local zenValue = chip(stats, "ZenChip", "🧘", 4)
+	coinsValue.TextColor3 = Color3.fromRGB(255, 220, 120)
+
+	-- Coins count up to a new total, with a "+N" that floats up from the chip
+	-- (shown without moving with Reduced motion).
+	local shownCoins = 0
+	local coinsTween: Tween? = nil
+	local counter = Instance.new("NumberValue")
+	counter.Changed:Connect(function(value: number)
+		coinsValue.Text = HudFormat.thousands(value)
+	end)
+	-- A full-screen layer for the floating "+N", so its position is measured
+	-- in the same space as the chip whatever the screen insets are.
+	local floats = Instance.new("Frame")
+	floats.Name = "Floats"
+	floats.BackgroundTransparency = 1
+	floats.Size = UDim2.fromScale(1, 1)
+	floats.ZIndex = 5
+	floats.Parent = gui
+	local function floatGain(amount: number): ()
+		local chipFrame = coinsValue.Parent :: Frame
+		local gain = text("CoinGain", floats, 18)
+		gain.Text = "+" .. HudFormat.thousands(amount)
+		gain.TextColor3 = Color3.fromRGB(255, 220, 120)
+		gain.TextStrokeTransparency = 0.4
+		gain.AnchorPoint = Vector2.new(0.5, 0)
+		gain.Size = UDim2.fromOffset(80, 22)
+		local start = chipFrame.AbsolutePosition
+			- floats.AbsolutePosition
+			+ Vector2.new(chipFrame.AbsoluteSize.X / 2, chipFrame.AbsoluteSize.Y + 2)
+		gain.Position = UDim2.fromOffset(start.X, start.Y)
+		local info =
+			UiTokens.motion(TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.Out))
+		TweenService:Create(gain, info, {
+			Position = UDim2.fromOffset(start.X, start.Y + 18),
+			TextTransparency = 1,
+			TextStrokeTransparency = 1,
+		}):Play()
+		task.delay(1, function()
+			gain:Destroy()
+		end)
+	end
+	local function showCoins(total: number): ()
+		if coinsTween then
+			coinsTween:Cancel()
+		end
+		local gained = total - shownCoins
+		shownCoins = total
+		if gained > 0 and counter.Value > 0 then
+			floatGain(gained)
+			local tween = TweenService:Create(
+				counter,
+				UiTokens.motion(TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)),
+				{ Value = total }
+			)
+			coinsTween = tween
+			tween:Play()
+		else
+			counter.Value = total
+			coinsValue.Text = HudFormat.thousands(total)
+		end
+	end
+
 	task.spawn(function()
 		local leaderstats = localPlayer:WaitForChild("leaderstats")
 		local score = leaderstats:WaitForChild("Score")
@@ -162,29 +315,52 @@ local function buildHud(): (ScreenGui, Frame)
 			local snapshot = ProgressController.get()
 			local zenLevel = if snapshot then snapshot.ZenLevel else 0
 			local level = localPlayer:GetAttribute(Attributes.Level)
-			scoreLabel.Text = string.format(
-				"Lv %d   Score: %d   Coins: %d   %s",
-				if typeof(level) == "number" then level else 1,
-				score.Value,
-				coins.Value,
-				StressRules.zenBonusText(zenLevel)
+			levelValue.Text = string.format("Lv %d", if typeof(level) == "number" then level else 1)
+			scoreValue.Text = HudFormat.thousands(score.Value)
+			zenValue.Text = string.format(
+				"+%d%%%s",
+				StressRules.zenBonusPercent(zenLevel),
+				if StressRules.zenBonusIsMax(zenLevel) then " max" else ""
 			)
 		end
 		score.Changed:Connect(refreshStats)
-		coins.Changed:Connect(refreshStats)
+		coins.Changed:Connect(function()
+			showCoins(coins.Value)
+		end)
 		ProgressController.Changed:Connect(refreshStats)
 		localPlayer:GetAttributeChangedSignal(Attributes.Level):Connect(refreshStats)
 		refreshStats()
+		showCoins(coins.Value)
 	end)
 
-	-- Active buffs with time left, under the score line.
-	local buffsLabel = makeLabel("Buffs", gui)
-	buffsLabel.AnchorPoint = Vector2.new(0.5, 0)
-	buffsLabel.Position = UDim2.new(0.5, 0, 0, 76)
-	buffsLabel.Size = UDim2.new(0.7, 0, 0, 22)
-	buffsLabel.TextColor3 = Color3.fromRGB(150, 230, 255)
-	buffsLabel.Text = ""
-	Responsive.capText(buffsLabel, 18)
+	-- Active boosts as chips with time left, under the stats. One chip per
+	-- kind, reused (shown or hidden), text updated once a second.
+	local boosts = Instance.new("Frame")
+	boosts.Name = "Boosts"
+	boosts.AnchorPoint = Vector2.new(0.5, 0)
+	boosts.Position = UDim2.new(0.5, 0, 0, 92)
+	boosts.Size = UDim2.fromOffset(0, 26)
+	boosts.AutomaticSize = Enum.AutomaticSize.X
+	boosts.BackgroundTransparency = 1
+	boosts.Parent = gui
+	local boostsLayout = Instance.new("UIListLayout")
+	boostsLayout.FillDirection = Enum.FillDirection.Horizontal
+	boostsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	boostsLayout.Padding = UDim.new(0, 6)
+	boostsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	boostsLayout.Parent = boosts
+	local boostChips: { [string]: TextLabel } = {}
+	local boostIcons: { [string]: string } =
+		{ Zen = "🧘", Xp = "✨", Damage = "💥", CritDamage = "🎯" }
+	for order, kind in { "Zen", "Xp", "Damage", "CritDamage" } do
+		local value = chip(boosts, kind .. "Boost", boostIcons[kind], order)
+		local frame = value.Parent :: Frame
+		frame.Size = UDim2.fromOffset(0, 26)
+		value.TextSize = math.floor(14 * Responsive.textScale())
+		value.TextColor3 = Color3.fromRGB(150, 230, 255)
+		frame.Visible = false
+		boostChips[kind] = value
+	end
 	task.spawn(function()
 		local receivedAt = os.clock()
 		local lastSnapshot = ProgressController.get()
@@ -193,19 +369,16 @@ local function buildHud(): (ScreenGui, Frame)
 			receivedAt = os.clock()
 		end)
 		while gui.Parent ~= nil do
-			local parts: { string } = {}
+			local shown: { [string]: string } = {}
 			local zenEnds = localPlayer:GetAttribute(Attributes.ZenBuffEnds)
 			if typeof(zenEnds) == "number" then
 				local left = zenEnds - Workspace:GetServerTimeNow()
 				if left > 0 then
-					table.insert(
-						parts,
-						string.format(
-							"ZEN +%d dmg +%d%% crit %s",
-							GameConfig.ZenBuffFlatDamage,
-							GameConfig.ZenBuffCritChance * 100,
-							formatTime(left)
-						)
+					shown.Zen = string.format(
+						"+%d dmg +%d%% crit · %s",
+						GameConfig.ZenBuffFlatDamage,
+						GameConfig.ZenBuffCritChance * 100,
+						formatTime(left)
 					)
 				end
 			end
@@ -215,58 +388,104 @@ local function buildHud(): (ScreenGui, Frame)
 				for _, kind in BUFF_ORDER do
 					local buff = lastSnapshot.Buffs[kind]
 					if buff and buff.SecondsLeft - elapsed > 0 then
-						table.insert(
-							parts,
-							string.format(
-								"%s +%d%% %s",
-								BUFF_LABELS[kind],
-								buff.Percent,
-								formatTime(buff.SecondsLeft - elapsed)
-							)
+						shown[kind] = string.format(
+							"%s +%d%% · %s",
+							BUFF_LABELS[kind],
+							buff.Percent,
+							formatTime(buff.SecondsLeft - elapsed)
 						)
 					end
 				end
 			end
-			buffsLabel.Text = table.concat(parts, "   |   ")
+			for kind, label in boostChips do
+				local line = shown[kind]
+				local frame = label.Parent :: Frame
+				frame.Visible = line ~= nil
+				if line then
+					label.Text = line
+				end
+			end
 			task.wait(1)
 		end
 	end)
 
-	-- XP bar: a thin strip along the bottom edge, out of the way of the
-	-- Stress Meter, the buttons on the right and the mobile thumbstick/jump.
-	local xpFill, xpLabel = makeBar("XpBar", XP_COLOR, gui)
-	local xpBar = xpFill.Parent :: Frame
-	xpBar.AnchorPoint = Vector2.new(0.5, 1)
-	xpBar.Position = UDim2.new(0.5, 0, 1, -6)
-	xpBar.Size = UDim2.new(0.36, 0, 0, 16)
-	xpBar.BackgroundTransparency = 0.25
-	local xpConstraint = Instance.new("UISizeConstraint")
-	xpConstraint.MinSize = Vector2.new(180, 14)
-	xpConstraint.MaxSize = Vector2.new(440, 18)
-	xpConstraint.Parent = xpBar
-	Responsive.capText(xpLabel, 14, 9)
+	-- XP bar along the bottom edge (out of the way of the Stress Meter, the
+	-- buttons on the right and the mobile thumbstick/jump): a level badge and
+	-- a gradient fill.
+	local xpCard = pill("XpBar", gui)
+	xpCard.AnchorPoint = Vector2.new(0.5, 1)
+	xpCard.Position = UDim2.new(0.5, 0, 1, -6)
+	xpCard.Size = UDim2.new(0.36, 0, 0, 22)
+	local xpLimit = Instance.new("UISizeConstraint")
+	xpLimit.MinSize = Vector2.new(200, 20)
+	xpLimit.MaxSize = Vector2.new(460, 22)
+	xpLimit.Parent = xpCard
+	local badge = Instance.new("TextLabel")
+	badge.Name = "LevelBadge"
+	badge.AnchorPoint = Vector2.new(0, 0.5)
+	badge.Position = UDim2.new(0, -6, 0.5, 0)
+	badge.Size = UDim2.fromOffset(30, 30)
+	badge.BackgroundColor3 = XP_COLOR
+	badge.TextColor3 = TEXT_COLOR
+	badge.Font = UiTokens.Font.Title
+	badge.TextSize = math.floor(14 * Responsive.textScale())
+	badge.ZIndex = 3
+	badge.Parent = xpCard
+	local badgeCorner = Instance.new("UICorner")
+	badgeCorner.CornerRadius = UDim.new(1, 0)
+	badgeCorner.Parent = badge
+	local badgeStroke = Instance.new("UIStroke")
+	badgeStroke.Color = Color3.new(1, 1, 1)
+	badgeStroke.Transparency = 0.5
+	badgeStroke.Thickness = 1.5
+	badgeStroke.Parent = badge
+	local xpTrack = Instance.new("Frame")
+	xpTrack.Name = "Track"
+	xpTrack.BackgroundTransparency = 1
+	xpTrack.Position = UDim2.fromOffset(28, 4)
+	xpTrack.Size = UDim2.new(1, -34, 1, -8)
+	xpTrack.Parent = xpCard
+	local xpFill = Instance.new("Frame")
+	xpFill.Name = "Fill"
+	xpFill.BackgroundColor3 = Color3.new(1, 1, 1)
+	xpFill.BorderSizePixel = 0
+	xpFill.Size = UDim2.fromScale(0, 1)
+	xpFill.Parent = xpTrack
+	local xpFillCorner = Instance.new("UICorner")
+	xpFillCorner.CornerRadius = UDim.new(1, 0)
+	xpFillCorner.Parent = xpFill
+	local gradient = Instance.new("UIGradient")
+	gradient.Color = ColorSequence.new(XP_COLOR, Color3.fromRGB(170, 120, 255))
+	gradient.Parent = xpFill
+	local xpLabel = text("Label", xpCard, 12)
+	xpLabel.Position = UDim2.fromOffset(28, 0)
+	xpLabel.Size = UDim2.new(1, -34, 1, 0)
+	xpLabel.ZIndex = 2
+	xpLabel.TextStrokeTransparency = 0.6
 	local function refreshXp(): ()
 		local snapshot = ProgressController.get()
 		if snapshot == nil then
 			xpFill.Size = UDim2.fromScale(0, 1)
 			xpLabel.Text = ""
+			badge.Text = ""
 			return
 		end
 		local level = LevelRules.levelFor(snapshot.Xp)
+		badge.Text = tostring(level)
 		if LevelRules.isMax(level) then
 			-- The cap: a full bar; XP keeps counting for the leaderboard.
 			setFill(xpFill, 1, 1)
-			xpLabel.Text = string.format("Lv %d   MAX LEVEL   %d XP", level, snapshot.Xp)
+			xpLabel.Text =
+				string.format("👑 MAX LEVEL · %s XP", HudFormat.thousands(snapshot.Xp))
 			return
 		end
 		local floor = LevelRules.scoreForLevel(level)
 		local nextAt = LevelRules.scoreForLevel(level + 1)
 		setFill(xpFill, snapshot.Xp - floor, nextAt - floor)
 		xpLabel.Text = string.format(
-			"Lv %d   %d / %d XP to Lv %d",
-			level,
-			snapshot.Xp - floor,
-			nextAt - floor,
+			"%s / %s XP to Lv %d",
+			HudFormat.thousands(snapshot.Xp - floor),
+			HudFormat.thousands(nextAt - floor),
 			level + 1
 		)
 	end

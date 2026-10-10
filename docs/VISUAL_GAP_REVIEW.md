@@ -106,3 +106,9 @@ Visual work becomes its own track, done before Phase 6, each part with a Studio 
   uploaded assets): an egg-shaped body with a belly, oval eyes set into the face with oval pupils and a
   shine, "^" closed eyes, thin rounded brows, an open "D" smile with a tongue, short stubby arms, oval
   feet, a smaller crown, the sign held by the hand. Expressions and animation unchanged.
+- **V4a HUD** (branch `feat/v4a-hud`): owner approved the mascot bosses (2026-10-10). New HUD in
+  `UIController` + `Lib/HudFormat`: Stress Meter card with a mood face and a red→green fill, stat chips
+  (level, score, coins, Zen bonus) with thousands separators, coins counting up with a floating "+N",
+  boost chips with timers, an XP bar with a level badge and gradient; dock/Menu/Music buttons restyled
+  (dark card, coloured icon disc, outline, press squish; Reduced motion respected). Next: V4b (Bag,
+  Hammer shop, Store on PanelKit with item grids), V4c (reward reveals, level-up and event cards).
