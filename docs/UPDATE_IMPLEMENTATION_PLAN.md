@@ -140,7 +140,17 @@ no editing others' rooms) and the migration of a v8 profile.
 **v12**; `scripts/check.ps1` passes; Studio specs **693 passed, 0 failed** (2026-10-10); the 2-client
 playtest (`docs/PLAYTEST.md` "Pickleball", 393–422) reported working by the owner after the swing fix
 (`f2cc101`: Studio test players have negative UserIds; held swings; arm swing; reach glow). Rejoin
-rows 410/421 need a published place. D4–D6 accepted by the owner. Changes from the plan below:
+rows 410/421 need a published place.
+
+**Phase 4b (2026-10-10):** ✅ complete on branch `feat/phase4b-season-board`: `RecreationRankService`
+(ordered store `RecRating_<seasonId>`, frozen results in `RecSeasons`, prizes on join or within a
+minute, once per season via `SeasonClaims`), `Rec.Season` remote, the 📈 Season tab, season prizes on
+the Prizes tab, pure rules + specs in `PickleballRules`. No schema change (v12). Deviations: ranked
+only after 5 rated matches (P), so one lucky win can't take a prize; prizes are coins + Special
+furniture (the Champion Plaque for #1), **no season titles yet** (titles are level-derived; saved
+titles would be a schema change); the last 3 finished seasons can still be collected. `scripts/check.ps1`
+passes; the playtest (`docs/PLAYTEST.md` 423-429) was reported working by the owner (2026-10-10); a Studio
+spec run with the new season specs was not reported. D4–D6 accepted by the owner. Changes from the plan below:
 - **Split into 4a and 4b.** 4a (this branch): challenges, matches, rules, rewards, supplies, the Elo
   rating with its season reset. 4b (next): the seasonal leaderboard (ordered store per season) and
   the top-10 season prizes. v12 already saves `SeasonId` and `SeasonClaims`, so 4b needs no migration.

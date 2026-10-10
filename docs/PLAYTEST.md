@@ -625,3 +625,14 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 420 | Studio only: set `PickleballConfig.Game.TimeLimit` to 60, play a short match | At the limit the side ahead wins ("Time's up!"); a tie is cancelled with refunds. Put it back to 1200 afterwards |
 | 421 | Rejoin after matches (Studio API access on) | Rating and wins/losses kept; an older (v11) profile loads with rating 1000 |
 | 422 | Output | No errors from RecreationService, PickleballController, CourtBuilder, HammerService, SprintController, PlayerDataService |
+
+### Pickleball season board and prizes (Phase 4b)
+| # | Steps | Expected |
+|---|---|---|
+| 423 | Open Pickleball → 📈 Season (no matches played) | "Season 1", the days and hours left, "Play 5 more rated matches this season to be ranked.", an empty-board notice; with API access off also "This server only" |
+| 424 | 🏆 Prizes tab | "Season prizes (top 10)": #1 1500 coins + Champion Plaque, #2-3 800 + Golden Hammer Trophy, #4-10 400 + Neon CALM Sign, and the 5-match note |
+| 425 | 2 clients: play 5 rated matches (Studio only: set `PickleballConfig.Game.PointsToWin` to 1 and `WinBy` to 1 to make them quick; put them back to 11 and 2 afterwards) | After each match the Season tab's "matches to go" counts down; after the 5th both players are on the Top 10 within a few seconds, in the right order, "(you)" on your own row, "You're #n" |
+| 426 | A friendly match (over the daily cap) | Doesn't count towards the 5 and doesn't change the board |
+| 427 | Studio API access on, after 425: wait 2-3 minutes, stop, Play again | The board shows the players from the stored season board ("This server only" gone) |
+| 428 | Output | No errors from RecreationRankService; with API access off at most one `[RecRank]` warning per kind |
+| 429 | Season prizes (needs a season to end: a published test place, or in Studio with API access on set `PickleballConfig.Season.Seconds` to 600 and `SeasonBoard.FreezeDelay` to 30 and play 5 quick matches) | About a minute after the freeze the top players get a "🏆 SEASON RESULTS" card, the coins and the item in office storage; rejoining never pays it twice. Put the values back afterwards |

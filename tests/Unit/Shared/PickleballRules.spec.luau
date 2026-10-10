@@ -391,4 +391,97 @@ return function()
 			expect(PickleballRules.isFull("Doubles", { 2, 2 })).to.equal(true)
 		end)
 	end)
+
+	describe("PickleballRules season board", function()
+		local BOARD = PickleballConfig.SeasonBoard
+
+		it("ranks a record only in its season and after enough matches", function()
+			local record = PickleballRules.defaultRecord(5)
+			record.Wins = BOARD.MinMatches - 1
+			expect(PickleballRules.isRanked(record, 5)).to.equal(false)
+			record.Losses = 1
+			expect(PickleballRules.isRanked(record, 5)).to.equal(true)
+			expect(PickleballRules.isRanked(record, 6)).to.equal(false)
+		end)
+
+		it("gives a prize to every top rank and none below", function()
+			for rank = 1, BOARD.Size do
+				local prize = PickleballRules.seasonPrize(rank)
+				expect(prize).to.be.ok()
+				local item = FurnitureConfig.ByKey[(prize :: PickleballConfig.SeasonPrize).Item]
+				expect(item).to.be.ok()
+				expect((item :: FurnitureConfig.Item).Tier).to.equal("Special")
+			end
+			expect((PickleballRules.seasonPrize(1) :: PickleballConfig.SeasonPrize).Item).to.equal(
+				"champion_plaque"
+			)
+			expect(PickleballRules.seasonPrize(BOARD.Size + 1)).to.equal(nil)
+			expect(PickleballRules.seasonPrize(0)).to.equal(nil)
+			expect(PickleballRules.seasonPrize(1.5)).to.equal(nil)
+		end)
+
+		it("better ranks never get fewer coins", function()
+			local last = math.huge
+			for rank = 1, BOARD.Size do
+				local coins = (PickleballRules.seasonPrize(rank) :: PickleballConfig.SeasonPrize).Coins
+				expect(coins <= last).to.equal(true)
+				last = coins
+			end
+		end)
+
+		it("merges live ratings over the stored page, ties to the lower id", function()
+			local board = PickleballRules.mergeBoard({
+				{ UserId = 1, Rating = 1100 },
+				{ UserId = 2, Rating = 1200 },
+				{ UserId = 3, Rating = 1100 },
+			}, { { UserId = 2, Rating = 1000 }, { UserId = -4, Rating = 1300 } }, 3)
+			expect(#board).to.equal(3)
+			expect(board[1].UserId).to.equal(-4)
+			expect(board[2].UserId).to.equal(1)
+			expect(board[3].UserId).to.equal(3)
+			expect(PickleballRules.rankOn(board, 3)).to.equal(3)
+			expect(PickleballRules.rankOn(board, 2)).to.equal(nil)
+		end)
+
+		it("cleans saved results and rejects broken ones", function()
+			expect(PickleballRules.sanitizeResults(nil)).to.equal(nil)
+			expect(PickleballRules.sanitizeResults({ Top = "x" })).to.equal(nil)
+			local top: { unknown } = {}
+			for index = 1, BOARD.Size + 5 do
+				table.insert(top, { UserId = index, Rating = 1000 + index })
+			end
+			table.insert(top, { UserId = 0, Rating = 9000 })
+			table.insert(top, { UserId = 1.5, Rating = 9000 })
+			table.insert(top, { UserId = 99, Rating = 0 / 0 })
+			table.insert(top, "junk")
+			local results =
+				PickleballRules.sanitizeResults({ Top = top }) :: { PickleballRules.BoardEntry }
+			expect(#results).to.equal(BOARD.Size)
+			expect(results[1].UserId).to.equal(BOARD.Size + 5)
+			expect(results[1].Rating).to.equal(1000 + BOARD.Size + 5)
+		end)
+
+		it("lists finished, frozen, unclaimed seasons newest first", function()
+			local season = 800
+			local start = PickleballRules.seasonEnds(season - 1)
+			-- Just after season 799 ended: not frozen yet.
+			local early = PickleballRules.claimableSeasons({}, start + 60)
+			expect(table.find(early, season - 1)).to.equal(nil)
+			expect(early[1]).to.equal(season - 2)
+			local later =
+				PickleballRules.claimableSeasons({ season - 2 }, start + BOARD.FreezeDelay)
+			expect(later[1]).to.equal(season - 1)
+			expect(table.find(later, season - 2)).to.equal(nil)
+			expect(#later).to.equal(BOARD.ClaimSeasons - 1)
+			expect(#PickleballRules.claimableSeasons({}, 0)).to.equal(0)
+		end)
+
+		it("numbers seasons from the launch season", function()
+			expect(PickleballRules.seasonNumber(PickleballConfig.Season.First)).to.equal(1)
+			expect(PickleballRules.seasonNumber(PickleballConfig.Season.First + 2)).to.equal(3)
+			expect(PickleballRules.seasonNumber(0)).to.equal(1)
+			-- 2026-10-10 23:30 UTC is in the launch season.
+			expect(PickleballRules.seasonId(1791675000)).to.equal(PickleballConfig.Season.First)
+		end)
+	end)
 end

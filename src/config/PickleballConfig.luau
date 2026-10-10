@@ -14,6 +14,8 @@ export type Mode = "Singles" | "Doubles"
 
 export type SupplyWeight = { Item: string, Weight: number }
 
+export type SeasonPrize = { MaxRank: number, Coins: number, Item: string }
+
 local WIDTH = 20
 local LENGTH = 44
 
@@ -151,7 +153,31 @@ local PickleballConfig = table.freeze({
 	Season = table.freeze({
 		Epoch = 4 * 86400,
 		Seconds = 28 * 86400,
+		-- Shown as "Season 1": the season the game's pickleball launched in
+		-- (2026-10-10 is in season 740).
+		First = 740,
 	}),
+
+	-- The season board and its prizes (Phase 4b, RecreationRankService).
+	SeasonBoard = table.freeze({
+		Size = 10, -- players shown and prized
+		MinMatches = 5, -- (P) rated matches this season before a player is ranked
+		WriteInterval = 120, -- seconds; a changed rating is saved at most this often
+		ReadInterval = 60, -- seconds between reads of the board
+		-- A season's top 10 is frozen this long after it ends, so every
+		-- server has saved its last ratings first (P).
+		FreezeDelay = 15 * 60,
+		-- Finished seasons checked for a prize when a player joins (P).
+		ClaimSeasons = 3,
+	}),
+
+	-- Top-10 season prizes (§21.2; coins and a Special furniture item, by
+	-- the best rank each tier covers). (P)
+	SeasonPrizes = table.freeze({
+		table.freeze({ MaxRank = 1, Coins = 1500, Item = "champion_plaque" }),
+		table.freeze({ MaxRank = 3, Coins = 800, Item = "trophy_gold" }),
+		table.freeze({ MaxRank = 10, Coins = 400, Item = "neon_calm_sign" }),
+	} :: { SeasonPrize }),
 
 	-- Matches already rewarded, kept per player so a reward is paid once.
 	MaxProcessedMatches = 50,

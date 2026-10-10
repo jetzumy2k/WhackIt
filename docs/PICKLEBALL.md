@@ -8,6 +8,7 @@ game between players, in the same cartoon style as the rest of the campus.
 Code: `Config/PickleballConfig` (every number), `Shared/PickleballRules` (scoring, line calls, faults,
 rating, caps, supplies; unit-tested), `Shared/BallFlight` (the ball's path; unit-tested),
 `Lib/CourtBuilder` (the center), `Services/RecreationService` (challenges, matches, rewards),
+`Services/RecreationRankService` (the season board and prizes),
 `Controllers/PickleballController` (cards, panel, score bar, controls, the ball).
 
 ## The Recreation Center
@@ -109,9 +110,28 @@ supply or rating change) for everyone in it; players are told when it starts.
   uses their team's average against the other team's. An even match moves both sides by 16.
 - **Seasons** (decision D6): 4 weeks, starting Mondays 00:00 UTC. A new season resets the rating and the
   season's wins and losses; all-time totals stay.
-- **Not built yet (Phase 4b):** the seasonal leaderboard (an ordered DataStore per season) and the
-  top-10 season prizes. The saved data already holds what they need (`Recreation.SeasonId`,
-  `SeasonClaims`), so they need no new migration.
+- Seasons are shown numbered from the launch season ("Season 1" = `Season.First`, the season of
+  2026-10-10).
+
+### Season board and prizes (Phase 4b, `Services/RecreationRankService`)
+- **Ranked** after **5 rated matches** in the season (`SeasonBoard.MinMatches`, P). Friendly matches
+  don't count.
+- **The board:** Pickleball panel → **📈 Season**: the top 10 of all servers (an ordered DataStore per
+  season), with live ratings for players in this server, the time left, your rank or how many matches
+  you still need. Without DataStore access it ranks this server only and says so.
+- **Prizes** (P), for the final top 10:
+
+  | Rank | Coins | Office item (Special) |
+  |---|---|---|
+  | #1 | 1,500 | Champion Plaque |
+  | #2-3 | 800 | Golden Hammer Trophy |
+  | #4-10 | 400 | Neon CALM Sign |
+
+- **Paying out:** 15 minutes after a season ends (so every server has saved its last ratings), the first
+  server that needs it saves the final top 10 once (`RecSeasons`, never overwritten). A player in it
+  gets the prize on their next join, or within a minute if they're online, with a card. Each season
+  pays once (`SeasonClaims`); the last 3 finished seasons can still be collected.
+- **Not done:** season titles (titles come from levels today; a season title needs saved titles, later).
 
 ## Security (docs/REMOTE_CONTRACTS.md "Rec")
 Clients send a mode, a challenge id and a team, or an aim and a power; never a position, a score, a

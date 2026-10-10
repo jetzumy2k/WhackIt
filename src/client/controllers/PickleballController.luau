@@ -21,6 +21,9 @@
 	    bounce. One RenderStepped connection, only while a ball is moving.
 	  * Results (Rec.Result): a card with the coins, the office supply and
 	    the rating change.
+	  * The season (Rec.Season): the board (top 10, all servers when the
+	    server can read it) on the panel's Season tab, and a card when the
+	    server hands out a finished season's prize.
 ]]
 
 local Players = game:GetService("Players")
@@ -67,6 +70,15 @@ local ARM_BACK = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.
 
 export type Seat = { UserId: number, Name: string }
 
+export type BoardRow = { UserId: number, Name: string, Rating: number }
+
+export type SeasonBoard = {
+	SeasonId: number,
+	EndsAt: number,
+	Global: boolean,
+	Top: { BoardRow },
+}
+
 export type Challenge = {
 	Id: string,
 	Mode: string,
@@ -112,6 +124,7 @@ local balls: { [number]: Ball } = {}
 local renderConnection: RBXScriptConnection? = nil
 local changedEvent = Instance.new("BindableEvent")
 local openPanel: (() -> ())? = nil
+local seasonBoard: SeasonBoard? = nil
 -- Each shoulder joint's C0 before the first swing (the swing returns to it).
 local shoulderRest: { [Motor6D]: CFrame? } = setmetatable({}, { __mode = "k" }) :: any
 
@@ -629,6 +642,62 @@ local function parseMatch(payload: unknown): MatchView?
 	}
 end
 
+-- The season -------------------------------------------------------------------------
+
+local function parseBoard(data: { [string]: unknown }): SeasonBoard
+	local rows: { BoardRow } = {}
+	if typeof(data.Top) == "table" then
+		for _, raw in data.Top :: { unknown } do
+			if typeof(raw) == "table" and #rows < PickleballConfig.SeasonBoard.Size then
+				local row = raw :: { [string]: unknown }
+				local userId = number(row.UserId, 0)
+				if userId ~= 0 then
+					table.insert(rows, {
+						UserId = userId,
+						Name = string.sub(text(row.Name, "Player"), 1, MAX_NAME),
+						Rating = number(row.Rating, 0),
+					})
+				end
+			end
+		end
+	end
+	return {
+		SeasonId = number(data.SeasonId, 0),
+		EndsAt = number(data.EndsAt, 0),
+		Global = data.Global == true,
+		Top = rows,
+	}
+end
+
+local function onSeason(payload: unknown): ()
+	if typeof(payload) ~= "table" then
+		return
+	end
+	local data = payload :: { [string]: unknown }
+	if data.Kind == "Board" then
+		seasonBoard = parseBoard(data)
+		changedEvent:Fire()
+	elseif data.Kind == "Prize" then
+		local item = text(data.Item, "")
+		AnnouncementController.show({
+			Title = "🏆 SEASON RESULTS",
+			Body = string.format(
+				"Pickleball Season %d is over: you finished #%d!",
+				PickleballRules.seasonNumber(number(data.SeasonId, 0)),
+				number(data.Rank, 0)
+			),
+			Detail = string.format("+%d coins", number(data.Coins, 0))
+				.. if item ~= "" then " · " .. item .. " (in your office storage)" else "",
+			Accent = C.Heading,
+			Seconds = 15,
+		})
+	end
+end
+
+function PickleballController.season(): SeasonBoard?
+	return seasonBoard
+end
+
 -- Match HUD --------------------------------------------------------------------------
 
 local function buildHud(): (ScreenGui, () -> ())
@@ -988,6 +1057,31 @@ local function buildPanel(parent: Instance): ()
 				)
 			end
 		end
+		local season = PanelKit.section(content, "Season prizes (top 10)", false, true)
+		local from = 1
+		for _, prize in PickleballConfig.SeasonPrizes do
+			local item = FurnitureConfig.ByKey[prize.Item]
+			PanelKit.text(
+				season.Body,
+				string.format(
+					"%s: %d coins + %s",
+					if from == prize.MaxRank
+						then string.format("#%d", from)
+						else string.format("#%d-%d", from, prize.MaxRank),
+					prize.Coins,
+					if item then item.Name else prize.Item
+				)
+			)
+			from = prize.MaxRank + 1
+		end
+		PanelKit.text(
+			season.Body,
+			string.format(
+				"Ranked after %d rated matches in the season. Prizes are handed out when you next play after the season ends.",
+				PickleballConfig.SeasonBoard.MinMatches
+			),
+			"Muted"
+		)
 		local rating = PanelKit.section(content, "Rating and seasons", false, true)
 		PanelKit.text(
 			rating.Body,
@@ -998,6 +1092,81 @@ local function buildPanel(parent: Instance): ()
 		)
 	end
 
+	local function seasonPage(): ()
+		local board = seasonBoard
+		local seasonId = if board then board.SeasonId else PickleballRules.seasonId(os.time())
+		local left = math.max(0, PickleballRules.seasonEnds(seasonId) - serverNow())
+		local header = PanelKit.section(
+			content,
+			string.format("Season %d", PickleballRules.seasonNumber(seasonId)),
+			false,
+			true
+		)
+		PanelKit.text(
+			header.Body,
+			string.format(
+				"Ends in %d d %d h. The top %d when it ends win a prize (🏆 Prizes tab).",
+				left // 86400,
+				(left % 86400) // 3600,
+				PickleballConfig.SeasonBoard.Size
+			)
+		)
+		local snapshot = ProgressController.get()
+		if snapshot then
+			local record = snapshot.Recreation
+			local played = if record.SeasonId == seasonId then record.Wins + record.Losses else 0
+			local need = PickleballConfig.SeasonBoard.MinMatches - played
+			local rank = nil
+			if board then
+				for index, row in board.Top do
+					if row.UserId == localPlayer.UserId then
+						rank = index
+					end
+				end
+			end
+			PanelKit.text(
+				header.Body,
+				if need > 0
+					then string.format(
+						"Play %d more rated match%s this season to be ranked.",
+						need,
+						if need == 1 then "" else "es"
+					)
+					elseif rank then string.format("You're #%d. Keep it up!", rank)
+					else "You're ranked, but not in the top 10 yet.",
+				"Muted"
+			)
+		end
+		local top = PanelKit.section(content, "Top 10", false, true)
+		if board == nil or #board.Top == 0 then
+			PanelKit.notice(
+				top.Body,
+				"Empty",
+				string.format(
+					"Nobody is ranked yet. Play %d rated matches to get on the board!",
+					PickleballConfig.SeasonBoard.MinMatches
+				)
+			)
+		else
+			for index, row in board.Top do
+				local mine = row.UserId == localPlayer.UserId
+				PanelKit.text(
+					top.Body,
+					string.format(
+						"%d. %s · %d",
+						index,
+						if mine then row.Name .. " (you)" else row.Name,
+						row.Rating
+					),
+					if mine then "Heading" else nil
+				)
+			end
+		end
+		if board and not board.Global then
+			PanelKit.text(top.Body, "This server only (the season board is offline).", "Muted")
+		end
+	end
+
 	local function render(): ()
 		window:clear()
 		table.clear(countdowns)
@@ -1006,6 +1175,8 @@ local function buildPanel(parent: Instance): ()
 			playPage()
 		elseif activeTab == "Rules" then
 			rulesPage()
+		elseif activeTab == "Season" then
+			seasonPage()
 		else
 			prizesPage()
 		end
@@ -1014,6 +1185,7 @@ local function buildPanel(parent: Instance): ()
 	window:setTabs({
 		{ Id = "Play", Label = "🏓 Play" },
 		{ Id = "Rules", Label = "📖 How to play" },
+		{ Id = "Season", Label = "📈 Season" },
 		{ Id = "Prizes", Label = "🏆 Prizes" },
 	}, function(id: string)
 		activeTab = id
@@ -1031,7 +1203,7 @@ local function buildPanel(parent: Instance): ()
 		end
 	end
 	local function refresh(): ()
-		if window:isOpen() and activeTab == "Play" then
+		if window:isOpen() and (activeTab == "Play" or activeTab == "Season") then
 			render()
 		end
 	end
@@ -1095,6 +1267,7 @@ function PickleballController.start(): ()
 	remote("Challenges").OnClientEvent:Connect(onChallenges)
 	remote("Shot").OnClientEvent:Connect(onShot)
 	remote("Result").OnClientEvent:Connect(onResult)
+	remote("Season").OnClientEvent:Connect(onSeason)
 	remote("MatchState").OnClientEvent:Connect(function(payload: unknown)
 		local parsed = parseMatch(payload)
 		if parsed then

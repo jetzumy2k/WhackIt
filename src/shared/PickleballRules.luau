@@ -59,6 +59,9 @@ export type Record = {
 	DayOpponents: { [string]: number }, -- opponentsKey -> rewarded matches that day
 }
 
+-- One player on a season board.
+export type BoardEntry = { UserId: number, Rating: number }
+
 local PickleballRules = {}
 
 local MAX_COUNTER = 2 ^ 40
@@ -386,6 +389,11 @@ function PickleballRules.seasonEnds(seasonId: number): number
 	return season.Epoch + (seasonId + 1) * season.Seconds
 end
 
+-- The season's number as players see it ("Season 1" = the launch season).
+function PickleballRules.seasonNumber(seasonId: number): number
+	return math.max(1, seasonId - PickleballConfig.Season.First + 1)
+end
+
 -- The same opponents in any order give the same key.
 function PickleballRules.opponentsKey(userIds: { number }): string
 	local sorted = table.clone(userIds)
@@ -530,6 +538,135 @@ end
 function PickleballRules.isFull(mode: string, counts: { number }): boolean
 	local size = PickleballRules.teamSize(mode)
 	return counts[1] >= size and counts[2] >= size
+end
+
+-- Season board and prizes (Phase 4b) ---------------------------------------------
+
+local MAX_USER_ID = 2 ^ 52
+
+local function userIdOf(value: unknown): number?
+	-- Not "> 0": Studio's local test players have negative ids.
+	if typeof(value) ~= "number" or value ~= value or value % 1 ~= 0 then
+		return nil
+	end
+	if value == 0 or math.abs(value) > MAX_USER_ID then
+		return nil
+	end
+	return value
+end
+
+-- Whether a record counts on the board of `seasonId` (enough rated matches).
+function PickleballRules.isRanked(record: Record, seasonId: number): boolean
+	return record.SeasonId == seasonId
+		and record.Wins + record.Losses >= PickleballConfig.SeasonBoard.MinMatches
+end
+
+-- The prize for a final rank, or nil outside the prized ranks.
+function PickleballRules.seasonPrize(rank: number): PickleballConfig.SeasonPrize?
+	if rank < 1 or rank % 1 ~= 0 then
+		return nil
+	end
+	for _, prize in PickleballConfig.SeasonPrizes do
+		if rank <= prize.MaxRank then
+			return prize
+		end
+	end
+	return nil
+end
+
+-- Highest rating first; ties go to the lower UserId so every server agrees.
+-- At most `limit` entries.
+function PickleballRules.rankBoard(entries: { BoardEntry }, limit: number): { BoardEntry }
+	local sorted = table.clone(entries)
+	table.sort(sorted, function(a: BoardEntry, b: BoardEntry): boolean
+		if a.Rating ~= b.Rating then
+			return a.Rating > b.Rating
+		end
+		return a.UserId < b.UserId
+	end)
+	local top: { BoardEntry } = {}
+	for index = 1, math.min(limit, #sorted) do
+		table.insert(top, sorted[index])
+	end
+	return top
+end
+
+-- The stored page combined with the ranked players in this server (their
+-- live ratings are fresher and win), ranked, at most `limit`. Broken entries
+-- are skipped.
+function PickleballRules.mergeBoard(
+	page: { BoardEntry },
+	live: { BoardEntry },
+	limit: number
+): { BoardEntry }
+	local ratings: { [number]: number } = {}
+	for _, list in { page, live } do
+		for _, entry in list do
+			local userId = userIdOf(entry.UserId)
+			local rating = entry.Rating
+			if
+				userId
+				and typeof(rating) == "number"
+				and rating == rating
+				and math.abs(rating) ~= math.huge
+			then
+				ratings[userId] = PickleballRules.clampRating(rating)
+			end
+		end
+	end
+	local entries: { BoardEntry } = {}
+	for userId, rating in ratings do
+		table.insert(entries, { UserId = userId, Rating = rating })
+	end
+	return PickleballRules.rankBoard(entries, limit)
+end
+
+-- A clean, ranked copy of a finished season's frozen top list as saved in
+-- the RecSeasons store ({ Top = { { UserId, Rating } } }); nil if unusable.
+function PickleballRules.sanitizeResults(raw: unknown): { BoardEntry }?
+	if typeof(raw) ~= "table" then
+		return nil
+	end
+	local top = (raw :: { [string]: unknown }).Top
+	if typeof(top) ~= "table" then
+		return nil
+	end
+	local entries: { BoardEntry } = {}
+	for _, item in top :: { unknown } do
+		if typeof(item) == "table" then
+			local entry = item :: { [string]: unknown }
+			local userId, rating = userIdOf(entry.UserId), entry.Rating
+			if userId and typeof(rating) == "number" then
+				table.insert(entries, { UserId = userId, Rating = rating })
+			end
+		end
+	end
+	return PickleballRules.mergeBoard(entries, {}, PickleballConfig.SeasonBoard.Size)
+end
+
+-- 1-based position of `userId` on a ranked board, or nil.
+function PickleballRules.rankOn(board: { BoardEntry }, userId: number): number?
+	for index, entry in board do
+		if entry.UserId == userId then
+			return index
+		end
+	end
+	return nil
+end
+
+-- Finished seasons, newest first, whose prizes a player may still collect:
+-- the last ClaimSeasons seasons, frozen by `unixTime`, not already in `claims`.
+function PickleballRules.claimableSeasons(claims: { number }, unixTime: number): { number }
+	local board = PickleballConfig.SeasonBoard
+	local current = PickleballRules.seasonId(unixTime)
+	local seasons: { number } = {}
+	for season = current - 1, math.max(0, current - board.ClaimSeasons), -1 do
+		local frozen = unixTime >= PickleballRules.seasonEnds(season) + board.FreezeDelay
+		if frozen and table.find(claims, season) == nil then
+			table.insert(seasons, season)
+		end
+	end
+	return seasons
 end
 
 return PickleballRules
