@@ -27,7 +27,7 @@ local BuffService = require(script.Parent.BuffService)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressService = require(script.Parent.ProgressService)
-local QuestService = require(script.Parent.QuestService)
+local ActivityService = require(script.Parent.ActivityService)
 local SessionService = require(script.Parent.SessionService)
 local StressRules = require(ReplicatedStorage.Shared.StressRules)
 local Types = require(ReplicatedStorage.Shared.Types)
@@ -53,7 +53,7 @@ local function celebrateZen(player: Player, data: PlayerDataService.PlayerData):
 	SessionService.addCoins(player, GameConfig.ZenBonusCoins)
 	BuffService.grantZenBuff(player)
 	ProgressService.sync(player)
-	QuestService.record(player, "ReachZen", 1)
+	ActivityService.record(player, "ReachZen", 1)
 
 	local payload: Types.ZenAchieved = {
 		UserId = player.UserId,

@@ -252,6 +252,14 @@
           }
         },
 
+        "DailyEvent": {
+          "$className": "Folder",
+
+          "Rewarded": {
+            "$className": "RemoteEvent"
+          }
+        },
+
         "Quests": {
           "$className": "Folder",
 

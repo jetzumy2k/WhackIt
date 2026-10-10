@@ -177,6 +177,11 @@ on the Executive Floor without access.
 | `Level.SetCosmetic` | client -> server | `kind: "Trail" \| "Glow" \| "Office", id: string` (`""` = default); `maxArgs` 2, `RemoteLimits.Settings` | `LevelRewardRules.parseChoice`: known kind and `""` or a known id (else rejected); the player's level unlocks it (else ignored, a UI race). Saves `Cosmetics`, sets `TrailStyle` / `GlowStyle` (re-equips the hammer for a new trail), repaints the office for a theme (`OfficeService.applyTheme`); `Profile.Sync` |
 | `Level.LevelUp` | server -> one client | `{ FromLevel, ToLevel, Coins }` | sent when XP reaches levels never rewarded before and their coins are paid (`SessionService.addXp`); display only (the level-up card) |
 
+## DailyEvent (docs/DAILY_EVENTS.md, 2026-10-10)
+| Remote | Direction | Payload | Server checks / handling |
+|---|---|---|---|
+| `DailyEvent.Rewarded` | server -> one client | `{ EventId, Tier, Tiers, Coins, Xp, Supply }` | when the player's points reach a tier, after it's marked paid and paid; display only (the tier card). There is no client -> server direction: points come from the activity feed |
+
 ## Quests (docs/QUESTS.md, 2026-10-10)
 | Remote | Direction | Payload | Server checks / handling |
 |---|---|---|---|
@@ -184,7 +189,8 @@ on the Executive Floor without access.
 | `Quests.Reroll` | client -> server | `index: 1..3`; `maxArgs` 1, `RemoteLimits.Quests` | whole index in range (else rejected); a reroll left today and the quest unfinished (else a toast); swaps in a daily quest not already on the list; `Profile.Sync` |
 | `Quests.Rewarded` | server -> one client | `{ Title, Coins, Xp, Supply }` | after a claim (or a reset paying a finished, unclaimed quest); display only (the reward card) |
 
-Progress never comes from a client: services call `QuestService.record` after results they've decided
+Progress never comes from a client: services report results they've decided to the activity feed
+(`ActivityService.record`), which feeds quests and the Event of the Day
 (rewarded defeats and their coins, rewarded Zen, rewarded pickleball matches and wins, furniture placed,
 another player's office reached, a pet hatched).
 

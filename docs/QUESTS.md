@@ -55,7 +55,8 @@ The office supply is a roll from the pickleball losers' pool (`PickleballConfig.
 needing other players can be swapped (daily) or left; the others always add up to a full set.
 
 ## Rules
-- **What counts** (the server decides; clients never report progress):
+- **What counts** (the server decides; clients never report progress). Services report to the
+  activity feed (`Services/ActivityService`), which quests and the Event of the Day both listen to:
 
   | Event | Counted by | When |
   |---|---|---|

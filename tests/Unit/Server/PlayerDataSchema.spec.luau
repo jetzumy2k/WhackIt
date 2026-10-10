@@ -903,4 +903,30 @@ return function()
 			expect((data.Quests :: QuestRules.State).TutorialStep).to.equal(1)
 		end)
 	end)
+
+	describe("PlayerDataSchema v14 (Event of the Day)", function()
+		local DailyEventRules = require(ReplicatedStorage.Shared.DailyEventRules)
+
+		it("starts existing players with no points, touching nothing else", function()
+			local data = validData()
+			data.SchemaVersion = 13
+			data.DailyEvent = { DayKey = "2026-10-10", Points = 999, Tiers = 3 } -- can't exist before v14
+			expect((PlayerDataSchema.prepare(data))).to.equal(true)
+			local state = data.DailyEvent :: DailyEventRules.State
+			expect(state.DayKey).to.equal("")
+			expect(state.Points).to.equal(0)
+			expect(state.Tiers).to.equal(0)
+			expect(data.Coins).to.equal(250)
+		end)
+
+		it("keeps saved points and paid tiers", function()
+			local data = validData()
+			data.DailyEvent = { DayKey = "2026-10-10", Points = 85, Tiers = 2 }
+			PlayerDataSchema.prepare(data)
+			PlayerDataSchema.prepare(data)
+			local state = data.DailyEvent :: DailyEventRules.State
+			expect(state.Points).to.equal(85)
+			expect(state.Tiers).to.equal(2)
+		end)
+	end)
 end

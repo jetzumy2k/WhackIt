@@ -38,7 +38,7 @@ local OfficeConfig = require(ReplicatedStorage.Config.OfficeConfig)
 local OfficeWingBuilder = require(ServerScriptService.Lib.OfficeWingBuilder)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressService = require(script.Parent.ProgressService)
-local QuestService = require(script.Parent.QuestService)
+local ActivityService = require(script.Parent.ActivityService)
 local RemoteController = require(ServerScriptService.Controllers.RemoteController)
 local RemoteLimits = require(ServerScriptService.Config.RemoteLimits)
 local Validate = require(ReplicatedStorage.Shared.Validate)
@@ -325,7 +325,7 @@ local function onGo(player: Player, rawTarget: unknown): ()
 	end
 	teleport(player, arrival(index))
 	if target ~= player then
-		QuestService.record(player, "VisitOffice", 1)
+		ActivityService.record(player, "VisitOffice", 1)
 	end
 end
 
@@ -408,7 +408,7 @@ local function onPlace(
 	table.insert(data.OfficeLayout, { Id = data.NextOfficeItemId, Item = key, X = x, Z = z, R = r })
 	data.NextOfficeItemId += 1
 	changed(player)
-	QuestService.record(player, "PlaceFurniture", 1)
+	ActivityService.record(player, "PlaceFurniture", 1)
 end
 
 local function readId(player: Player, remoteName: string, raw: unknown): number?

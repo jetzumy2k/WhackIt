@@ -47,7 +47,7 @@ local PetConfig = require(ReplicatedStorage.Config.PetConfig)
 local PetRules = require(ReplicatedStorage.Shared.PetRules)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressService = require(script.Parent.ProgressService)
-local QuestService = require(script.Parent.QuestService)
+local ActivityService = require(script.Parent.ActivityService)
 local RemoteController = require(ServerScriptService.Controllers.RemoteController)
 local RemoteLimits = require(ServerScriptService.Config.RemoteLimits)
 local StoreConfig = require(ReplicatedStorage.Config.StoreConfig)
@@ -212,7 +212,7 @@ function hatch(player: Player): ()
 		CreatedAt = os.time(),
 	}
 	data.Incubation = nil
-	QuestService.record(player, "HatchPet", 1)
+	ActivityService.record(player, "HatchPet", 1)
 	local autoEquipped = data.EquippedPetId == ""
 	if autoEquipped then
 		equip(player, data, petId)

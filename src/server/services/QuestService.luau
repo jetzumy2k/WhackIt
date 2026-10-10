@@ -2,8 +2,8 @@
 --[[
 	Quests (docs/QUESTS.md, major update Phase 2b, decisions D7-D9).
 
-	* Counting: other services report what a player did
-	  (QuestService.record(player, event, amount)); only server-side results
+	* Counting: other services report what a player did to the activity
+	  feed (ActivityService.record), which calls QuestService.record; only server-side results
 	  count: a rewarded boss defeat and its coins (CombatService), a rewarded
 	  Zen (StressService), a rewarded pickleball match or win
 	  (RecreationService), a piece placed or another player's office reached
@@ -26,6 +26,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
+local ActivityService = require(script.Parent.ActivityService)
 local FurnitureConfig = require(ReplicatedStorage.Config.FurnitureConfig)
 local FurnitureRules = require(ReplicatedStorage.Shared.FurnitureRules)
 local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
@@ -199,6 +200,7 @@ local function onReroll(player: Player, rawIndex: unknown): ()
 end
 
 function QuestService.init(): ()
+	ActivityService.subscribe(QuestService.record)
 	RemoteController.bind(QuestRemotes.Claim, {
 		name = "Quests.Claim",
 		maxArgs = 2,

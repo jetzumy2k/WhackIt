@@ -10,6 +10,10 @@
 	    with an office supply, time to Monday) and 🎓 Getting started (the
 	    tutorial chain, one step at a time).
 	  * Quests.Rewarded: a card with what a claim paid.
+	  * The Event of the Day (docs/DAILY_EVENTS.md) on the 🌟 Today tab:
+	    today's event, how points are earned, the points and the three tiers,
+	    the time left. A card on join says what today's event is, and
+	    DailyEvent.Rewarded shows each tier the server paid.
 ]]
 
 local Players = game:GetService("Players")
@@ -17,6 +21,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local QuestConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("QuestConfig"))
 local QuestRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("QuestRules"))
+local DailyEventConfig =
+	require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("DailyEventConfig"))
+local DailyEventRules =
+	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("DailyEventRules"))
 
 local AnnouncementController = require(script.Parent.AnnouncementController)
 local PanelKit = require(script.Parent.Parent.Lib.PanelKit)
@@ -32,7 +40,7 @@ local MAX_TEXT = 120
 
 local localPlayer = Players.LocalPlayer
 local remotes: Folder? = nil
-local openPanel: (() -> ())? = nil
+local openPanel: ((tab: string?) -> ())? = nil
 
 local function remote(name: string): RemoteEvent
 	local folder = remotes :: Folder
@@ -65,9 +73,10 @@ local function rewardText(quest: QuestConfig.Quest): string
 		.. if quest.Kind == "Weekly" then " · an office supply" else ""
 end
 
-function QuestController.open(): ()
+-- Opens the Quests window, on `tab` if given ("Today", "Daily", "Weekly", "Tutorial").
+function QuestController.open(tab: string?): ()
 	if openPanel then
-		openPanel()
+		openPanel(tab)
 	end
 end
 
@@ -75,6 +84,55 @@ end
 function QuestController.claimable(): number
 	local snapshot = ProgressController.get()
 	return if snapshot then QuestRules.claimableCount(snapshot.Quests) else 0
+end
+
+local function tierText(tier: DailyEventConfig.Tier): string
+	return string.format("%d coins · %d XP", tier.Coins, tier.Xp)
+		.. if tier.Supply then " · an office supply" else ""
+end
+
+local function onEventRewarded(payload: unknown): ()
+	if typeof(payload) ~= "table" then
+		return
+	end
+	local data = payload :: { [string]: unknown }
+	local dailyEvent = DailyEventConfig.ById[text(data.EventId, "")]
+	local parts = {
+		string.format("+%d coins", number(data.Coins, 0)),
+		string.format("+%d XP", number(data.Xp, 0)),
+	}
+	local supply = text(data.Supply, "")
+	if supply ~= "" then
+		table.insert(parts, supply .. " (in your office storage)")
+	end
+	AnnouncementController.show({
+		Title = string.format(
+			"%s TIER %d OF %d!",
+			if dailyEvent then dailyEvent.Icon else "🌟",
+			number(data.Tier, 1),
+			number(data.Tiers, #DailyEventConfig.Tiers)
+		),
+		Body = if dailyEvent then dailyEvent.Name else "Event of the Day",
+		Detail = table.concat(parts, " · "),
+		Accent = ACCENT,
+		Seconds = 6,
+	})
+end
+
+-- Once per join: what today's event is.
+local function announceToday(): ()
+	local dailyEvent = DailyEventRules.eventFor(os.time())
+	AnnouncementController.show({
+		Title = dailyEvent.Icon .. " TODAY: " .. string.upper(dailyEvent.Name),
+		Body = dailyEvent.Text,
+		Detail = "Points: " .. dailyEvent.PointsText,
+		Accent = ACCENT,
+		Seconds = 8,
+		ActionLabel = "SEE GOALS",
+		OnAction = function()
+			QuestController.open("Today")
+		end,
+	})
 end
 
 local function onRewarded(payload: unknown): ()
@@ -110,7 +168,7 @@ local function buildPanel(parent: Instance): ()
 		DisplayOrder = 5,
 	}, parent)
 	local content = window.Content
-	local activeTab = "Daily"
+	local activeTab = "Today"
 
 	-- One quest: what to do, a progress bar, the reward and its button.
 	local function questRow(
@@ -252,6 +310,52 @@ local function buildPanel(parent: Instance): ()
 		end
 	end
 
+	local function todayPage(saved: DailyEventRules.State): ()
+		local now = os.time()
+		local dailyEvent = DailyEventRules.eventFor(now)
+		-- Points saved for an earlier day count as 0 today.
+		local today = saved.DayKey == DailyEventRules.dayKey(now)
+		local points = if today then DailyEventRules.shownPoints(saved) else 0
+		local paid = if today then saved.Tiers else 0
+		local header =
+			PanelKit.section(content, dailyEvent.Icon .. " " .. dailyEvent.Name, false, true)
+		PanelKit.text(header.Body, dailyEvent.Text)
+		PanelKit.text(header.Body, "Points: " .. dailyEvent.PointsText, "Muted")
+		PanelKit.text(
+			header.Body,
+			string.format(
+				"Ends in %s (00:00 UTC). Tomorrow brings a different event; missing a day costs nothing.",
+				duration(DailyEventRules.endsAt(now) - now)
+			),
+			"Muted"
+		)
+		local tiers = DailyEventConfig.Tiers
+		local goal =
+			PanelKit.section(content, string.format("Your points: %d", points), false, true)
+		local nextTier = tiers[paid + 1]
+		local bar = PanelKit.progressBar(goal.Body, if nextTier then ACCENT else C.Good)
+		bar.set(
+			if nextTier then math.clamp(points / nextTier.Points, 0, 1) else 1,
+			if nextTier
+				then string.format("%d / %d to tier %d", points, nextTier.Points, paid + 1)
+				else "✅ All tiers reached!"
+		)
+		for index, tier in tiers do
+			PanelKit.text(
+				goal.Body,
+				string.format(
+					"%s Tier %d · %d points: %s",
+					if index <= paid then "✅" else "⬜",
+					index,
+					tier.Points,
+					tierText(tier)
+				),
+				if index <= paid then nil else "Muted"
+			)
+		end
+		PanelKit.text(goal.Body, "Tiers are paid as soon as you reach them.", "Muted")
+	end
+
 	local function render(): ()
 		window:clear()
 		window:selectTab(activeTab)
@@ -261,7 +365,9 @@ local function buildPanel(parent: Instance): ()
 			return
 		end
 		local state = snapshot.Quests
-		if activeTab == "Weekly" then
+		if activeTab == "Today" then
+			todayPage(snapshot.DailyEvent)
+		elseif activeTab == "Weekly" then
 			weeklyPage(state)
 		elseif activeTab == "Tutorial" then
 			tutorialPage(state)
@@ -271,6 +377,7 @@ local function buildPanel(parent: Instance): ()
 	end
 
 	window:setTabs({
+		{ Id = "Today", Label = "🌟 Today" },
 		{ Id = "Daily", Label = "📅 Daily" },
 		{ Id = "Weekly", Label = "🗓️ Weekly" },
 		{ Id = "Tutorial", Label = "🎓 Getting started" },
@@ -281,7 +388,10 @@ local function buildPanel(parent: Instance): ()
 	window:onOpen(function()
 		task.defer(render)
 	end)
-	openPanel = function()
+	openPanel = function(tab: string?)
+		if tab then
+			activeTab = tab
+		end
 		if window:isOpen() then
 			render()
 		else
@@ -299,7 +409,9 @@ end
 
 local function buildButton(): ()
 	local button = Responsive.dockButton("OpenQuests", "📋", "Quests", ACCENT, 6)
-	button.Activated:Connect(QuestController.open)
+	button.Activated:Connect(function()
+		QuestController.open()
+	end)
 	local badge = Instance.new("TextLabel")
 	badge.Name = "Badge"
 	badge.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -329,6 +441,12 @@ function QuestController.start(): ()
 	buildPanel(localPlayer:WaitForChild("PlayerGui"))
 	buildButton()
 	remote("Rewarded").OnClientEvent:Connect(onRewarded)
+	local eventRewarded = ReplicatedStorage:WaitForChild("Remotes")
+		:WaitForChild("DailyEvent")
+		:WaitForChild("Rewarded")
+	assert(eventRewarded:IsA("RemoteEvent"), "DailyEvent.Rewarded must be a RemoteEvent")
+	eventRewarded.OnClientEvent:Connect(onEventRewarded)
+	task.delay(6, announceToday)
 end
 
 return QuestController
