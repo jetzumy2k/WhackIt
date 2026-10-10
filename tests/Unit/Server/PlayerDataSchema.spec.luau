@@ -1060,4 +1060,31 @@ return function()
 			expect(state.TotalSpins).to.equal(30)
 		end)
 	end)
+	describe("PlayerDataSchema v20 (paper toss)", function()
+		local PaperTossRules = require(ReplicatedStorage.Shared.PaperTossRules)
+
+		it("starts existing players with no games, touching nothing else", function()
+			local data = validData()
+			data.SchemaVersion = 19
+			data.PaperToss = { Cleared = 3, Best = 15 } -- can't exist before v20
+			expect((PlayerDataSchema.prepare(data))).to.equal(true)
+			local record = data.PaperToss :: PaperTossRules.Record
+			expect(record.Cleared).to.equal(0)
+			expect(record.Best).to.equal(0)
+			expect(data.Coins).to.equal(250)
+			expect(data.SchemaVersion).to.equal(PlayerDataSchema.CURRENT_VERSION)
+		end)
+
+		it("keeps a saved record", function()
+			local data = validData()
+			data.PaperToss =
+				{ DayKey = "2026-10-10", DayWins = 2, Cleared = 2, Best = 11, TotalWins = 6 }
+			PlayerDataSchema.prepare(data)
+			PlayerDataSchema.prepare(data)
+			local record = data.PaperToss :: PaperTossRules.Record
+			expect(record.Cleared).to.equal(2)
+			expect(record.Best).to.equal(11)
+			expect(record.TotalWins).to.equal(6)
+		end)
+	end)
 end

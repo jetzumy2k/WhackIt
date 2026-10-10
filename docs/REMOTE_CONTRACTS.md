@@ -175,6 +175,16 @@ Client -> server remotes: `RemoteLimits.Contest` (burst 4, 0.5/s); one contest r
 | `Contest.State` | server -> one client | `{ Available, Global, Week, Phase, Remaining, Test, Entered, EntryModeration, EntryItems, EntryFit, ThemeItemsUsed, CanEnter, EnterReason, CanVote, VoteReason, VotesLeft, Winners = { { UserId, Name, Score } }, WinnersWeek }` | after Info, Enter |
 | `Contest.Result` | server -> one client | `{ Week, Theme, Rank?, Coins, Xp, Item }` | once per entered week when its prize is paid |
 
+## PaperToss: Paper Toss Showdown (docs/PAPER_TOSS.md, 2026-10-10)
+Client -> server remotes: `RemoteLimits.PaperToss` (burst 4, 1/s).
+
+| Remote | Direction | Payload | Server checks / handling |
+|---|---|---|---|
+| `PaperToss.Start` | client -> server | `opponent` (1-3); `maxArgs` 1 | not in a match or mission; `PaperTossRules.canPlay` (beat the one before); a new game with the server's rounds; `State` Start |
+| `PaperToss.Throw` | client -> server | `aim`, `power` (numbers 0..1, else rejected); `maxArgs` 2 | a game running; ≥ 1.2 s since the last throw; judged by the server, the CPU throws, next round; at the end `PaperTossRules.finish` pays (daily cap) |
+| `PaperToss.Quit` | client -> server | none | ends the game, no reward |
+| `PaperToss.State` | server -> one client | `{ Kind = "Start", Opponent, Rounds, Round, You, Cpu }`, `{ Kind = "Round", Played, YouThrow, CpuThrow, You, Cpu, Round, Outcome?, Coins?, Xp?, Supply?, Rewarded? }` or `{ Kind = "Quit" }` | |
+
 ## Capsule: the Lucky Capsule Machine (docs/CAPSULE.md, 2026-10-10)
 | Remote | Direction | Payload | Server checks / handling |
 |---|---|---|---|

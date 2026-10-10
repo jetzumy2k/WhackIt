@@ -498,6 +498,99 @@ local function capsuleMachine(parent: Instance): ()
 	model.Parent = parent
 end
 
+-- Paper Toss Showdown (docs/PAPER_TOSS.md): a little office corner with a
+-- desk, a waste bin and a desk fan at the east end of the entrance. Its
+-- prompt opens the game (Controllers/PaperTossController); throws are on screen.
+CourtBuilder.TOSS_PROMPT_NAME = "PaperTossPrompt"
+CourtBuilder.TOSS_POSITION = Vector3.new(50, 0, 121)
+
+local function paperTossBooth(parent: Instance): ()
+	local model = Instance.new("Model")
+	model.Name = "PaperToss"
+	local base = CourtBuilder.TOSS_POSITION + Vector3.new(0, CENTER.SurfaceY, 0)
+	part(
+		model,
+		"Rug",
+		Vector3.new(9, 0.2, 7),
+		base + Vector3.new(0, 0.1, 0),
+		Color3.fromRGB(90, 110, 160),
+		Enum.Material.Fabric
+	)
+	part(
+		model,
+		"Desk",
+		Vector3.new(4, 0.4, 2),
+		base + Vector3.new(-2, 2.6, 1.5),
+		Color3.fromRGB(170, 120, 75),
+		Enum.Material.Wood
+	)
+	for _, x in { -3.7, -0.3 } do
+		part(
+			model,
+			"DeskLeg",
+			Vector3.new(0.3, 2.4, 1.8),
+			base + Vector3.new(x, 1.2, 1.5),
+			Color3.fromRGB(120, 85, 55),
+			Enum.Material.Wood
+		)
+	end
+	local bin = part(
+		model,
+		"Bin",
+		Vector3.new(1.8, 2, 2),
+		base + Vector3.new(2.5, 1.0, -1.5),
+		Color3.fromRGB(70, 75, 90),
+		Enum.Material.Metal
+	)
+	bin.Shape = Enum.PartType.Cylinder
+	bin.Orientation = Vector3.new(0, 0, 90)
+	for _, offset in
+		{ Vector3.new(-1.5, 2.95, 1.2), Vector3.new(-2.4, 2.95, 1.8), Vector3.new(1.8, 0.35, -0.2) }
+	do
+		local paper = part(
+			model,
+			"PaperBall",
+			Vector3.new(0.5, 0.5, 0.5),
+			base + offset,
+			Color3.fromRGB(245, 245, 240)
+		)
+		paper.Shape = Enum.PartType.Ball
+	end
+	local fan = part(
+		model,
+		"Fan",
+		Vector3.new(0.3, 1.2, 1.2),
+		base + Vector3.new(-3.2, 3.5, 1.4),
+		Color3.fromRGB(110, 190, 255),
+		Enum.Material.Metal
+	)
+	fan.Shape = Enum.PartType.Cylinder
+	local panel =
+		part(model, "Sign", Vector3.new(9, 2.8, 0.5), base + Vector3.new(0, 6.5, 3.6), BOARD)
+	label(panel, Enum.NormalId.Back, "🗑️ PAPER TOSS SHOWDOWN", BOARD_TEXT)
+	label(panel, Enum.NormalId.Front, "🗑️ PAPER TOSS", BOARD_TEXT)
+	for _, x in { -4, 4 } do
+		part(
+			model,
+			"SignLeg",
+			Vector3.new(0.4, 5, 0.4),
+			base + Vector3.new(x, 2.5, 3.6),
+			POST,
+			Enum.Material.Metal
+		)
+	end
+	local stand =
+		part(model, "PromptStand", Vector3.new(2.6, 3, 1), base + Vector3.new(0, 1.5, -3.2), BOARD)
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = CourtBuilder.TOSS_PROMPT_NAME
+	prompt.ObjectText = "Paper Toss Showdown"
+	prompt.ActionText = "Play"
+	prompt.MaxActivationDistance = 12
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = stand
+	model.Parent = parent
+end
+
 -- The pavilion over the courts (visual overhaul V2): a high roof on steel
 -- columns (lobs fly up to ~40 studs, so the roof is above them), a lit
 -- fascia sign facing the HQ, three-tier stands down both sides, a mural
@@ -637,6 +730,7 @@ function CourtBuilder.build(parent: Instance): Center
 	pavilion(folder)
 	arenaKiosk(folder)
 	capsuleMachine(folder)
+	paperTossBooth(folder)
 	folder.Parent = parent
 	return { Folder = folder, Courts = courts, Prompt = prompt }
 end
