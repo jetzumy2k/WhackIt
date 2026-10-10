@@ -1,8 +1,8 @@
 --!strict
 --[[
 	Builds the Recreation Center (docs/PICKLEBALL.md "The Recreation
-	Center"): a paved area north of the office building with two pickleball
-	courts side by side (Config/PickleballConfig.Center), spectator benches,
+	Center"): a paved area in front of the office building (since 2026-10-10)
+	under a pavilion (see pavilion()) with two pickleball courts side by side (Config/PickleballConfig.Center), spectator benches,
 	a board per court showing its match, and a sign with a "Pickleball"
 	prompt that opens the Pickleball panel (PickleballController).
 
@@ -37,7 +37,7 @@ CourtBuilder.NET_WALL_NAME = "NetWall"
 
 local COURT = PickleballConfig.Court
 local CENTER = PickleballConfig.Center
-local PAD = Color3.fromRGB(150, 150, 156)
+local PAD = Color3.fromRGB(118, 122, 130) -- dark paving, not a pale building-site slab
 local RUN_OFF = Color3.fromRGB(70, 120, 90)
 local SURFACE = Color3.fromRGB(60, 110, 170)
 local KITCHEN = Color3.fromRGB(90, 140, 195)
@@ -333,6 +333,124 @@ local function signpost(parent: Instance): ProximityPrompt
 	return prompt
 end
 
+-- The pavilion over the courts (visual overhaul V2): a high roof on steel
+-- columns (lobs fly up to ~40 studs, so the roof is above them), a lit
+-- fascia sign facing the HQ, three-tier stands down both sides, a mural
+-- wall at the far end, lights under the roof and planters at the entrance.
+local ROOF_Y = 42
+local STEEL = Color3.fromRGB(70, 74, 86)
+local ROOF = Color3.fromRGB(58, 62, 74)
+local SEAT = Color3.fromRGB(60, 110, 180)
+
+local function pavilion(parent: Instance): ()
+	local area = CENTER.Area
+	local pad = CENTER.SurfaceY
+	local minX, maxX = area.MinX + 2, area.MaxX - 2
+	local roofMinZ, roofMaxZ = area.MinZ + 12, area.MaxZ - 2
+	local midZ = (roofMinZ + roofMaxZ) / 2
+	local model = Instance.new("Model")
+	model.Name = "Pavilion"
+	model.Parent = parent
+
+	part(
+		model,
+		"PavilionRoof",
+		Vector3.new(maxX - minX + 2, 1.5, roofMaxZ - roofMinZ + 2),
+		Vector3.new(0, pad + ROOF_Y + 0.75, midZ),
+		ROOF,
+		Enum.Material.Metal
+	)
+	-- Columns down both long sides.
+	for _, x in { minX + 1, maxX - 1 } do
+		for z = roofMinZ + 1, roofMaxZ - 1, (roofMaxZ - roofMinZ - 2) / 3 do
+			part(
+				model,
+				"PavilionColumn",
+				Vector3.new(1.4, ROOF_Y, 1.4),
+				Vector3.new(x, pad + ROOF_Y / 2, z),
+				STEEL,
+				Enum.Material.Metal
+			)
+		end
+	end
+	-- The fascia over the entrance, facing the HQ (-Z), with the name.
+	local fascia = part(
+		model,
+		"PavilionFascia",
+		Vector3.new(maxX - minX + 2, 6, 1),
+		Vector3.new(0, pad + ROOF_Y + 2.5, roofMinZ - 1),
+		Color3.fromRGB(35, 38, 48),
+		Enum.Material.Metal
+	)
+	local signLabel = label(fascia, Enum.NormalId.Front, "🏓  RECREATION CENTER", BOARD_TEXT)
+	local gui = signLabel.Parent :: SurfaceGui
+	gui.Brightness = 1.5
+	-- Stands: three tiers on each long side, outside the court benches.
+	for _, side in { -1, 1 } do
+		for tier = 0, 2 do
+			local height = 1 + tier * 1.2
+			local x = side * (COURT.Width / 2 + COURT.RunOff + 24 + 5.5 + tier * 2.4)
+			part(
+				model,
+				"Stand",
+				Vector3.new(2.4, height, 52),
+				Vector3.new(x, pad + height / 2, CENTER.Courts[1].Z),
+				if tier % 2 == 0 then SEAT else Color3.fromRGB(80, 130, 200),
+				Enum.Material.SmoothPlastic
+			)
+		end
+	end
+	-- The far wall with a mural line, facing the courts.
+	local wall = part(
+		model,
+		"MuralWall",
+		Vector3.new(maxX - minX, 12, 1),
+		Vector3.new(0, pad + 6, roofMaxZ),
+		Color3.fromRGB(45, 60, 90),
+		Enum.Material.Concrete
+	)
+	label(wall, Enum.NormalId.Front, "PLAY  •  RELAX  •  REPEAT", Color3.fromRGB(255, 225, 150))
+	-- Lights under the roof (dim, no shadows).
+	for _, x in { -30, 0, 30 } do
+		for _, z in { midZ - 18, midZ + 18 } do
+			local holder = part(
+				model,
+				"PavilionLight",
+				Vector3.new(4, 0.4, 4),
+				Vector3.new(x, pad + ROOF_Y - 0.4, z),
+				Color3.fromRGB(200, 200, 196)
+			)
+			holder.CanCollide = false
+			local light = Instance.new("PointLight")
+			light.Color = Color3.fromRGB(255, 240, 220)
+			light.Range = 50
+			light.Brightness = 0.9
+			light.Shadows = false
+			light.Parent = holder
+		end
+	end
+	-- Planters either side of the entrance path.
+	for _, x in { -12, 12 } do
+		part(
+			model,
+			"EntrancePlanter",
+			Vector3.new(5, 2, 5),
+			Vector3.new(x, pad + 1, area.MinZ + 4),
+			Color3.fromRGB(72, 76, 88),
+			Enum.Material.Concrete
+		)
+		local bush = part(
+			model,
+			"EntranceBush",
+			Vector3.new(5, 4, 5),
+			Vector3.new(x, pad + 3.5, area.MinZ + 4),
+			Color3.fromRGB(70, 150, 80),
+			Enum.Material.Grass
+		)
+		bush.Shape = Enum.PartType.Ball
+	end
+end
+
 function CourtBuilder.build(parent: Instance): Center
 	local folder = Instance.new("Folder")
 	folder.Name = "RecreationCenter"
@@ -344,13 +462,14 @@ function CourtBuilder.build(parent: Instance): Center
 		Vector3.new(area.MaxX - area.MinX, 1, area.MaxZ - area.MinZ),
 		Vector3.new((area.MinX + area.MaxX) / 2, padTop - 0.5, (area.MinZ + area.MaxZ) / 2),
 		PAD,
-		Enum.Material.Concrete
+		Enum.Material.Pavement
 	)
 	local courts: { Court } = {}
 	for index, center in CENTER.Courts do
 		table.insert(courts, buildCourt(folder, index, center))
 	end
 	local prompt = signpost(folder)
+	pavilion(folder)
 	folder.Parent = parent
 	return { Folder = folder, Courts = courts, Prompt = prompt }
 end

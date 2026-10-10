@@ -108,9 +108,10 @@ return function()
 		end)
 
 		it("has CeoHealthMultiplier times the HP of the toughest other boss", function()
+			-- The Principal tier (PostCeo, after the CEO) doesn't count.
 			local toughest = 0
 			for _, boss in BossConfig.List do
-				if boss.Id ~= ceo.Id then
+				if boss.Id ~= ceo.Id and not boss.PostCeo then
 					toughest = math.max(toughest, boss.MaxHealth)
 				end
 			end
@@ -122,17 +123,44 @@ return function()
 			return boss.MaxHealth / boss.DamageTakenMultiplier
 		end
 
+		-- The ladder without the CEO (a raid boss with its own rule above):
+		-- ground floor, Senior floor, then the Principal tier.
+		local function ladder(): { BossConfig.BossDefinition }
+			local list: { BossConfig.BossDefinition } = {}
+			for _, boss in BossConfig.List do
+				if not boss.UnlockAfterAllBosses then
+					table.insert(list, boss)
+				end
+			end
+			return list
+		end
+
 		it("gives every boss more HP than the boss before it", function()
-			for index = 2, #BossConfig.List do
-				local previous, boss = BossConfig.List[index - 1], BossConfig.List[index]
-				expect(boss.MaxHealth > previous.MaxHealth).to.equal(true)
+			local list = ladder()
+			for index = 2, #list do
+				expect(list[index].MaxHealth > list[index - 1].MaxHealth).to.equal(true)
 			end
 		end)
 
 		it("needs more hammer damage for every boss than the boss before it", function()
-			for index = 2, #BossConfig.List do
-				local previous, boss = BossConfig.List[index - 1], BossConfig.List[index]
-				expect(effective(boss) > effective(previous)).to.equal(true)
+			local list = ladder()
+			for index = 2, #list do
+				expect(effective(list[index]) > effective(list[index - 1])).to.equal(true)
+			end
+		end)
+
+		it("gives every Senior boss a Principal version that is tougher and pays more", function()
+			for _, boss in BossConfig.List do
+				if string.sub(boss.Id, 1, 7) == "senior_" then
+					local principal = BossConfig.ById["principal_" .. string.sub(boss.Id, 8)]
+					expect(principal).never.to.equal(nil)
+					expect(principal.PostCeo).to.equal(true)
+					expect(principal.MinLevel).to.equal(GameConfig.PrincipalMinLevel)
+					expect(principal.UnlockAfterBossId).to.equal(boss.Id)
+					expect(effective(principal) > effective(boss)).to.equal(true)
+					expect(principal.ScoreReward > boss.ScoreReward).to.equal(true)
+					expect(principal.CoinReward > boss.CoinReward).to.equal(true)
+				end
 			end
 		end)
 

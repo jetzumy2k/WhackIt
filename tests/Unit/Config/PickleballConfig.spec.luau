@@ -62,20 +62,25 @@ return function()
 			end
 		end)
 
-		it("stands inside the campus, north of the building, reached by a walkway", function()
-			local campus = ArenaConfig.Campus
-			expect(inside(CENTER.Area, campus.Boundary)).to.equal(true)
-			expect(CENTER.Area.MaxZ < ArenaConfig.BuildingNorthZ).to.equal(true)
-			local reached = false
-			for _, walkway in campus.Walkways do
-				local touches = walkway.MinZ <= CENTER.Area.MaxZ
-					and walkway.MaxZ >= CENTER.Area.MaxZ
-					and walkway.MinX < CENTER.Area.MaxX
-					and walkway.MaxX > CENTER.Area.MinX
-				reached = reached or touches
+		it(
+			"stands inside the campus, in front of the building, at the end of the main walkway",
+			function()
+				local campus = ArenaConfig.Campus
+				expect(inside(CENTER.Area, campus.Boundary)).to.equal(true)
+				expect(CENTER.Area.MinZ > campus.Plaza.MaxZ).to.equal(true)
+				local main = campus.Walkways[1]
+				expect(main.MaxZ >= CENTER.Area.MinZ).to.equal(true)
+				expect(main.MinX < CENTER.Area.MaxX and main.MaxX > CENTER.Area.MinX).to.equal(true)
+				-- Clear of the Garden and the Coffee Corner.
+				for _, round in { campus.Garden, campus.CoffeeCorner } do
+					local x = math.clamp(round.Center.X, CENTER.Area.MinX, CENTER.Area.MaxX)
+					local z = math.clamp(round.Center.Z, CENTER.Area.MinZ, CENTER.Area.MaxZ)
+					expect(
+						Vector2.new(x - round.Center.X, z - round.Center.Z).Magnitude > round.Radius
+					).to.equal(true)
+				end
 			end
-			expect(reached).to.equal(true)
-		end)
+		)
 
 		it("keeps the exit point and the sign off the courts", function()
 			for _, center in CENTER.Courts do

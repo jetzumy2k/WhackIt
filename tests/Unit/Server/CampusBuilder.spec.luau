@@ -5,6 +5,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local ArenaConfig = require(ReplicatedStorage.Config.ArenaConfig)
 local CampusBuilder = require(ServerScriptService.Lib.CampusBuilder)
+local PickleballConfig = require(ReplicatedStorage.Config.PickleballConfig)
 
 local CAMPUS = ArenaConfig.Campus
 -- Parts lower than this (above the ground) can block someone walking.
@@ -209,8 +210,16 @@ return function()
 			expect(main.MinX >= -CAMPUS.EntranceWidth / 2 and main.MaxX <= CAMPUS.EntranceWidth / 2).to.equal(
 				true
 			)
+			-- The main walkway leads to the Recreation Center (in front since
+			-- 2026-10-10); a walkway from the loop reaches the Stress-Relief Zone.
+			local rec = PickleballConfig.Center.Area
+			expect(main.MaxZ >= rec.MinZ).to.equal(true)
 			local zone = CAMPUS.StressReliefZone
-			expect(touchesCircle(main, zone.Center, zone.Radius)).to.equal(true)
+			local zoneReached = false
+			for _, walkway in walkways do
+				zoneReached = zoneReached or touchesCircle(walkway, zone.Center, zone.Radius)
+			end
+			expect(zoneReached).to.equal(true)
 			-- The cross walk meets the main walkway and reaches both side areas.
 			expect(overlaps(main, cross)).to.equal(true)
 			expect(touchesCircle(cross, CAMPUS.Garden.Center, CAMPUS.Garden.Radius)).to.equal(true)

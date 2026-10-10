@@ -177,10 +177,11 @@ building, offices, stairs, elevator, leaderboard and spawn are unchanged.
 | Area | Where | What's there |
 |---|---|---|
 | Front Plaza | in front of the entrance | paving, benches facing the building, planters, lamp posts, signpost |
-| Walkways | entrance → zone; garden ↔ coffee corner; a loop around the building | concrete paths lined with lamp posts, trees and bushes; benches and trees behind the building |
+| Walkways | entrance → Recreation Center; garden ↔ coffee corner; a loop around the building; loop → Stress-Relief Zone | concrete paths lined with lamp posts, trees and bushes; benches and trees behind the building |
+| Recreation Center | south end of the main walkway (since 2026-10-10) | the pickleball pavilion (docs/PICKLEBALL.md) |
 | Relaxation Garden | west | soft grass, a shallow walk-over pond with stones, benches facing it, flower beds, trees ("No meetings beyond this point") |
-| Coffee Corner & Break Area | east | brick patio, coffee kiosk ("free refills of patience"), picnic tables with umbrellas, a vending machine ("SNACKS for feelings") |
-| Stress-Relief Zone | south end of the main walkway | sand garden, bean bags, a giant pink stress ball, rocks ("Breathe in. Breathe out. Reply later.") |
+| Coffee Corner & Break Area | east | brick patio, the **Calm Brew Café** (since 2026-10-10: a small building with a counter, espresso machine, pastry case, menu board, striped awning, glass side windows and a lit roof sign), picnic tables with parasols, a vending machine ("SNACKS for feelings") |
+| Stress-Relief Zone | behind the building, at the end of the walkway north from the loop (since 2026-10-10) | sand garden, bean bags, a giant pink stress ball, rocks ("Breathe in. Breathe out. Reply later.") |
 
 - **Clear paths:** every walkway and the entrance lane are kept free of props, and the spawn has an
   open walk out of the lobby (both spec-checked). The paths inside (bosses, stairs, elevator,
@@ -396,8 +397,13 @@ version in the office directly above it: tougher than every ground-floor boss, p
 ground version, with a gold crown and its own jokes (numbers in the table above).
 A Senior boss unlocks with **Player Level ≥ `UpstairsMinLevel` (10)** and **1 defeat of its
 ground-floor version** (`BossConfig.UnlockAfterBossId` / `UnlockDefeats` / `MinLevel`). Below the
-level its bar reads "LOCKED: reach Lv 10" and swings show "Reach Level 10 to fight this Senior boss!".
+level its bar reads "LOCKED: reach Lv 10" and swings show "Reach Level 10 to fight this boss!".
 This spreads experienced players across two floors instead of crowding one boss.
+
+### Department Heads (3rd floor, Level 30+, 2026-10-10)
+Each Senior boss has a **Principal** version on the 3rd floor, reached by the tower elevator: Level 30
+and 1 defeat of its Senior version, tougher than every Senior boss and paying more. Numbers and the
+floor: docs/TOWER.md.
 
 ### Boss labels (2026-10-06)
 A boss's name, HP bar and speech bubble float above it, sized in studs (they shrink with distance) and
@@ -606,10 +612,14 @@ and a spec rejects a blocklist of bad words, including for the angry CEO.
 ## Executive Floor and the CEO (2026-10-05)
 - **Unlock:** defeat **every** ground-floor and Senior boss at least once (Level 10 is implied by the
   Senior bosses). Rule: `BossConfig.UnlockAfterAllBosses` on the CEO.
-- **Getting there:** the **Executive Elevator** at the west end of the 2nd-floor corridor ("Ride up"
-  prompt; "Ride down" on the 3rd floor). The server checks access; without it a message says what's
-  missing ("defeat every boss once first (N to go)"). Anyone found on the floor without access is
-  sent back down.
+- **Getting there:** the **tower elevator** at the west end of the corridor (since 2026-10-10 one
+  shaft for every floor with a floor panel, docs/TOWER.md). The server checks access; without it the
+  panel and a toast say what's missing ("Defeat every boss once (N to go)"). Anyone found on the floor
+  without access is sent back down.
+- Since 2026-10-10 the Executive Floor is the **4th (top) floor**, above Department Heads, with the
+  Rooftop Lounge over it (docs/TOWER.md).
+- The Principal tier (3rd floor, docs/TOWER.md) is **not** part of this unlock and not counted in the
+  CEO's health.
 - **Stress spike:** arriving on the Executive Floor sets the Stress Meter to **100 %** (and re-arms Zen).
 - **The CEO:** a 1.6× size, crowned raid boss. **MaxHealth = 150 × the toughest other boss**
   (`GameConfig.CeoHealthMultiplier`, derived from config: 150 × 600 = **90,000** today). Rewards

@@ -16,6 +16,7 @@
 ]]
 
 local Players = game:GetService("Players")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
@@ -659,6 +660,12 @@ function MissionController.start(): ()
 		refreshHud()
 	end)
 	remote("Result").OnClientEvent:Connect(onResult)
+	-- The Mission Board on the Rooftop Lounge (Lib/RooftopBuilder).
+	ProximityPromptService.PromptTriggered:Connect(function(prompt: ProximityPrompt)
+		if prompt.Name == "MissionBoardPrompt" then
+			MissionController.open()
+		end
+	end)
 	localPlayer:GetAttributeChangedSignal(Attributes.InMission):Connect(function()
 		if not inMission() then
 			run = nil

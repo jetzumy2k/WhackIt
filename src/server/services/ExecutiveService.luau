@@ -4,17 +4,14 @@
 
 	* Access = the CEO boss is unlocked for the player (every other boss
 	  defeated at least once, plus the Player Level; Shared/ProgressionRules).
-	* "Ride up" (ProximityPrompt on the 2nd-floor elevator door): the server
-	  checks access, moves the player to the Executive Floor and spikes their
-	  stress to 100 %. Without access they get a toast saying what's missing.
-	* "Ride down" (3rd-floor door): always allowed.
+	* Riding there: the tower elevator (TowerService, docs/TOWER.md) checks
+	  the same access, and spikes stress to 100 % on arrival.
 	* Guard: anyone found on the Executive Floor without access (e.g. by
 	  cheating past the elevator) is sent back down to the 2nd floor.
 ]]
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
 
 local ArenaConfig = require(ReplicatedStorage.Config.ArenaConfig)
 local BuffService = require(script.Parent.BuffService)
@@ -23,12 +20,10 @@ local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
 local MovementGuardService = require(script.Parent.MovementGuardService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
-local StressService = require(script.Parent.StressService)
 
 local ToastRemote = ReplicatedStorage.Remotes.Notify.Toast
 
 local GUARD_TICK_SECONDS = 1
-local PROMPT_DISTANCE = 10
 
 local ExecutiveService = {}
 
@@ -87,16 +82,6 @@ local function moveTo(player: Player, position: Vector3): ()
 	character:PivotTo(CFrame.lookAt(position, position + Vector3.new(1, 0, 0)))
 end
 
-local function rideUp(player: Player): ()
-	if not hasAccess(player) then
-		ToastRemote:FireClient(player, denyReason(player))
-		return
-	end
-	moveTo(player, executive.ArriveUp)
-	StressService.spike(player)
-	ToastRemote:FireClient(player, "Welcome to the Executive Floor. Stress level: MAXIMUM.")
-end
-
 local function rideDown(player: Player): ()
 	moveTo(player, executive.ArriveDown)
 end
@@ -119,29 +104,11 @@ local function guardTick(): ()
 	end
 end
 
-local function addPrompt(doorName: string, actionText: string, onTriggered: (Player) -> ()): ()
-	local office = Workspace:WaitForChild("Office")
-	local door = office:FindFirstChild(doorName, true)
-	if door == nil or not door:IsA("BasePart") then
-		warn("[ExecutiveService] missing elevator door " .. doorName)
-		return
-	end
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.ObjectText = "Executive Elevator"
-	prompt.ActionText = actionText
-	prompt.MaxActivationDistance = PROMPT_DISTANCE
-	prompt.RequiresLineOfSight = false
-	prompt.Parent = door
-	prompt.Triggered:Connect(onTriggered)
-end
-
 function ExecutiveService.start(): ()
 	assert(
 		BossConfig.ById[executive.CeoBossId],
 		"ArenaConfig.Executive.CeoBossId must exist in BossConfig"
 	)
-	addPrompt("ElevatorUpDoor", "Ride up", rideUp)
-	addPrompt("ElevatorDownDoor", "Ride down", rideDown)
 	while true do
 		task.wait(GUARD_TICK_SECONDS)
 		guardTick()

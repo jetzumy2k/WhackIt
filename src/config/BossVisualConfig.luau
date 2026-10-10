@@ -104,6 +104,48 @@ local BossVisualConfig: { [string]: BossVisual } = table.freeze({
 		Crown = true,
 		Scale = 1.6,
 	}),
+
+	-- Principal (4th floor) versions: darker still, a crown, a little bigger.
+	principal_deadline_boss = table.freeze({
+		BodyColor = Color3.fromRGB(150, 45, 25),
+		BellyColor = Color3.fromRGB(225, 140, 100),
+		LimbColor = Color3.fromRGB(115, 30, 15),
+		SignText = "DUE BEFORE START",
+		Crown = true,
+		Scale = 1.15,
+	}),
+	principal_meeting_master = table.freeze({
+		BodyColor = Color3.fromRGB(75, 40, 135),
+		BellyColor = Color3.fromRGB(170, 140, 220),
+		LimbColor = Color3.fromRGB(55, 25, 105),
+		SignText = "ROOM BOOKED 2027",
+		Crown = true,
+		Scale = 1.15,
+	}),
+	principal_reply_all_boss = table.freeze({
+		BodyColor = Color3.fromRGB(20, 75, 150),
+		BellyColor = Color3.fromRGB(125, 170, 230),
+		LimbColor = Color3.fromRGB(15, 55, 115),
+		SignText = "RE: EVERYONE",
+		Crown = true,
+		Scale = 1.15,
+	}),
+	principal_production_bug = table.freeze({
+		BodyColor = Color3.fromRGB(40, 110, 35),
+		BellyColor = Color3.fromRGB(140, 200, 115),
+		LimbColor = Color3.fromRGB(25, 80, 20),
+		SignText = "LIVES IN PROD",
+		Crown = true,
+		Scale = 1.15,
+	}),
+	principal_monday_monster = table.freeze({
+		BodyColor = Color3.fromRGB(45, 50, 80),
+		BellyColor = Color3.fromRGB(140, 148, 180),
+		LimbColor = Color3.fromRGB(30, 35, 60),
+		SignText = "8-DAY WEEK",
+		Crown = true,
+		Scale = 1.15,
+	}),
 })
 
 return BossVisualConfig

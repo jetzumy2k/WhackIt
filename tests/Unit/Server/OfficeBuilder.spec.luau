@@ -6,6 +6,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local ArenaConfig = require(ReplicatedStorage.Config.ArenaConfig)
 local BossConfig = require(ReplicatedStorage.Config.BossConfig)
 local OfficeBuilder = require(ServerScriptService.Lib.OfficeBuilder)
+local TowerRules = require(ReplicatedStorage.Shared.TowerRules)
 
 -- Free space kept around each boss so players can walk up and swing.
 local BOSS_CLEARANCE = 7
@@ -228,10 +229,16 @@ return function()
 			office:Destroy()
 		end)
 
-		it("puts Senior offices on the upper floor", function()
+		it("puts Senior offices on the upper floor and Principal offices on the 4th", function()
 			for _, entry in ArenaConfig.Offices do
 				local isSenior = string.sub(entry.BossId, 1, 7) == "senior_"
-				expect(entry.Center.Y).to.equal(if isSenior then ArenaConfig.UpperFloorY else 0)
+				local isPrincipal = string.sub(entry.BossId, 1, 10) == "principal_"
+				expect(entry.Center.Y).to.equal(
+					if isSenior
+						then ArenaConfig.UpperFloorY
+						elseif isPrincipal then ArenaConfig.DepartmentFloor.FloorY
+						else 0
+				)
 			end
 		end)
 	end)
@@ -294,22 +301,152 @@ return function()
 		end)
 	end)
 	describe("OfficeBuilder Executive Floor", function()
-		it("builds an elevator door on the 2nd and the 3rd floor", function()
+		it("builds an elevator door on every floor", function()
 			local office = build()
-			local up = office:FindFirstChild("ElevatorUpDoor", true)
-			local down = office:FindFirstChild("ElevatorDownDoor", true)
-			expect(up).never.to.equal(nil)
-			expect(down).never.to.equal(nil)
+			for _, floor in ArenaConfig.Tower.Floors do
+				local door = office:FindFirstChild(floor.DoorName, true)
+				expect(door).never.to.equal(nil)
+				expect(math.abs((door :: BasePart).Position.Y - (floor.FloorY + 4)) < 1e-3).to.equal(
+					true
+				)
+			end
 			office:Destroy()
 		end)
 
 		it("keeps the elevator arrival spots clear", function()
 			local office = build()
 			local executive = ArenaConfig.Executive
-			for _, point in { executive.ArriveUp, executive.ArriveDown } do
+			local points = { executive.ArriveUp, executive.ArriveDown }
+			for _, floor in ArenaConfig.Tower.Floors do
+				table.insert(points, TowerRules.arrival(floor.Id) :: Vector3)
+			end
+			for _, point in points do
 				for _, p in parts(office) do
 					expect(contains(p, point)).to.equal(false)
 				end
+			end
+			office:Destroy()
+		end)
+
+		it("gives each tower arrival a floor to stand on", function()
+			local office = build()
+			for _, floor in ArenaConfig.Tower.Floors do
+				local arrival = TowerRules.arrival(floor.Id) :: Vector3
+				local below = arrival - Vector3.new(0, 3.2, 0)
+				local supported = floor.FloorY == 0 -- the ground floor is the baseplate
+				for _, p in parts(office) do
+					if p.CanCollide and contains(p, below) then
+						supported = true
+					end
+				end
+				expect(supported).to.equal(true)
+			end
+			office:Destroy()
+		end)
+	end)
+	describe("OfficeBuilder tower shell (visual overhaul V1a)", function()
+		it("wraps the tower in a curtain wall up to the roof, with a crown sign", function()
+			local office = build()
+			local top = ArenaConfig.Rooftop.FloorY
+			local highest = 0
+			for _, p in parts(office) do
+				if p.Name == "CurtainGlass" then
+					highest = math.max(highest, p.Position.Y + p.Size.Y / 2)
+				end
+			end
+			expect(highest > top - 2).to.equal(true)
+			expect(office:FindFirstChild("CrownSign", true)).never.to.equal(nil)
+			office:Destroy()
+		end)
+
+		it(
+			"builds the Break Room and the Meeting Room with open doorways from the corridor",
+			function()
+				local office = build()
+				expect(office:FindFirstChild("Break Room", true)).never.to.equal(nil)
+				expect(office:FindFirstChild("Meeting Room", true)).never.to.equal(nil)
+				for _, side in { -1, 1 } do
+					for _, z in { -1, 0, 1 } do
+						local doorway = Vector3.new(side * 61, 4, z)
+						for _, p in parts(office) do
+							if p.CanCollide and contains(p, doorway) then
+								error(
+									p.Name
+										.. " blocks the podium room doorway at "
+										.. tostring(doorway)
+								)
+							end
+						end
+					end
+				end
+				office:Destroy()
+			end
+		)
+
+		it("keeps the shell outside the floors players walk on", function()
+			local office = build()
+			local shell = office:FindFirstChild("Curtain Wall", true) :: Instance
+			for _, p in parts(shell) do
+				-- The tower's storeys (north block) and the podium under its roof.
+				local position = p.Position
+				local withinX = math.abs(position.X) < ArenaConfig.BuildingHalfWidth - 1
+				local inTower = withinX
+					and position.Z > ArenaConfig.BuildingNorthZ + 1
+					and position.Z < -1
+					and position.Y < ArenaConfig.Executive.CeilingY
+				local inPodium = withinX
+					and position.Z > 1
+					and position.Z < ArenaConfig.BuildingSouthZ - 1
+					and position.Y < ArenaConfig.RoofY
+				expect(inTower or inPodium).to.equal(false)
+			end
+			office:Destroy()
+		end)
+	end)
+	describe("OfficeBuilder Rooftop Lounge", function()
+		it("builds the lounge with both boards and their prompts", function()
+			local office = build()
+			local roof = office:FindFirstChild("Rooftop Lounge", true)
+			expect(roof).never.to.equal(nil)
+			for _, name in { "MissionBoardPrompt", "EventBoardPrompt" } do
+				local prompt = (roof :: Instance):FindFirstChild(name, true)
+				expect(prompt).never.to.equal(nil)
+				expect((prompt :: Instance):IsA("ProximityPrompt")).to.equal(true)
+			end
+			office:Destroy()
+		end)
+
+		it("keeps everything on the deck inside the parapet and above the CEO's ceiling", function()
+			local office = build()
+			local roof = office:FindFirstChild("Rooftop Lounge", true) :: Instance
+			for _, p in parts(roof) do
+				expect(math.abs(p.Position.X) <= ArenaConfig.BuildingHalfWidth).to.equal(true)
+				expect(
+					p.Position.Z >= ArenaConfig.Rooftop.NorthZ
+						and p.Position.Z <= ArenaConfig.Rooftop.SouthZ
+				).to.equal(true)
+				expect(p.Position.Y >= ArenaConfig.Executive.CeilingY).to.equal(true)
+			end
+			office:Destroy()
+		end)
+	end)
+	describe("OfficeBuilder interior finish (visual overhaul V1c)", function()
+		it("finishes the lobby, the corridors and the podium rooms", function()
+			local office = build()
+			for _, name in
+				{ "Lobby Finish", "Corridor Art", "Room Finish", "FloorGuide", "ReceptionFront" }
+			do
+				expect(office:FindFirstChild(name, true)).never.to.equal(nil)
+			end
+			office:Destroy()
+		end)
+
+		it("lists every tower floor on the floor guide", function()
+			local office = build()
+			local guide = office:FindFirstChild("FloorGuide", true) :: Instance
+			local label = guide:FindFirstChildWhichIsA("TextLabel", true) :: TextLabel
+			for _, floor in ArenaConfig.Tower.Floors do
+				expect((string.find(label.Text, floor.Name, 1, true))).to.be.ok()
 			end
 			office:Destroy()
 		end)

@@ -65,6 +65,9 @@ local GameConfig = table.freeze({
 	LevelCritChancePerLevel = 0.0005,
 	-- Senior bosses upstairs need at least this Player Level.
 	UpstairsMinLevel = 10,
+	-- Principal bosses (4th floor, Department Heads) and the floor itself need
+	-- at least this Player Level (Phase 3a, decision D16).
+	PrincipalMinLevel = 30,
 	-- The CEO (3rd floor) has this many times the HP of the toughest other boss
 	-- (37.5 x 2,400 = 90,000 HP).
 	CeoHealthMultiplier = 37.5,

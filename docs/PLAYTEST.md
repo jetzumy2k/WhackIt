@@ -694,3 +694,59 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 469 | Clear 4 missions in one UTC day | The 4th card says today's 3 rewarded missions are used |
 | 470 | Exploits (command bar): `Remotes.Mission.Open:FireServer("nope!")`, `Remotes.Mission.Join:FireServer({})`, Begin as a non-leader, 10 Opens in a row | Bad ids rejected and logged; the rest answered with a toast; the rate limit holds |
 | 471 | Output | No errors from MissionService, BossService, MissionController, CombatService, RewardService |
+
+### The tower: elevator and Department Heads (Phase 3a)
+| # | Steps | Expected |
+|---|---|---|
+| 472 | From the lobby walk into the corridor | A sign "← ELEVATOR · ALL FLOORS" just west of the lobby; at the corridor's west end an elevator door "ELEVATOR · ALL FLOORS" with an **Elevator · Floor 1** prompt |
+| 473 | Press E (a new Level 1 player) | The 🛗 Elevator panel: 4 · Department Heads (🔒 "Reach Level 30 (you're Level 1)" with a bar), 3 · Executive Floor (🔒 "Reach Level 10…"), 2 · Senior Floor (Go), 1 · Lobby & Offices (📍 You are here) |
+| 474 | Go to floor 2 | Arrive by the floor-2 elevator door, facing into the corridor; its door now says "ELEVATOR · FLOOR 2" and has the same panel (no more "Ride up") |
+| 475 | Below Level 30, standing at an elevator door, run in the **client** command bar `game.ReplicatedStorage.Remotes.Tower.Ride:FireServer("Department")` | A toast "Department Heads: Reach Level 30 (you're Level n) first."; nothing moves |
+| 476 | Admin → set Level 30 (or the boss bypass), ride to floor 4 | Arrive on the Department Heads floor: a corridor with a window wall over the campus, amber lights, the "FLOOR 4 · DEPARTMENT HEADS" sign and five offices "Principal … 's Office" |
+| 477 | Walk into a Principal office | A darker, slightly bigger, crowned boss with its own sign; locked until you've beaten its Senior version ("LOCKED…" bar, the swing message says what's missing) |
+| 478 | Beat a Senior boss, then its Principal | The Principal fights and pays like any boss (more than the Senior), shouts its own lines |
+| 479 | Executive Floor with every ground and Senior boss beaten but no Principal | The panel shows floor 3 open; riding there spikes stress to 100 % with the welcome toast; the CEO is fightable (Principals aren't needed) |
+| 480 | Command bar (server): move a Level 1 player onto floor 4, e.g. `game.Players.Player1.Character:PivotTo(CFrame.new(-40, 48, -10))` | Within a second they're sent to the Senior floor with a toast saying what's missing |
+| 481 | Ride from a spot far from any elevator door (fire the remote from the lobby) | A toast "Use the elevator at the west end of the corridor."; nothing moves |
+| 482 | Phone emulator: open the panel | Floors readable, buttons tappable, it scrolls |
+| 483 | Output | No errors from TowerService, ExecutiveService, TowerController, OfficeBuilder, BossService |
+
+### HQ tower look (visual overhaul V1a) — please send screenshots
+| # | Steps | Expected |
+|---|---|---|
+| 484 | Walk out to the plaza and look back at the building | A 4-storey glass tower behind a 2-storey glass podium: fins every bay, a dark band at each floor, a parapet, the lit "WHACK IT OUT! HQ" sign on top, an entrance canopy "WHACK IT OUT! HEADQUARTERS" over the doors |
+| 485 | Walk round the building on the loop path | Glass on every side up to the roof (north, east, west), no gaps or floating pieces at the corners; the Recreation Center path behind is clear |
+| 486 | Look at the light | Softer, warmer daylight with a light haze in the distance and gentle glow on bright signs (Future lighting); nothing glaring |
+| 487 | Ground corridor: walk through the new doorways west and east of the lobby | West: the Break Room (wood floor, coffee bar, fridge, round tables, sofa corner, pendant lights); east: the Meeting Room (long table with chairs, screen "Q3 SYNERGY ALIGNMENT", agenda whiteboard) |
+| 488 | Inside the offices on every floor | Windows now look out through the curtain wall; nothing blocks doors, the elevator or the stairs |
+| 489 | Performance: walk round outside and in the lobby (View → Stats / MicroProfiler) | No big frame drop compared with before |
+
+### CEO at the top and the Rooftop Lounge (V1, owner request) — screenshots please
+| # | Steps | Expected |
+|---|---|---|
+| 490 | Open the elevator panel | 5 · Rooftop Lounge (Go for everyone), 4 · Executive Floor, 3 · Department Heads (Lv 30), 2 · Senior Floor, 1 · Lobby & Offices |
+| 491 | Ride to floor 3 (Lv 30 or bypass) | Department Heads: sign "FLOOR 3 · DEPARTMENT HEADS", door "ELEVATOR · FLOOR 3", five Principal offices |
+| 492 | Ride to floor 4 (CEO unlocked or bypass) | The CEO's suite at the top; stress spikes to 100 %; door "ELEVATOR · FLOOR 4" |
+| 493 | Ride to floor 5 | Out of the elevator house onto the Rooftop Lounge: deck, sofas, coffee cart, loungers, trees, string lights, telescope, the crown sign on the front edge |
+| 494 | Press E at the Mission Board / Event Board | The Team Missions window / the Quests window on 🌟 Today |
+| 495 | Walk the parapet edge | Nobody can fall off; no gaps; the view over the campus and to the Recreation Center |
+
+### Campus: Recreation Center in front, café, skyline (owner request 2026-10-10) — screenshots please
+| # | Steps | Expected |
+|---|---|---|
+| 496 | Walk out of the lobby and straight down the main path | It ends at the Recreation Center: a high pavilion roof on steel columns with the lit "🏓 RECREATION CENTER" sign facing you, planters at the entrance, the sign with the Pickleball prompt just inside |
+| 497 | Walk in | Two courts under the roof, blue stands down both sides, the "PLAY • RELAX • REPEAT" wall at the far end, lights under the roof; a 2-player match still plays normally (a lob stays under the roof) |
+| 498 | The plaza signpost | "v Recreation Center (Pickleball)" |
+| 499 | Behind the building: the walkway north from the loop | The Stress-Relief Zone (sand, bean bags, stress ball, its sign) where the courts used to be |
+| 500 | Coffee Corner (east of the plaza) | The Calm Brew Café: building with awning, lit roof sign, counter with espresso machine and pastry case, menu board, side windows; parasols over the patio tables |
+| 501 | Look around from the plaza and the roof | The city is office blocks with window bands and rooftop plant rooms, lower and further out; none on the campus or the street; the HQ stands out |
+| 502 | Round the HQ | A paved apron round the building, no raw concrete strip; no grass blades through any floor |
+
+### Interiors (visual overhaul V1c) — screenshots please
+| # | Steps | Expected |
+|---|---|---|
+| 503 | Spawn in the lobby | Stone floor; three warm pendant lights hanging in the atrium; a rug and two low tables between the couches by the front glass; the walk out is still clear |
+| 504 | Look at reception | The desk has a dark front "RECEPTION · Welcome to Whack It Out!", a monitor and a bell; the receptionist behind it |
+| 505 | Look towards the corridor | Left of the welcome sign, the FLOOR GUIDE: 5 Rooftop Lounge … 1 Lobby & Offices, "← Elevator: west end of the corridor" |
+| 506 | Walk the ground and Senior corridors | Framed joke posters on the corridor walls beyond the lobby; blue-slate carpet on the ground floor, plum on the Senior floor, bronze on Department Heads, red in the CEO's suite |
+| 507 | Break Room / Meeting Room | Wood slat wall in the Break Room; coloured acoustic panels in the Meeting Room; doorways still open |

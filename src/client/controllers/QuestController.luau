@@ -17,6 +17,7 @@
 ]]
 
 local Players = game:GetService("Players")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local QuestConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("QuestConfig"))
@@ -447,6 +448,12 @@ function QuestController.start(): ()
 	assert(eventRewarded:IsA("RemoteEvent"), "DailyEvent.Rewarded must be a RemoteEvent")
 	eventRewarded.OnClientEvent:Connect(onEventRewarded)
 	task.delay(6, announceToday)
+	-- The Event Board on the Rooftop Lounge (Lib/RooftopBuilder).
+	ProximityPromptService.PromptTriggered:Connect(function(prompt: ProximityPrompt)
+		if prompt.Name == "EventBoardPrompt" then
+			QuestController.open("Today")
+		end
+	end)
 end
 
 return QuestController

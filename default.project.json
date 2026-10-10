@@ -292,6 +292,14 @@
           }
         },
 
+        "Tower": {
+          "$className": "Folder",
+
+          "Ride": {
+            "$className": "RemoteEvent"
+          }
+        },
+
         "Quests": {
           "$className": "Folder",
 
@@ -457,12 +465,55 @@
 
     "Lighting": {
       "$properties": {
-        "Brightness": 1.5,
-        "ExposureCompensation": -0.25,
+        "Technology": "Future",
+        "Brightness": 2,
+        "ExposureCompensation": -0.15,
+        "EnvironmentDiffuseScale": 0.6,
+        "EnvironmentSpecularScale": 0.6,
         "Ambient": [0.27, 0.27, 0.31],
         "OutdoorAmbient": [0.45, 0.45, 0.5],
-        "ClockTime": 15,
+        "ClockTime": 15.5,
+        "GeographicLatitude": 35,
         "GlobalShadows": true
+      },
+
+      "Atmosphere": {
+        "$className": "Atmosphere",
+        "$properties": {
+          "Density": 0.28,
+          "Offset": 0.2,
+          "Color": [0.8, 0.85, 0.95],
+          "Decay": [0.42, 0.46, 0.6],
+          "Glare": 0.1,
+          "Haze": 0.8
+        }
+      },
+
+      "Bloom": {
+        "$className": "BloomEffect",
+        "$properties": {
+          "Intensity": 0.35,
+          "Size": 24,
+          "Threshold": 2
+        }
+      },
+
+      "ColorCorrection": {
+        "$className": "ColorCorrectionEffect",
+        "$properties": {
+          "Brightness": 0.02,
+          "Contrast": 0.06,
+          "Saturation": 0.04,
+          "TintColor": [1, 1, 1]
+        }
+      },
+
+      "SunRays": {
+        "$className": "SunRaysEffect",
+        "$properties": {
+          "Intensity": 0.04,
+          "Spread": 0.8
+        }
       }
     },
 

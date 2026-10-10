@@ -67,6 +67,32 @@ local BossShoutConfig: { [string]: { string } } = table.freeze({
 		"Weekends have been cancelled!",
 	}),
 
+	principal_deadline_boss = table.freeze({
+		"It was due before you were hired!",
+		"I need it done before I ask for it!",
+		"Time is a social construct. Deadlines aren't!",
+	}),
+	principal_meeting_master = table.freeze({
+		"I booked every room until next year!",
+		"This meeting is about the next meeting!",
+		"Let's take this offline. Then online again!",
+	}),
+	principal_reply_all_boss = table.freeze({
+		"I replied to the whole internet!",
+		"Please read my 400-page email!",
+		"Reply-all to my reply-all!",
+	}),
+	principal_production_bug = table.freeze({
+		"I've been in production since launch day!",
+		"Restarting won't help. Trust me!",
+		"I'm load-bearing now!",
+	}),
+	principal_monday_monster = table.freeze({
+		"I invented the eight-day week!",
+		"It's Monday on Saturday now!",
+		"Your weekend has been rescheduled!",
+	}),
+
 	-- Angry, but never vulgar.
 	the_ceo = table.freeze({
 		"WHO APPROVED THIS BUDGET?!",

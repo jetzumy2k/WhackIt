@@ -7,7 +7,7 @@
 
 	Lines are written by us, short (<= 30 characters) and family-friendly:
 	surprised, flustered or silly, never rude (spec-checked with the same
-	blocked words as BossShoutConfig). Senior bosses share their junior's
+	blocked words as BossShoutConfig). Senior and Principal bosses share their junior's
 	personality; admin-created bosses use the one of the boss they look like.
 
 	Sounds are Roblox built-in files (no uploaded audio needed), pitched per
@@ -151,6 +151,11 @@ local typeOf: { [string]: string } = {
 	senior_production_bug = "confused",
 	monday_monster = "sleepy",
 	senior_monday_monster = "sleepy",
+	principal_deadline_boss = "hurry",
+	principal_meeting_master = "stressed",
+	principal_reply_all_boss = "overwhelmed",
+	principal_production_bug = "confused",
+	principal_monday_monster = "sleepy",
 	the_ceo = "pompous",
 }
 

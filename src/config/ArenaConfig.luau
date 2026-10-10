@@ -44,10 +44,14 @@ local BossVisualConfig = require(script.Parent.BossVisualConfig)
 
 local OFFICE_Z = -36
 local BASE_BOSS_SIZE = Vector3.new(6, 8, 6)
--- Top of the executive (3rd) floor: the old roof slab now carries it.
-local EXECUTIVE_FLOOR_Y = 30
 -- Floor top of the upper storey (ground walls are 14 tall, plus a 1-stud slab).
 local UPPER_FLOOR_Y = 15
+-- Every storey is 14 tall plus a 1-stud slab. Since 2026-10-10 (owner
+-- request) the CEO is at the top: the 3rd floor is Department Heads (on the
+-- old roof slab), the 4th the Executive Floor, the 5th the Rooftop Lounge.
+local DEPARTMENT_FLOOR_Y = UPPER_FLOOR_Y + 15 -- 30
+local EXECUTIVE_FLOOR_Y = DEPARTMENT_FLOOR_Y + 15 -- 45
+local ROOFTOP_FLOOR_Y = EXECUTIVE_FLOOR_Y + 15 -- 60, the Executive Floor's roof
 -- Bosses stand a little behind the room centre, leaving space to walk around them.
 local BOSS_OFFSET = Vector3.new(0, 4, -2)
 
@@ -137,6 +141,49 @@ local offices: { Office } = {
 		"MON 8:00 AM",
 		"Mondays never end"
 	),
+
+	-- 4th floor (Department Heads): Principal offices over the CEO's suite,
+	-- in the same columns as the floors below.
+	office(
+		"principal_deadline_boss",
+		-68,
+		DEPARTMENT_FLOOR_Y,
+		Color3.fromRGB(140, 85, 65),
+		"DUE: -1 DAYS",
+		"Ahead of schedule? Never."
+	),
+	office(
+		"principal_meeting_master",
+		-34,
+		DEPARTMENT_FLOOR_Y,
+		Color3.fromRGB(110, 90, 150),
+		"MEETINGS: 24/7",
+		"Per our sync"
+	),
+	office(
+		"principal_reply_all_boss",
+		0,
+		DEPARTMENT_FLOOR_Y,
+		Color3.fromRGB(80, 115, 165),
+		"INBOX: INFINITE",
+		"Looping in everyone"
+	),
+	office(
+		"principal_production_bug",
+		34,
+		DEPARTMENT_FLOOR_Y,
+		Color3.fromRGB(90, 135, 85),
+		"UPTIME: 3%",
+		"It's a feature"
+	),
+	office(
+		"principal_monday_monster",
+		68,
+		DEPARTMENT_FLOOR_Y,
+		Color3.fromRGB(100, 105, 130),
+		"MON MON MON",
+		"Weekend? Never heard of it"
+	),
 }
 
 -- A boss's hitbox grows with its visual Scale, and it stands on its floor.
@@ -169,6 +216,67 @@ local ArenaConfig = table.freeze({
 	DoorWidth = 10,
 	DoorHeight = 10,
 	UpperFloorY = UPPER_FLOOR_Y,
+	-- 3rd floor (Department Heads): offices along the north half, the corridor
+	-- south of them, on the 2nd floor's roof; the Executive Floor is above.
+	DepartmentFloor = table.freeze({
+		FloorY = DEPARTMENT_FLOOR_Y,
+		CeilingY = DEPARTMENT_FLOOR_Y + 14,
+		NorthZ = -52,
+		SouthZ = 0,
+	}),
+
+	-- The tower elevator (Phase 3a, docs/TOWER.md): one shaft at the corridor's
+	-- west end with a door on every floor; each door opens the floor panel
+	-- (TowerService checks every ride). Floors in order, bottom first.
+	Tower = table.freeze({
+		DoorX = -85,
+		DoorZ = -10,
+		ArriveX = -78,
+		-- The 2nd floor and Executive doors keep their old names (ElevatorUpDoor,
+		-- ElevatorDownDoor). Text is what the floor panel says about the floor.
+		Floors = table.freeze({
+			table.freeze({
+				Id = "Ground",
+				Number = 1,
+				Name = "Lobby & Offices",
+				Text = "The lobby, the Hall of Calm and 5 office bosses",
+				FloorY = 0,
+				DoorName = "ElevatorGroundDoor",
+			}),
+			table.freeze({
+				Id = "Senior",
+				Number = 2,
+				Name = "Senior Floor",
+				Text = "5 Senior bosses (Level 10+)",
+				FloorY = UPPER_FLOOR_Y,
+				DoorName = "ElevatorUpDoor",
+			}),
+			table.freeze({
+				Id = "Department",
+				Number = 3,
+				Name = "Department Heads",
+				Text = "5 Principal bosses (Level 30+)",
+				FloorY = DEPARTMENT_FLOOR_Y,
+				DoorName = "ElevatorDepartmentDoor",
+			}),
+			table.freeze({
+				Id = "Executive",
+				Number = 4,
+				Name = "Executive Floor",
+				Text = "The CEO's suite, at the top. Stress level: MAXIMUM",
+				FloorY = EXECUTIVE_FLOOR_Y,
+				DoorName = "ElevatorDownDoor",
+			}),
+			table.freeze({
+				Id = "Rooftop",
+				Number = 5,
+				Name = "Rooftop Lounge",
+				Text = "Open air: seats, a coffee cart, the mission and event boards",
+				FloorY = ROOFTOP_FLOOR_Y,
+				DoorName = "ElevatorRooftopDoor",
+			}),
+		}),
+	}),
 
 	-- Straight stairs along the lobby's east wall, from the lobby floor (south
 	-- end) up to the upper corridor (north end): one 1-stud step every 2 studs.
@@ -188,7 +296,15 @@ local ArenaConfig = table.freeze({
 	BuildingSouthZ = 34,
 	RoofY = 29, -- underside of the 2nd-floor ceiling (upper walls are 14 tall)
 
-	-- Executive (3rd) floor: the CEO's suite over the offices and corridor.
+	-- The Rooftop Lounge (5th floor, docs/TOWER.md): the deck on the Executive
+	-- Floor's roof, inside the tower's parapet.
+	Rooftop = table.freeze({
+		FloorY = ROOFTOP_FLOOR_Y,
+		NorthZ = -52,
+		SouthZ = 0,
+	}),
+
+	-- Executive (4th, top) floor: the CEO's suite over the offices and corridor.
 	Executive = table.freeze({
 		FloorY = EXECUTIVE_FLOOR_Y,
 		CeilingY = EXECUTIVE_FLOOR_Y + 14,
@@ -224,18 +340,19 @@ local ArenaConfig = table.freeze({
 		EntranceHeight = 10,
 		GroundY = -1,
 		-- Invisible walls keep players on the grounds; a low hedge marks them.
-		-- North edge moved from z -130 to -210 for the Recreation Center
-		-- (major update decision D3, 2026-10-09).
-		Boundary = table.freeze({ MinX = -130, MaxX = 130, MinZ = -210, MaxZ = 150 }),
+		-- North edge moved from z -130 to -210 (2026-10-09, now the
+		-- Stress-Relief Zone behind the HQ); south edge from 150 to 210 for the
+		-- Recreation Center in front of the HQ (owner request 2026-10-10).
+		Boundary = table.freeze({ MinX = -130, MaxX = 130, MinZ = -210, MaxZ = 210 }),
 		BoundaryHeight = 60,
 		-- Decorative road just outside the south boundary.
-		StreetNorthZ = 160,
-		StreetSouthZ = 176,
+		StreetNorthZ = 220,
+		StreetSouthZ = 236,
 		-- Paved plaza in front of the entrance.
 		Plaza = table.freeze({ MinX = -44, MaxX = 44, MinZ = 34, MaxZ = 52 }),
 		Walkways = table.freeze({
-			-- Entrance straight south to the Stress-Relief Zone.
-			table.freeze({ MinX = -5, MaxX = 5, MinZ = 52, MaxZ = 112 }),
+			-- Entrance straight south to the Recreation Center's entrance.
+			table.freeze({ MinX = -5, MaxX = 5, MinZ = 52, MaxZ = 116 }),
 			-- Cross walk from the Garden to the Coffee Corner.
 			table.freeze({ MinX = -48, MaxX = 48, MinZ = 84, MaxZ = 92 }),
 			-- Loop around the building (south legs meet the plaza).
@@ -247,13 +364,14 @@ local ArenaConfig = table.freeze({
 			-- Garden and Coffee Corner down to the cross walk's ends and the loop.
 			table.freeze({ MinX = -100, MaxX = -94, MinZ = 46, MaxZ = 88 }),
 			table.freeze({ MinX = 94, MaxX = 100, MinZ = 46, MaxZ = 88 }),
-			-- North from the loop to the Recreation Center.
-			table.freeze({ MinX = -4, MaxX = 4, MinZ = -140, MaxZ = -66 }),
+			-- North from the loop behind the HQ to the Stress-Relief Zone.
+			table.freeze({ MinX = -4, MaxX = 4, MinZ = -154, MaxZ = -66 }),
 		}),
 		-- Round areas: centre (Y = ground) and radius.
 		Garden = table.freeze({ Center = Vector3.new(-70, -1, 88), Radius = 24 }),
 		CoffeeCorner = table.freeze({ Center = Vector3.new(70, -1, 88), Radius = 22 }),
-		StressReliefZone = table.freeze({ Center = Vector3.new(0, -1, 126), Radius = 16 }),
+		-- Behind the HQ since 2026-10-10 (the Recreation Center took its place in front).
+		StressReliefZone = table.freeze({ Center = Vector3.new(0, -1, -170), Radius = 16 }),
 	}),
 
 	PlaceholderBossSize = Vector3.new(6, 8, 6),

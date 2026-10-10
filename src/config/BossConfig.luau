@@ -36,6 +36,9 @@ export type BossDefinition = {
 	-- Team mission bosses only (Shared/MissionRules): also Custom; they drop
 	-- store boosts by the normal office chance, and only the team may hit them.
 	Mission: boolean?,
+	-- The Principal tier (4th floor, after the CEO): not needed to unlock the
+	-- CEO and not counted in its health, so the CEO stays exactly as it was.
+	PostCeo: boolean?,
 	LookId: string?, -- the BossConfig boss whose model, colours and shouts it borrows
 }
 
@@ -192,6 +195,86 @@ table.insert(list, {
 	MinLevel = SENIOR_MIN_LEVEL,
 	UnlockAfterAllBosses = true,
 })
+
+-- Principal bosses (4th floor, Department Heads; Phase 3a, decision D16):
+-- each needs Level 30 and a defeat of its Senior version, is tougher than
+-- every Senior boss and pays more. Listed after the CEO (PostCeo), whose
+-- health and unlock above don't include them.
+local PRINCIPAL_MIN_LEVEL = GameConfig.PrincipalMinLevel
+local function principal(
+	baseId: string,
+	name: string,
+	description: string,
+	health: number,
+	damageTaken: number,
+	score: number,
+	coins: number
+): BossDefinition
+	return {
+		Id = "principal_" .. baseId,
+		DisplayName = name,
+		Description = description,
+		MaxHealth = health,
+		DamageTakenMultiplier = damageTaken,
+		ScoreReward = score,
+		CoinReward = coins,
+		UnlockAfterBossId = "senior_" .. baseId,
+		UnlockDefeats = 1,
+		MinLevel = PRINCIPAL_MIN_LEVEL,
+		PostCeo = true,
+	}
+end
+for _, boss in
+	{
+		principal(
+			"deadline_boss",
+			"Principal Deadline Boss",
+			"Moved the deadline to before the project started.",
+			2600,
+			1.0,
+			1800,
+			200
+		),
+		principal(
+			"meeting_master",
+			"Principal Meeting Master",
+			"Books the meeting room for the rest of the year.",
+			2800,
+			1.0,
+			2100,
+			230
+		),
+		principal(
+			"reply_all_boss",
+			"Principal Reply-All Boss",
+			"Replies to all of the internet.",
+			3300,
+			1.1,
+			2400,
+			260
+		),
+		principal(
+			"production_bug",
+			"Principal Production Bug",
+			"Lives in prod. Pays no rent.",
+			3900,
+			1.2,
+			2800,
+			300
+		),
+		principal(
+			"monday_monster",
+			"Principal Monday Monster",
+			"Invented the eight-day week. Every day is Monday.",
+			4800,
+			1.4,
+			3300,
+			360
+		),
+	}
+do
+	table.insert(list, boss)
+end
 
 local byId: { [string]: BossDefinition } = {}
 for _, boss in list do

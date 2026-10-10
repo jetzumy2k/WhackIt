@@ -6,7 +6,8 @@
 
 	A boss unlocks when ALL that apply hold (BossConfig):
 	  * UnlockAfterBossId set    -> at least UnlockDefeats rewarded defeats of it;
-	  * UnlockAfterAllBosses set -> every other boss defeated at least once;
+	  * UnlockAfterAllBosses set -> every other boss defeated at least once
+	    (not counting PostCeo bosses, the Principal tier);
 	  * MinLevel set             -> Player Level (Shared/LevelRules) >= MinLevel.
 	Bosses with none of these are always unlocked, and so are:
 	  * bosses an admin unlocked for this player (`adminUnlocks`, saved data);
@@ -68,7 +69,8 @@ function ProgressionRules.unlockStatus(
 	if boss.UnlockAfterAllBosses then
 		-- One defeat still needed for each other boss never beaten.
 		for _, other in BossConfig.List do
-			if other.Id ~= boss.Id and (defeats[other.Id] or 0) < 1 then
+			-- The Principal tier (after the CEO) isn't part of this.
+			if other.Id ~= boss.Id and not other.PostCeo and (defeats[other.Id] or 0) < 1 then
 				defeatsNeeded += 1
 			end
 		end

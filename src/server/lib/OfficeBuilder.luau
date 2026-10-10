@@ -15,6 +15,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ArenaConfig = require(ReplicatedStorage.Config.ArenaConfig)
 local BossConfig = require(ReplicatedStorage.Config.BossConfig)
 local BossVisualConfig = require(ReplicatedStorage.Config.BossVisualConfig)
+local InteriorBuilder = require(script.Parent.InteriorBuilder)
+local RooftopBuilder = require(script.Parent.RooftopBuilder)
+local TowerShellBuilder = require(script.Parent.TowerShellBuilder)
 
 local OfficeBuilder = {}
 
@@ -32,14 +35,18 @@ local LEAF = Color3.fromRGB(70, 160, 80)
 local POT = Color3.fromRGB(190, 110, 70)
 local PAPER = Color3.fromRGB(196, 192, 182)
 local GLASS = Color3.fromRGB(170, 210, 235)
-local LIGHT_COLOR = Color3.fromRGB(255, 205, 150) -- warm amber
-local LIGHT_PANEL_COLOR = Color3.fromRGB(150, 130, 110)
+local LIGHT_COLOR = Color3.fromRGB(255, 236, 214) -- warm white (amber read olive under Future lighting)
+local LIGHT_PANEL_COLOR = Color3.fromRGB(196, 196, 192) -- a pale diffuser, not an orange slab
 local LIGHT_BRIGHTNESS = 0.7
 local LED_GROUND = Color3.fromRGB(60, 190, 210) -- cool cyan accent strip
 local LED_UPPER = Color3.fromRGB(150, 90, 220) -- purple accent strip
+local LED_DEPARTMENT = Color3.fromRGB(230, 170, 60) -- amber accent strip (3rd floor)
 -- How much darker office carpets are than their configured tint.
 local CARPET_DEEPEN = 0.4
-local CORRIDOR_CARPET = Color3.fromRGB(46, 52, 68)
+local CORRIDOR_CARPET = Color3.fromRGB(46, 52, 68) -- ground floor: blue slate
+-- Each floor its own corridor colour (visual overhaul V1c).
+local UPPER_CARPET = Color3.fromRGB(58, 46, 70) -- Senior floor: plum
+local DEPARTMENT_CARPET = Color3.fromRGB(66, 56, 42) -- Department Heads: bronze
 local CORRIDOR = { MinZ = -20, MaxZ = 0 }
 local LOBBY = { HalfWidth = 36 }
 local RAIL_HEIGHT = 3.5
@@ -111,7 +118,8 @@ end
 local function ledStrip(parent: Instance, length: number, position: Vector3, color: Color3): ()
 	local strip =
 		part(parent, "LedStrip", Vector3.new(length, 0.2, 0.2), position, color, Enum.Material.Neon)
-	strip.Transparency = 0.35
+	-- Future lighting makes Neon far brighter: keep strips faint.
+	strip.Transparency = 0.7
 	strip.CastShadow = false
 	strip.CanCollide = false
 	strip.CanQuery = false
@@ -283,7 +291,7 @@ local function buildOffice(parent: Instance, entry: ArenaConfig.Office): ()
 		Vector3.new(size.X, 0.1, size.Z),
 		center + Vector3.new(0, 0.05, 0),
 		entry.CarpetColor:Lerp(Color3.new(0, 0, 0), CARPET_DEEPEN),
-		Enum.Material.Fabric
+		Enum.Material.Carpet
 	)
 	walls(room, center)
 	ceilingLight(room, center + Vector3.new(0, size.Y - 0.3, 0), 24)
@@ -383,7 +391,7 @@ local function buildCommonAreas(parent: Instance): ()
 		Vector3.new(half * 2, 0.1, corridorDepth),
 		Vector3.new(0, 0.05, corridorZ),
 		CORRIDOR_CARPET,
-		Enum.Material.Fabric
+		Enum.Material.Carpet
 	)
 	part(
 		area,
@@ -397,8 +405,8 @@ local function buildCommonAreas(parent: Instance): ()
 		"UpperCorridorCarpet",
 		Vector3.new(half * 2, 0.1, corridorDepth),
 		Vector3.new(0, upperY + 0.05, corridorZ),
-		CORRIDOR_CARPET,
-		Enum.Material.Fabric
+		UPPER_CARPET,
+		Enum.Material.Carpet
 	)
 	part(
 		area,
@@ -418,13 +426,32 @@ local function buildCommonAreas(parent: Instance): ()
 			WALL_COLOR
 		)
 
-		-- Corridor walls between the lobby and the building ends, both storeys.
-		local span = half - LOBBY.HalfWidth
+		-- Corridor walls between the lobby and the building ends, both storeys,
+		-- with a doorway on the ground floor into the podium room behind
+		-- (Lib/TowerShellBuilder: the Break Room west, the Meeting Room east).
+		local doorX = TowerShellBuilder.ROOM_DOOR_X
+		local doorHalf = TowerShellBuilder.ROOM_DOOR_WIDTH / 2
+		local doorHeight = ArenaConfig.DoorHeight
+		for _, segment in
+			{
+				{ From = LOBBY.HalfWidth, To = doorX - doorHalf },
+				{ From = doorX + doorHalf, To = half },
+			}
+		do
+			local span = segment.To - segment.From
+			part(
+				area,
+				"CorridorSouthWall",
+				Vector3.new(span, roofY, WALL_THICKNESS),
+				Vector3.new(side * (segment.From + span / 2), roofY / 2, CORRIDOR.MaxZ),
+				WALL_COLOR
+			)
+		end
 		part(
 			area,
-			"CorridorSouthWall",
-			Vector3.new(span, roofY, WALL_THICKNESS),
-			Vector3.new(side * (LOBBY.HalfWidth + span / 2), roofY / 2, CORRIDOR.MaxZ),
+			"CorridorSouthWallLintel",
+			Vector3.new(doorHalf * 2, roofY - doorHeight, WALL_THICKNESS),
+			Vector3.new(side * doorX, doorHeight + (roofY - doorHeight) / 2, CORRIDOR.MaxZ),
 			WALL_COLOR
 		)
 
@@ -547,9 +574,14 @@ local function buildCommonAreas(parent: Instance): ()
 		"WelcomeSign",
 		Vector3.new(30, 4, 0.5),
 		Vector3.new(0, 11, 1),
-		Color3.fromRGB(255, 120, 60)
+		Color3.fromRGB(35, 38, 48)
 	)
-	sign(welcome, Enum.NormalId.Back, "WHACK IT OUT!  Stress Relief Dept.", Color3.new(1, 1, 1))
+	sign(
+		welcome,
+		Enum.NormalId.Back,
+		"WHACK IT OUT!  Stress Relief Dept.",
+		Color3.fromRGB(255, 170, 80)
+	)
 	-- On the front wall above the foot of the stairs, facing into the lobby (-Z).
 	local upstairs = part(
 		area,
@@ -615,7 +647,7 @@ local function elevatorDoor(parent: Instance, name: string, center: Vector3, lab
 	sign(signPart, Enum.NormalId.Right, label, Color3.fromRGB(255, 210, 120))
 end
 
--- The CEO's suite: the whole 3rd floor over the offices and corridor.
+-- The CEO's suite: the whole top (4th) floor over the offices and corridor.
 local function buildExecutiveFloor(parent: Instance): ()
 	local executive = ArenaConfig.Executive
 	local floor = executive.FloorY
@@ -635,7 +667,7 @@ local function buildExecutiveFloor(parent: Instance): ()
 		Vector3.new(half * 2, 0.1, depth),
 		Vector3.new(0, floor + 0.05, midZ),
 		Color3.fromRGB(80, 40, 50),
-		Enum.Material.Fabric
+		Enum.Material.Carpet
 	)
 	part(
 		suite,
@@ -762,9 +794,128 @@ local function buildExecutiveFloor(parent: Instance): ()
 		plant(suite, at)
 	end
 
-	-- Elevator doors on the west end wall: up from the 2nd floor, down from the 3rd.
-	elevatorDoor(parent, "ElevatorUpDoor", executive.ElevatorUpDoor, "EXECUTIVE ELEVATOR")
-	elevatorDoor(suite, "ElevatorDownDoor", executive.ElevatorDownDoor, "ELEVATOR DOWN")
+	-- Elevator doors on the west end wall (the tower shaft): the 2nd and 3rd
+	-- floors keep their door names; TowerService adds the floor-panel prompt.
+	elevatorDoor(parent, "ElevatorUpDoor", executive.ElevatorUpDoor, "ELEVATOR · FLOOR 2")
+	elevatorDoor(suite, "ElevatorDownDoor", executive.ElevatorDownDoor, "ELEVATOR · FLOOR 4")
+end
+
+-- The 3rd floor (Department Heads, Phase 3a): corridor, walls, windows and
+-- roof over the Executive Floor's footprint. The Principal offices are
+-- built like every other office (ArenaConfig.Offices).
+local function buildDepartmentFloor(parent: Instance): ()
+	local department = ArenaConfig.DepartmentFloor
+	local floor = department.FloorY
+	local height = department.CeilingY - floor
+	local half = ArenaConfig.BuildingHalfWidth
+	local northZ, southZ = department.NorthZ, department.SouthZ
+	local depth = southZ - northZ
+	local midZ = (southZ + northZ) / 2
+	local corridorDepth = CORRIDOR.MaxZ - CORRIDOR.MinZ
+	local corridorZ = (CORRIDOR.MinZ + CORRIDOR.MaxZ) / 2
+
+	local area = Instance.new("Model")
+	area.Name = "Department Heads Floor"
+	area.Parent = parent
+
+	part(
+		area,
+		"DepartmentCorridorCarpet",
+		Vector3.new(half * 2, 0.1, corridorDepth),
+		Vector3.new(0, floor + 0.05, corridorZ),
+		DEPARTMENT_CARPET,
+		Enum.Material.Carpet
+	)
+	part(
+		area,
+		"DepartmentRoof",
+		Vector3.new(half * 2, 1, depth),
+		Vector3.new(0, department.CeilingY + 0.5, midZ),
+		SLAB_COLOR
+	)
+	-- South wall: a window strip over the campus, like the CEO's north view.
+	local windowBottom, windowTop = 4, 10
+	part(
+		area,
+		"DepartmentWallLow",
+		Vector3.new(half * 2, windowBottom, WALL_THICKNESS),
+		Vector3.new(0, floor + windowBottom / 2, southZ),
+		WALL_COLOR
+	)
+	part(
+		area,
+		"DepartmentWallHigh",
+		Vector3.new(half * 2, height - windowTop, WALL_THICKNESS),
+		Vector3.new(0, floor + (windowTop + height) / 2, southZ),
+		WALL_COLOR
+	)
+	glass(
+		area,
+		"DepartmentWindow",
+		Vector3.new(half * 2, windowTop - windowBottom, 0.3),
+		Vector3.new(0, floor + (windowBottom + windowTop) / 2, southZ)
+	)
+	for _, side in { -1, 1 } do
+		part(
+			area,
+			"DepartmentEndWall",
+			Vector3.new(WALL_THICKNESS, height, depth),
+			Vector3.new(side * half, floor + height / 2, midZ),
+			WALL_COLOR
+		)
+	end
+	for x = -60, 60, 30 do
+		ceilingLight(area, Vector3.new(x, department.CeilingY - 0.3, corridorZ), 22)
+	end
+	ledStrip(
+		area,
+		half * 2 - 2,
+		Vector3.new(0, department.CeilingY - 0.4, CORRIDOR.MinZ + 0.6),
+		LED_DEPARTMENT
+	)
+	for _, x in { -50, 50 } do
+		plant(area, Vector3.new(x, floor, CORRIDOR.MaxZ - 2.5))
+	end
+
+	-- The floor's name, on the window wall above the glass, facing the corridor.
+	local plate = part(
+		area,
+		"DepartmentSign",
+		Vector3.new(30, 2.6, 0.4),
+		Vector3.new(0, floor + 11.8, southZ - 0.8),
+		Color3.fromRGB(60, 50, 40)
+	)
+	sign(plate, Enum.NormalId.Front, "FLOOR 3 · DEPARTMENT HEADS", Color3.fromRGB(255, 210, 120))
+
+	local tower = ArenaConfig.Tower
+	elevatorDoor(
+		area,
+		"ElevatorDepartmentDoor",
+		Vector3.new(tower.DoorX, floor + 4, tower.DoorZ),
+		"ELEVATOR · FLOOR 3"
+	)
+end
+
+-- The tower elevator's ground-floor door (west end of the corridor) and a
+-- sign in the lobby pointing to it.
+local function buildGroundElevator(parent: Instance): ()
+	local tower = ArenaConfig.Tower
+	elevatorDoor(
+		parent,
+		"ElevatorGroundDoor",
+		Vector3.new(tower.DoorX, 4, tower.DoorZ),
+		"ELEVATOR · ALL FLOORS"
+	)
+	-- Hanging over the corridor just west of the lobby, readable from the lobby (+X face).
+	local pointer = part(
+		parent,
+		"ElevatorPointer",
+		Vector3.new(0.4, 2.2, 12),
+		Vector3.new(-LOBBY.HalfWidth - 2, 11, (CORRIDOR.MinZ + CORRIDOR.MaxZ) / 2),
+		Color3.fromRGB(60, 50, 40)
+	)
+	pointer.CanCollide = false
+	sign(pointer, Enum.NormalId.Right, "← ELEVATOR · ALL FLOORS", Color3.fromRGB(255, 210, 120))
 end
 
 -- Builds the whole building under `parent` and returns its folder.
@@ -776,6 +927,11 @@ function OfficeBuilder.build(parent: Instance): Folder
 	end
 	buildCommonAreas(folder)
 	buildExecutiveFloor(folder)
+	buildDepartmentFloor(folder)
+	buildGroundElevator(folder)
+	TowerShellBuilder.build(folder)
+	RooftopBuilder.build(folder)
+	InteriorBuilder.build(folder)
 	folder.Parent = parent
 	return folder
 end

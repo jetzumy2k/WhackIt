@@ -12,10 +12,14 @@ rating, caps, supplies; unit-tested), `Shared/BallFlight` (the ball's path; unit
 `Controllers/PickleballController` (cards, panel, score bar, controls, the ball).
 
 ## The Recreation Center
-- North of the office building, x -60..60, z -200..-140 (decision D3). The campus boundary moved from
-  z -130 to z -210 to make room; a walkway runs north from the loop behind the building. Skyline blocks
-  that would now stand on the grounds aren't built (the others stay exactly where they were).
-- **Two courts** side by side (centres x ±24, z -170), each 20 × 44 studs with 7-stud kitchens, a net
+- **In front of the office** since 2026-10-10 (owner request: it was hard to find behind the building):
+  x -60..60, z 116..200, at the end of the main walkway straight out of the lobby. The campus boundary
+  moved south from z 150 to z 210 (the street with it, z 220..236); the Stress-Relief Zone took the old
+  spot behind the building.
+- **The pavilion** (visual overhaul V2): a roof 42 studs up on steel columns (lobs fly up to about 40),
+  a lit "🏓 RECREATION CENTER" fascia facing the HQ, three-tier stands down both sides, a "PLAY • RELAX •
+  REPEAT" mural wall at the far end, lights under the roof, planters at the entrance, a paved base.
+- **Two courts** side by side (centres x ±24, z 162), each 20 × 44 studs with 7-stud kitchens, a net
   (34-36 in), a 7-stud run-off with a low fence, benches on the outer side and a board at the far end
   showing the match. An invisible wall in the net's plane keeps everyone on their own side.
 - **The sign** between the courts, with a "Pickleball" prompt (E), opens the Pickleball panel.
