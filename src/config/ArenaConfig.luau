@@ -44,13 +44,14 @@ local BossVisualConfig = require(script.Parent.BossVisualConfig)
 
 local OFFICE_Z = -36
 local BASE_BOSS_SIZE = Vector3.new(6, 8, 6)
--- Top of the executive (3rd) floor: the old roof slab now carries it.
-local EXECUTIVE_FLOOR_Y = 30
 -- Floor top of the upper storey (ground walls are 14 tall, plus a 1-stud slab).
 local UPPER_FLOOR_Y = 15
--- 4th floor (Department Heads, Phase 3a): on the Executive Floor's roof slab
--- (its ceiling is 14 above its floor, plus a 1-stud slab).
-local DEPARTMENT_FLOOR_Y = EXECUTIVE_FLOOR_Y + 15
+-- Every storey is 14 tall plus a 1-stud slab. Since 2026-10-10 (owner
+-- request) the CEO is at the top: the 3rd floor is Department Heads (on the
+-- old roof slab), the 4th the Executive Floor, the 5th the Rooftop Lounge.
+local DEPARTMENT_FLOOR_Y = UPPER_FLOOR_Y + 15 -- 30
+local EXECUTIVE_FLOOR_Y = DEPARTMENT_FLOOR_Y + 15 -- 45
+local ROOFTOP_FLOOR_Y = EXECUTIVE_FLOOR_Y + 15 -- 60, the Executive Floor's roof
 -- Bosses stand a little behind the room centre, leaving space to walk around them.
 local BOSS_OFFSET = Vector3.new(0, 4, -2)
 
@@ -215,8 +216,8 @@ local ArenaConfig = table.freeze({
 	DoorWidth = 10,
 	DoorHeight = 10,
 	UpperFloorY = UPPER_FLOOR_Y,
-	-- 4th floor (Department Heads): offices along the north half, the corridor
-	-- south of them, both over the Executive Floor's footprint.
+	-- 3rd floor (Department Heads): offices along the north half, the corridor
+	-- south of them, on the 2nd floor's roof; the Executive Floor is above.
 	DepartmentFloor = table.freeze({
 		FloorY = DEPARTMENT_FLOOR_Y,
 		CeilingY = DEPARTMENT_FLOOR_Y + 14,
@@ -231,7 +232,7 @@ local ArenaConfig = table.freeze({
 		DoorX = -85,
 		DoorZ = -10,
 		ArriveX = -78,
-		-- The 2nd and 3rd floor doors keep their old names (ElevatorUpDoor,
+		-- The 2nd floor and Executive doors keep their old names (ElevatorUpDoor,
 		-- ElevatorDownDoor). Text is what the floor panel says about the floor.
 		Floors = table.freeze({
 			table.freeze({
@@ -251,20 +252,28 @@ local ArenaConfig = table.freeze({
 				DoorName = "ElevatorUpDoor",
 			}),
 			table.freeze({
-				Id = "Executive",
-				Number = 3,
-				Name = "Executive Floor",
-				Text = "The CEO's suite. Stress level: MAXIMUM",
-				FloorY = EXECUTIVE_FLOOR_Y,
-				DoorName = "ElevatorDownDoor",
-			}),
-			table.freeze({
 				Id = "Department",
-				Number = 4,
+				Number = 3,
 				Name = "Department Heads",
 				Text = "5 Principal bosses (Level 30+)",
 				FloorY = DEPARTMENT_FLOOR_Y,
 				DoorName = "ElevatorDepartmentDoor",
+			}),
+			table.freeze({
+				Id = "Executive",
+				Number = 4,
+				Name = "Executive Floor",
+				Text = "The CEO's suite, at the top. Stress level: MAXIMUM",
+				FloorY = EXECUTIVE_FLOOR_Y,
+				DoorName = "ElevatorDownDoor",
+			}),
+			table.freeze({
+				Id = "Rooftop",
+				Number = 5,
+				Name = "Rooftop Lounge",
+				Text = "Open air: seats, a coffee cart, the mission and event boards",
+				FloorY = ROOFTOP_FLOOR_Y,
+				DoorName = "ElevatorRooftopDoor",
 			}),
 		}),
 	}),
@@ -287,7 +296,15 @@ local ArenaConfig = table.freeze({
 	BuildingSouthZ = 34,
 	RoofY = 29, -- underside of the 2nd-floor ceiling (upper walls are 14 tall)
 
-	-- Executive (3rd) floor: the CEO's suite over the offices and corridor.
+	-- The Rooftop Lounge (5th floor, docs/TOWER.md): the deck on the Executive
+	-- Floor's roof, inside the tower's parapet.
+	Rooftop = table.freeze({
+		FloorY = ROOFTOP_FLOOR_Y,
+		NorthZ = -52,
+		SouthZ = 0,
+	}),
+
+	-- Executive (4th, top) floor: the CEO's suite over the offices and corridor.
 	Executive = table.freeze({
 		FloorY = EXECUTIVE_FLOOR_Y,
 		CeilingY = EXECUTIVE_FLOOR_Y + 14,

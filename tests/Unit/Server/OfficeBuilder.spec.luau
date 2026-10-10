@@ -347,7 +347,7 @@ return function()
 	describe("OfficeBuilder tower shell (visual overhaul V1a)", function()
 		it("wraps the tower in a curtain wall up to the roof, with a crown sign", function()
 			local office = build()
-			local top = ArenaConfig.DepartmentFloor.CeilingY + 1
+			local top = ArenaConfig.Rooftop.FloorY
 			local highest = 0
 			for _, p in parts(office) do
 				if p.Name == "CurtainGlass" then
@@ -393,12 +393,39 @@ return function()
 				local inTower = withinX
 					and position.Z > ArenaConfig.BuildingNorthZ + 1
 					and position.Z < -1
-					and position.Y < ArenaConfig.DepartmentFloor.CeilingY
+					and position.Y < ArenaConfig.Executive.CeilingY
 				local inPodium = withinX
 					and position.Z > 1
 					and position.Z < ArenaConfig.BuildingSouthZ - 1
 					and position.Y < ArenaConfig.RoofY
 				expect(inTower or inPodium).to.equal(false)
+			end
+			office:Destroy()
+		end)
+	end)
+	describe("OfficeBuilder Rooftop Lounge", function()
+		it("builds the lounge with both boards and their prompts", function()
+			local office = build()
+			local roof = office:FindFirstChild("Rooftop Lounge", true)
+			expect(roof).never.to.equal(nil)
+			for _, name in { "MissionBoardPrompt", "EventBoardPrompt" } do
+				local prompt = (roof :: Instance):FindFirstChild(name, true)
+				expect(prompt).never.to.equal(nil)
+				expect((prompt :: Instance):IsA("ProximityPrompt")).to.equal(true)
+			end
+			office:Destroy()
+		end)
+
+		it("keeps everything on the deck inside the parapet and above the CEO's ceiling", function()
+			local office = build()
+			local roof = office:FindFirstChild("Rooftop Lounge", true) :: Instance
+			for _, p in parts(roof) do
+				expect(math.abs(p.Position.X) <= ArenaConfig.BuildingHalfWidth).to.equal(true)
+				expect(
+					p.Position.Z >= ArenaConfig.Rooftop.NorthZ
+						and p.Position.Z <= ArenaConfig.Rooftop.SouthZ
+				).to.equal(true)
+				expect(p.Position.Y >= ArenaConfig.Executive.CeilingY).to.equal(true)
 			end
 			office:Destroy()
 		end)

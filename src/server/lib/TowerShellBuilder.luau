@@ -32,10 +32,16 @@ local NORTH = ArenaConfig.BuildingNorthZ -- -52
 local SOUTH = ArenaConfig.BuildingSouthZ -- 34
 local TOWER_SOUTH = 0 -- the tower block's south face (over the podium)
 local PODIUM_TOP = ArenaConfig.RoofY + 1 -- 30
-local TOWER_TOP = ArenaConfig.DepartmentFloor.CeilingY + 1 -- 60
+local TOWER_TOP = ArenaConfig.Rooftop.FloorY -- 60, the roof deck
 local PARAPET = 3
-local STOREYS =
-	{ 0, ArenaConfig.UpperFloorY, ArenaConfig.Executive.FloorY, ArenaConfig.DepartmentFloor.FloorY }
+-- Storey floor levels, bottom first.
+local STOREYS = {
+	0,
+	ArenaConfig.UpperFloorY,
+	ArenaConfig.DepartmentFloor.FloorY,
+	ArenaConfig.Executive.FloorY,
+}
+table.sort(STOREYS)
 local LOBBY_HALF = 36
 local OUT = 1 -- the curtain wall stands this far outside the walls
 local BAY = 8.6
@@ -282,17 +288,6 @@ local function buildShell(parent: Instance): ()
 			Enum.Material.Metal
 		)
 	end
-	-- A slim mast on the roof.
-	decor(
-		part(
-			shell,
-			"Mast",
-			Vector3.new(0.6, 18, 0.6),
-			Vector3.new(60, TOWER_TOP + 9, -30),
-			FIN_COLOR,
-			Enum.Material.Metal
-		)
-	)
 end
 
 local function buildCanopy(parent: Instance): ()

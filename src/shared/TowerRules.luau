@@ -7,6 +7,7 @@
 	ride; the client's floor panel uses the same rules only to display.
 
 	  Ground, Senior   always open (Senior bosses are locked one by one)
+	  Rooftop          always open (the Rooftop Lounge)
 	  Executive        the CEO is unlocked for the player (ProgressionRules)
 	  Department       Player Level >= GameConfig.PrincipalMinLevel
 	An admin's boss-access bypass opens every floor.
@@ -69,7 +70,7 @@ function TowerRules.status(
 	adminUnlocks: { [string]: boolean }?,
 	bypass: boolean
 ): Status
-	if bypass or id == "Ground" or id == "Senior" then
+	if bypass or id == "Ground" or id == "Senior" or id == "Rooftop" then
 		return OPEN
 	end
 	if id == "Executive" then

@@ -13,14 +13,25 @@ Code: `Config/ArenaConfig` (`Tower`, `DepartmentFloor`, the Principal offices), 
 ## Floors
 | # | Floor | What's there | Who may go |
 |---|---|---|---|
-| 4 | Department Heads (y 45) | 5 Principal bosses | Level 30+ |
-| 3 | Executive Floor (y 30) | The CEO | the CEO is unlocked: every ground and Senior boss beaten once (unchanged) |
+| 5 | Rooftop Lounge (y 60) | deck, sofas, coffee cart, loungers, trees, string lights, telescope, the **Mission Board** and **Event Board** | everyone |
+| 4 | Executive Floor (y 45) | The CEO, at the top | the CEO is unlocked: every ground and Senior boss beaten once (unchanged) |
+| 3 | Department Heads (y 30) | 5 Principal bosses | Level 30+ |
 | 2 | Senior Floor (y 15) | 5 Senior bosses (Level 10+ each) | everyone (also by the stairs) |
-| 1 | Lobby & Offices | the lobby, the Hall of Calm, 5 office bosses | everyone |
+| 1 | Lobby & Offices | the lobby, the Hall of Calm, 5 office bosses, the Break Room and the Meeting Room | everyone |
 
-The 4th floor stands on the Executive Floor's roof, over the same north half of the building: five
-offices in the same columns as below and a corridor with a window wall over the campus, amber accent
-lights and a "FLOOR 4 · DEPARTMENT HEADS" sign. It is reached only by the elevator.
+**The CEO is at the top (owner request 2026-10-10):** the Executive Floor moved from the 3rd to the 4th
+floor and Department Heads from the 4th to the 3rd, so the company's head sits above its department
+heads. The 3rd floor stands on the 2nd floor's roof, over the north half of the building: five offices
+in the same columns as below and a corridor with a window wall over the campus, amber accent lights and
+a "FLOOR 3 · DEPARTMENT HEADS" sign. Floors 3-5 are reached only by the elevator.
+
+### The Rooftop Lounge (5th floor, `Lib/RooftopBuilder`)
+On the Executive Floor's roof inside the tower's parapet: an elevator house at the west end ("FLOOR 5 ·
+ROOFTOP LOUNGE"), a wooden deck, a sofa corner with coffee tables and bean bags, a coffee cart under a
+parasol, four loungers with umbrellas, trees in planters along the north edge, two lines of string
+lights, a telescope looking towards the Recreation Center, and two boards: the **Mission Board** (E:
+opens 🤝 Team Missions) and the **Event Board** (E: opens 🌟 Today). The crown sign stands on the south
+parapet.
 
 ## The elevator
 - One shaft at the **west end of the corridor**, with a door on every floor (x -85, z -10). A sign in
@@ -33,11 +44,11 @@ lights and a "FLOOR 4 · DEPARTMENT HEADS" sign. It is reached only by the eleva
   not already on that floor, and access from saved data. Refused rides get a toast saying what's
   missing. Arriving on the Executive Floor still spikes stress to 100 %.
 - The old "Ride up" / "Ride down" prompts on the 2nd and 3rd floor doors are replaced by the panel.
-- Guards: anyone on the 4th floor without Level 30 is sent to the Senior floor; anyone on the
+- Guards: anyone on the 3rd floor (Department Heads) without Level 30 is sent to the Senior floor; anyone on the
   Executive Floor without access is sent down, as before. An admin's boss-access bypass opens every
   floor.
 
-## The Principal tier (4th floor)
+## The Principal tier (3rd floor)
 | Boss | HP | Damage taken | Score | Coins | Unlock |
 |---|---|---|---|---|---|
 | Principal Deadline Boss | 2,600 | 1.0 | 1,800 | 200 | Lv 30 + 1 defeat of Senior Deadline Boss |

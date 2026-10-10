@@ -15,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ArenaConfig = require(ReplicatedStorage.Config.ArenaConfig)
 local BossConfig = require(ReplicatedStorage.Config.BossConfig)
 local BossVisualConfig = require(ReplicatedStorage.Config.BossVisualConfig)
+local RooftopBuilder = require(script.Parent.RooftopBuilder)
 local TowerShellBuilder = require(script.Parent.TowerShellBuilder)
 
 local OfficeBuilder = {}
@@ -38,7 +39,7 @@ local LIGHT_PANEL_COLOR = Color3.fromRGB(196, 196, 192) -- a pale diffuser, not 
 local LIGHT_BRIGHTNESS = 0.7
 local LED_GROUND = Color3.fromRGB(60, 190, 210) -- cool cyan accent strip
 local LED_UPPER = Color3.fromRGB(150, 90, 220) -- purple accent strip
-local LED_DEPARTMENT = Color3.fromRGB(230, 170, 60) -- amber accent strip (4th floor)
+local LED_DEPARTMENT = Color3.fromRGB(230, 170, 60) -- amber accent strip (3rd floor)
 -- How much darker office carpets are than their configured tint.
 local CARPET_DEEPEN = 0.4
 local CORRIDOR_CARPET = Color3.fromRGB(46, 52, 68)
@@ -642,7 +643,7 @@ local function elevatorDoor(parent: Instance, name: string, center: Vector3, lab
 	sign(signPart, Enum.NormalId.Right, label, Color3.fromRGB(255, 210, 120))
 end
 
--- The CEO's suite: the whole 3rd floor over the offices and corridor.
+-- The CEO's suite: the whole top (4th) floor over the offices and corridor.
 local function buildExecutiveFloor(parent: Instance): ()
 	local executive = ArenaConfig.Executive
 	local floor = executive.FloorY
@@ -792,10 +793,10 @@ local function buildExecutiveFloor(parent: Instance): ()
 	-- Elevator doors on the west end wall (the tower shaft): the 2nd and 3rd
 	-- floors keep their door names; TowerService adds the floor-panel prompt.
 	elevatorDoor(parent, "ElevatorUpDoor", executive.ElevatorUpDoor, "ELEVATOR · FLOOR 2")
-	elevatorDoor(suite, "ElevatorDownDoor", executive.ElevatorDownDoor, "ELEVATOR · FLOOR 3")
+	elevatorDoor(suite, "ElevatorDownDoor", executive.ElevatorDownDoor, "ELEVATOR · FLOOR 4")
 end
 
--- The 4th floor (Department Heads, Phase 3a): corridor, walls, windows and
+-- The 3rd floor (Department Heads, Phase 3a): corridor, walls, windows and
 -- roof over the Executive Floor's footprint. The Principal offices are
 -- built like every other office (ArenaConfig.Offices).
 local function buildDepartmentFloor(parent: Instance): ()
@@ -880,14 +881,14 @@ local function buildDepartmentFloor(parent: Instance): ()
 		Vector3.new(0, floor + 11.8, southZ - 0.8),
 		Color3.fromRGB(60, 50, 40)
 	)
-	sign(plate, Enum.NormalId.Front, "FLOOR 4 · DEPARTMENT HEADS", Color3.fromRGB(255, 210, 120))
+	sign(plate, Enum.NormalId.Front, "FLOOR 3 · DEPARTMENT HEADS", Color3.fromRGB(255, 210, 120))
 
 	local tower = ArenaConfig.Tower
 	elevatorDoor(
 		area,
 		"ElevatorDepartmentDoor",
 		Vector3.new(tower.DoorX, floor + 4, tower.DoorZ),
-		"ELEVATOR · FLOOR 4"
+		"ELEVATOR · FLOOR 3"
 	)
 end
 
@@ -925,6 +926,7 @@ function OfficeBuilder.build(parent: Instance): Folder
 	buildDepartmentFloor(folder)
 	buildGroundElevator(folder)
 	TowerShellBuilder.build(folder)
+	RooftopBuilder.build(folder)
 	folder.Parent = parent
 	return folder
 end

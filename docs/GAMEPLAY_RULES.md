@@ -399,8 +399,8 @@ ground-floor version** (`BossConfig.UnlockAfterBossId` / `UnlockDefeats` / `MinL
 level its bar reads "LOCKED: reach Lv 10" and swings show "Reach Level 10 to fight this boss!".
 This spreads experienced players across two floors instead of crowding one boss.
 
-### Department Heads (4th floor, Level 30+, 2026-10-10)
-Each Senior boss has a **Principal** version on the 4th floor, reached by the tower elevator: Level 30
+### Department Heads (3rd floor, Level 30+, 2026-10-10)
+Each Senior boss has a **Principal** version on the 3rd floor, reached by the tower elevator: Level 30
 and 1 defeat of its Senior version, tougher than every Senior boss and paying more. Numbers and the
 floor: docs/TOWER.md.
 
@@ -615,7 +615,9 @@ and a spec rejects a blocklist of bad words, including for the angry CEO.
   shaft for every floor with a floor panel, docs/TOWER.md). The server checks access; without it the
   panel and a toast say what's missing ("Defeat every boss once (N to go)"). Anyone found on the floor
   without access is sent back down.
-- The Principal tier (4th floor, docs/TOWER.md) is **not** part of this unlock and not counted in the
+- Since 2026-10-10 the Executive Floor is the **4th (top) floor**, above Department Heads, with the
+  Rooftop Lounge over it (docs/TOWER.md).
+- The Principal tier (3rd floor, docs/TOWER.md) is **not** part of this unlock and not counted in the
   CEO's health.
 - **Stress spike:** arriving on the Executive Floor sets the Stress Meter to **100 %** (and re-arms Zen).
 - **The CEO:** a 1.6× size, crowned raid boss. **MaxHealth = 150 × the toughest other boss**

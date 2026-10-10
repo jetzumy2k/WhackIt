@@ -55,9 +55,19 @@ return function()
 	end)
 
 	describe("TowerRules access", function()
-		it("always opens the ground and Senior floors", function()
+		it("always opens the ground and Senior floors and the Rooftop Lounge", function()
 			expect(TowerRules.status("Ground", {}, 1, nil, false).Open).to.equal(true)
 			expect(TowerRules.status("Senior", {}, 1, nil, false).Open).to.equal(true)
+			expect(TowerRules.status("Rooftop", {}, 1, nil, false).Open).to.equal(true)
+		end)
+
+		it("puts the CEO on the highest boss floor, under the Rooftop", function()
+			local executive = TowerRules.floor("Executive") :: TowerRules.Floor
+			local department = TowerRules.floor("Department") :: TowerRules.Floor
+			local rooftop = TowerRules.floor("Rooftop") :: TowerRules.Floor
+			expect(executive.FloorY > department.FloorY).to.equal(true)
+			expect(rooftop.FloorY > executive.FloorY).to.equal(true)
+			expect(rooftop.Number).to.equal(#TowerRules.floors())
 		end)
 
 		it("opens the Executive Floor like the CEO, with progress while locked", function()

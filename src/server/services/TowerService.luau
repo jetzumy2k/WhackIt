@@ -11,7 +11,7 @@
 	  (MovementGuardService.noteTeleport first). Arriving on the Executive
 	  Floor spikes stress to 100 % as before. A refused ride gets a toast
 	  saying what's missing.
-	* Guard: anyone found on the 4th floor without access (e.g. by cheating
+	* Guard: anyone found on the 3rd floor (Department Heads) without access (e.g. by cheating
 	  past the elevator) is sent down to the Senior floor. The Executive
 	  Floor keeps its own guard (ExecutiveService).
 ]]

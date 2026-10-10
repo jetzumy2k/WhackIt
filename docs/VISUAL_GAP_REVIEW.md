@@ -79,3 +79,9 @@ Visual work becomes its own track, done before Phase 6, each part with a Studio 
   Studio** (screenshots needed).
 - Next in V1: per-floor themes and wayfinding, a lobby makeover (atrium, reception, logo wall), a
   shared workspace and lounge on the upper storey, the Rooftop Lounge.
+- **V1a look pass** (owner screenshots): neutral grading and warm-white lights (the amber turned
+  everything olive under Future lighting), pale light panels, faint LED strips, Carpet material, a dark
+  welcome sign, pendant shades fixed.
+- **CEO at the top + Rooftop Lounge** (owner request): Executive Floor moved to the 4th floor, Department
+  Heads to the 3rd; `Lib/RooftopBuilder` on the 5th with the Mission and Event Boards. Not yet seen in
+  Studio.

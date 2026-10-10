@@ -720,3 +720,13 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 487 | Ground corridor: walk through the new doorways west and east of the lobby | West: the Break Room (wood floor, coffee bar, fridge, round tables, sofa corner, pendant lights); east: the Meeting Room (long table with chairs, screen "Q3 SYNERGY ALIGNMENT", agenda whiteboard) |
 | 488 | Inside the offices on every floor | Windows now look out through the curtain wall; nothing blocks doors, the elevator or the stairs |
 | 489 | Performance: walk round outside and in the lobby (View → Stats / MicroProfiler) | No big frame drop compared with before |
+
+### CEO at the top and the Rooftop Lounge (V1, owner request) — screenshots please
+| # | Steps | Expected |
+|---|---|---|
+| 490 | Open the elevator panel | 5 · Rooftop Lounge (Go for everyone), 4 · Executive Floor, 3 · Department Heads (Lv 30), 2 · Senior Floor, 1 · Lobby & Offices |
+| 491 | Ride to floor 3 (Lv 30 or bypass) | Department Heads: sign "FLOOR 3 · DEPARTMENT HEADS", door "ELEVATOR · FLOOR 3", five Principal offices |
+| 492 | Ride to floor 4 (CEO unlocked or bypass) | The CEO's suite at the top; stress spikes to 100 %; door "ELEVATOR · FLOOR 4" |
+| 493 | Ride to floor 5 | Out of the elevator house onto the Rooftop Lounge: deck, sofas, coffee cart, loungers, trees, string lights, telescope, the crown sign on the front edge |
+| 494 | Press E at the Mission Board / Event Board | The Team Missions window / the Quests window on 🌟 Today |
+| 495 | Walk the parapet edge | Nobody can fall off; no gaps; the view over the campus and to the Recreation Center |
