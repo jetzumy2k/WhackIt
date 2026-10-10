@@ -538,11 +538,19 @@ local function buildHud(): (ScreenGui, Frame)
 	card.AnchorPoint = Vector2.new(0.5, 0.5)
 	card.Position = UDim2.fromScale(0.5, 0.4)
 	card.Size = UDim2.fromScale(0.45, 0.18)
-	card.BackgroundColor3 = PANEL_COLOR
-	card.BackgroundTransparency = 0.1
+	card.BackgroundColor3 = UiTokens.Color.Window
+	card.BackgroundTransparency = 0.04
 	card.Visible = false
 	card.Parent = gui
-	Instance.new("UICorner").Parent = card
+	local cardCorner = Instance.new("UICorner")
+	cardCorner.CornerRadius = UDim.new(0, UiTokens.Radius.Window)
+	cardCorner.Parent = card
+	local cardStroke = Instance.new("UIStroke")
+	cardStroke.Color = UiTokens.Color.Heading
+	cardStroke.Thickness = 2
+	cardStroke.Parent = card
+	local cardScale = Instance.new("UIScale")
+	cardScale.Parent = card
 	local cardConstraint = Instance.new("UISizeConstraint")
 	cardConstraint.MinSize = Vector2.new(260, 90)
 	cardConstraint.MaxSize = Vector2.new(560, 180)
@@ -559,7 +567,34 @@ local function buildHud(): (ScreenGui, Frame)
 	padding.PaddingTop = UDim.new(0, 8)
 	padding.PaddingBottom = UDim.new(0, 8)
 	padding.Parent = card
-	Responsive.capText(makeLabel("Text", card), 26)
+	-- An icon disc on the left, a gold title line and the details beside it.
+	local disc = Instance.new("TextLabel")
+	disc.Name = "Disc"
+	disc.AnchorPoint = Vector2.new(0, 0.5)
+	disc.Position = UDim2.fromScale(0, 0.5)
+	disc.Size = UDim2.fromOffset(56, 56)
+	disc.BackgroundColor3 = Color3.fromRGB(190, 140, 50)
+	disc.Font = UiTokens.Font.Title
+	disc.TextSize = 30
+	disc.TextColor3 = TEXT_COLOR
+	disc.Parent = card
+	local discCorner = Instance.new("UICorner")
+	discCorner.CornerRadius = UDim.new(1, 0)
+	discCorner.Parent = disc
+	local title = makeLabel("Title", card)
+	title.Position = UDim2.fromOffset(66, 0)
+	title.Size = UDim2.new(1, -66, 0.36, 0)
+	title.TextColor3 = UiTokens.Color.Heading
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	Responsive.capText(title, 26)
+	local details = makeLabel("Text", card)
+	details.Position = UDim2.new(0, 66, 0.38, 0)
+	details.Size = UDim2.new(1, -66, 0.62, 0)
+	details.Font = UiTokens.Font.Body
+	details.TextXAlignment = Enum.TextXAlignment.Left
+	details.TextYAlignment = Enum.TextYAlignment.Top
+	details.TextWrapped = true
+	Responsive.capText(details, 18)
 
 	gui.Parent = localPlayer:WaitForChild("PlayerGui")
 	return gui, card
@@ -708,11 +743,26 @@ function attachBossBar(model: Model, billboardParent: Instance): ()
 	end)
 end
 
--- Shows the centre card; a newer card resets the timer instead of being hidden
--- by the older one.
-local function showCard(card: Frame, text: string): ()
-	local label = card:FindFirstChild("Text") :: TextLabel
-	label.Text = text
+-- Shows the centre card: the first line as its title, the rest under it, and
+-- `icon` in the disc; it pops in (instantly with Reduced motion). A newer card
+-- resets the timer instead of being hidden by the older one.
+local function showCard(card: Frame, text: string, icon: string): ()
+	local firstLine, rest = string.match(text, "^([^\n]*)\n?(.*)$")
+	local title = card:FindFirstChild("Title") :: TextLabel
+	local details = card:FindFirstChild("Text") :: TextLabel
+	local disc = card:FindFirstChild("Disc") :: TextLabel
+	title.Text = firstLine or text
+	details.Text = rest or ""
+	disc.Text = icon
+	local scale = card:FindFirstChildOfClass("UIScale")
+	if scale then
+		scale.Scale = if UiTokens.reducedMotion() then 1 else 0.75
+		TweenService:Create(
+			scale,
+			UiTokens.motion(TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out)),
+			{ Scale = 1 }
+		):Play()
+	end
 	victoryCardShownAt = os.clock()
 	local shownAt = victoryCardShownAt
 	card.Visible = true
@@ -748,7 +798,8 @@ local function onZenAchieved(card: Frame, payload: unknown): ()
 						"Zen bonus now +%d%% boss coins",
 						StressRules.zenBonusPercent(level)
 					)
-			)
+			),
+			"🧘"
 		)
 	else
 		UIController.showToast(string.format("%s reached Zen!", name))
@@ -774,7 +825,7 @@ local function showVictoryCard(card: Frame, payload: unknown): ()
 	local lines = { bossName .. " defeated!" }
 	if data.AdminDamage == true then
 		table.insert(lines, "Admin damage was on: no rewards for this boss.")
-		showCard(card, table.concat(lines, "\n"))
+		showCard(card, table.concat(lines, "\n"), "🛡️")
 		return
 	end
 	if typeof(score) == "number" and typeof(coins) == "number" then
@@ -816,7 +867,7 @@ local function showVictoryCard(card: Frame, payload: unknown): ()
 			end
 		end
 	end
-	showCard(card, table.concat(lines, "\n"))
+	showCard(card, table.concat(lines, "\n"), if data.LastHit == true then "🏆" else "🎉")
 end
 
 -- Shows a short tip; a newer tip replaces the current one. No-op before the HUD exists.

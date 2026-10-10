@@ -605,6 +605,7 @@ local function onResult(payload: unknown): ()
 		Body = text(data.Reason, "") .. "\n" .. table.concat(lines, " · "),
 		Detail = detail,
 		Accent = if won then C.Heading else ACCENT,
+		Celebrate = won,
 		Seconds = 12,
 		ActionLabel = "PLAY AGAIN",
 		OnAction = PickleballController.open,
@@ -689,6 +690,7 @@ local function onSeason(payload: unknown): ()
 			Detail = string.format("+%d coins", number(data.Coins, 0))
 				.. if item ~= "" then " · " .. item .. " (in your office storage)" else "",
 			Accent = C.Heading,
+			Celebrate = true,
 			Seconds = 15,
 		})
 	end

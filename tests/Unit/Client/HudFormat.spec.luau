@@ -28,5 +28,17 @@ return function()
 			-- Out-of-range values are clamped.
 			expect(HudFormat.stressColor(5)).to.equal(full)
 		end)
+
+		it("takes a leading emoji off a card title for its icon", function()
+			local icon, rest = HudFormat.splitIcon("🏆 YOU WON!")
+			expect(icon).to.equal("🏆")
+			expect(rest).to.equal("YOU WON!")
+			local none, same = HudFormat.splitIcon("LEVEL UP")
+			expect(none).to.equal(nil)
+			expect(same).to.equal("LEVEL UP")
+			local single, whole = HudFormat.splitIcon("🎉")
+			expect(single).to.equal(nil)
+			expect(whole).to.equal("🎉")
+		end)
 	end)
 end

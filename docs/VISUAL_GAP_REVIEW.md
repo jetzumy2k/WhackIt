@@ -117,3 +117,8 @@ Visual work becomes its own track, done before Phase 6, each part with a Studio 
   place) and the Robux Store (tabs, cards with live prices and a Gift button, bundles as sections,
   odds text, the admin tab, a separate gift-picker window with a persistent search box) moved to
   PanelKit windows. Next: V4c (reward reveals, level-up, event and notification cards).
+- **V4c reveals** (branch `feat/v4c-reveals`): notification cards get an icon disc (from the emoji the
+  title starts with, `HudFormat.splitIcon`), a pop-in, a countdown bar, and a sunburst for rewards and
+  wins (level-up, quest, event tier, mission cleared, pickleball win, season prize); the victory / Zen
+  card has an icon disc, a gold title line and a pop-in. Reduced motion respected. Owner approved V4b
+  without phone testing (2026-10-10).

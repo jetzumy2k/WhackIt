@@ -785,3 +785,13 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 528 | Eggs and Mystery tabs | The odds text first, then the cards (egg cards tinted by rarity); Bundles as sections listing their contents with "Purchase · R$ n" |
 | 529 | Store closed (Admin → Close now) | A non-admin sees a 🔒 notice "The store is closed right now"; the button hides for non-admins |
 | 530 | 🛡️ Admin tab | Status text, Open now / Close now, Start and End boxes, Set schedule with an error line for a bad format |
+
+### Reward reveals and cards (visual overhaul V4c)
+| # | Steps | Expected |
+|---|---|---|
+| 531 | Defeat a boss | The centre card pops in: a round icon (🎉, or 🏆 for the last hit), the gold "<Boss> defeated!" title and the details under it |
+| 532 | Reach Zen | The same card with 🧘 and "ZEN ACHIEVED!" |
+| 533 | Level up (Admin → Set level) | The level-up notification shows ⭐ in a coloured disc with a slowly spinning sunburst behind it, pops in, and a thin bar under it runs down until it closes |
+| 534 | Claim a quest / reach an event tier / clear a mission / win a pickleball match | Each card has its icon and the sunburst; a lost match or failed mission has the icon but no sunburst |
+| 535 | A challenge card (pickleball or team mission) | Icon disc (🏓 / 🤝), no sunburst, the countdown bar, JOIN / ACCEPT still work |
+| 536 | Settings → Reduced motion on | Cards appear at full size at once, no sunburst |

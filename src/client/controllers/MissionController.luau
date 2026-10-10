@@ -327,6 +327,7 @@ local function onResult(payload: unknown): ()
 			.. text(data.Reason, ""),
 		Detail = detail,
 		Accent = if cleared then C.Heading else ACCENT,
+		Celebrate = cleared,
 		Seconds = 10,
 	})
 end

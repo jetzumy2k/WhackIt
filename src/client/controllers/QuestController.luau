@@ -116,6 +116,7 @@ local function onEventRewarded(payload: unknown): ()
 		Body = if dailyEvent then dailyEvent.Name else "Event of the Day",
 		Detail = table.concat(parts, " · "),
 		Accent = ACCENT,
+		Celebrate = true,
 		Seconds = 6,
 	})
 end
@@ -154,6 +155,7 @@ local function onRewarded(payload: unknown): ()
 		Body = text(data.Title, "Quest"),
 		Detail = table.concat(parts, " · "),
 		Accent = ACCENT,
+		Celebrate = true,
 		Seconds = 6,
 	})
 end
