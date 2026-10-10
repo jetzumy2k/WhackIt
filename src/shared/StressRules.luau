@@ -75,4 +75,27 @@ function StressRules.shouldRearm(stress: number): boolean
 	return stress >= GameConfig.ZenRearmStress
 end
 
+-- The Zen bonus as players see it. The saved "Zen Level" counts rewarded
+-- Zens; only the first ZenCoinBonusMaxLevel add to boss coins, so players
+-- see the bonus itself, not a second level (2026-10-10, owner request).
+
+-- Whole percent extra boss coins (0..50).
+function StressRules.zenBonusPercent(zenLevel: number): number
+	local counted = math.clamp(math.floor(zenLevel), 0, GameConfig.ZenCoinBonusMaxLevel)
+	return math.floor(counted * GameConfig.ZenCoinBonusPerLevel * 100 + 0.5)
+end
+
+function StressRules.zenBonusIsMax(zenLevel: number): boolean
+	return zenLevel >= GameConfig.ZenCoinBonusMaxLevel
+end
+
+-- "Zen +15%", or "Zen +50% (max)".
+function StressRules.zenBonusText(zenLevel: number): string
+	return string.format(
+		"Zen +%d%%%s",
+		StressRules.zenBonusPercent(zenLevel),
+		if StressRules.zenBonusIsMax(zenLevel) then " (max)" else ""
+	)
+end
+
 return StressRules

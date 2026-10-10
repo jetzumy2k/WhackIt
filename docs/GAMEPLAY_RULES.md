@@ -127,8 +127,14 @@ anyone.
 - **Zen buff:** +`ZenBuffFlatDamage` (10) damage per hit and +`ZenBuffCritChance` (5 %) crit chance
   for `ZenBuffSeconds` (3 minutes), shown with a countdown under the score line. It is granted on
   every Zen, even when the coin reward isn't armed. It isn't saved.
-- **Reward:** +`ZenBonusCoins` (100) and +1 **Zen Level**. Each Zen Level permanently adds
-  `ZenCoinBonusPerLevel` (+5 %) to boss coins, counting up to `ZenCoinBonusMaxLevel` (10) levels.
+- **Reward:** +`ZenBonusCoins` (100) and +1 to the saved **Zen Level** (`ZenLevel`, a count of rewarded
+  Zens). Each one permanently adds `ZenCoinBonusPerLevel` (+5 %) to boss coins, counting up to
+  `ZenCoinBonusMaxLevel` (10), so +50 % at most.
+- **Shown as a "Zen bonus", not a level (2026-10-10):** players took "Zen Lv" for a second level to
+  grind. The HUD shows `Zen +15%` (`Zen +50% (max)` at the cap), the card "Zen bonus now +15% boss
+  coins", the toast to others just "<name> reached Zen!", the Profile tile "Zen bonus (boss coins)
+  +15% (3/10)" with a line saying the level comes from XP (`StressRules.zenBonusText`). Saved data and
+  rewards are unchanged.
 - Your screen shows "ZEN ACHIEVED!"; everyone else gets a toast. Your hammer glows while you stay at 0.
 - **No refill:** stress stays at 0 while you keep hitting; it only climbs back when you go idle.
 - **Anti-farming:** the next Zen only pays out once stress has climbed back to `ZenRearmStress` (50)
@@ -552,7 +558,7 @@ screens), cards, scrolling content, a quick scale-in/out animation and a close X
 
 | Page | What's there |
 |---|---|
-| Profile | level and title, XP to the next level, score, coins, stress, Zen level (updated live, text only); active boosts with time left; your leaderboard line |
+| Profile | level and title, XP to the next level, score, coins, stress, Zen bonus (updated live, text only); active boosts with time left; your leaderboard line |
 | 🏅 Levels (2026-10-09) | your title and next reward, trail and Zen glow pickers, the whole reward track |
 | Hammers | equipped hammer and its damage; every hammer you own with **Equip** (the existing `Shop.EquipHammer`, server-checked); a link to the Hammer Shop; your Bag's item count and **Open Bag** |
 | Game | shortcuts to the Hammer Shop, the Robux Store, the Bag (the existing panels) and, for admins, the Admin Panel; where things are in the office |

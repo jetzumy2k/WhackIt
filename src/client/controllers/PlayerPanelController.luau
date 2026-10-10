@@ -7,7 +7,7 @@
 	and every action goes through an existing panel or remote that the server
 	checks.
 
-	  Profile    level and XP, score, coins, stress, Zen level, active boosts,
+	  Profile    level and XP, score, coins, stress, Zen bonus, active boosts,
 	             your leaderboard line
 	  Levels     your title, the next level reward, the whole reward track, and
 	             the trail / Zen glow looks your level unlocked (pick ->
@@ -50,6 +50,7 @@ local OfficeConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChi
 local SettingsConfig =
 	require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("SettingsConfig"))
 local Types = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Types"))
+local StressRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("StressRules"))
 local StoreConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("StoreConfig"))
 
 local AdminController = require(script.Parent.AdminController)
@@ -212,7 +213,15 @@ function PlayerPanelController.start(): ()
 						else string.format("Lv %d  →  Lv %d", level, level + 1)
 				)
 			end
-			set("Zen", "Zen Lv " .. snapshot.ZenLevel)
+			set(
+				"Zen",
+				string.format(
+					"+%d%% (%d/%d)",
+					StressRules.zenBonusPercent(snapshot.ZenLevel),
+					math.min(snapshot.ZenLevel, GameConfig.ZenCoinBonusMaxLevel),
+					GameConfig.ZenCoinBonusMaxLevel
+				)
+			)
 			-- Character stats: the equipped hammer plus the permanent level bonus
 			-- (display only; boosts, pets and events add on top when hitting).
 			local hammerDamage = 0
@@ -287,13 +296,18 @@ function PlayerPanelController.start(): ()
 		tiles.Score = PanelKit.statTile(grid, "Score", "-")
 		tiles.Coins = PanelKit.statTile(grid, "Coins", "-", Color3.fromRGB(255, 225, 120))
 		tiles.Stress = PanelKit.statTile(grid, "Stress", "-", Color3.fromRGB(255, 140, 140))
-		tiles.Zen = PanelKit.statTile(grid, "Zen level", "-", Color3.fromRGB(160, 230, 200))
+		tiles.Zen =
+			PanelKit.statTile(grid, "Zen bonus (boss coins)", "-", Color3.fromRGB(160, 230, 200))
 		tiles.Damage = PanelKit.statTile(grid, "Base damage", "-", Color3.fromRGB(255, 180, 120))
 		tiles.Crit = PanelKit.statTile(grid, "Crit chance", "-", Color3.fromRGB(255, 214, 120))
 		levelText = PanelKit.text(you.Body, "", "Muted")
 		PanelKit.text(
 			you.Body,
-			"Stress goes down with every hit and climbs again 15 s after your last hit. Reach 0 for Zen!",
+			string.format(
+				"Stress goes down with every hit and climbs again 15 s after your last hit. Reach 0 for Zen! Each Zen adds +%d%% boss coins to your Zen bonus, up to +%d%%. Your level comes from XP, not from Zen.",
+				StressRules.zenBonusPercent(1),
+				StressRules.zenBonusPercent(GameConfig.ZenCoinBonusMaxLevel)
+			),
 			"Muted"
 		)
 

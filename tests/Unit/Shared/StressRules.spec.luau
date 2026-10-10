@@ -132,4 +132,28 @@ return function()
 			expect(StressRules.shouldRearm(GameConfig.ZenRearmStress)).to.equal(true)
 		end)
 	end)
+
+	describe("StressRules Zen bonus labels", function()
+		local max = GameConfig.ZenCoinBonusMaxLevel
+
+		it("shows the coin bonus, capped like the reward", function()
+			expect(StressRules.zenBonusPercent(0)).to.equal(0)
+			expect(StressRules.zenBonusPercent(3)).to.equal(
+				math.floor(3 * GameConfig.ZenCoinBonusPerLevel * 100 + 0.5)
+			)
+			expect(StressRules.zenBonusPercent(max + 7)).to.equal(StressRules.zenBonusPercent(max))
+			expect(StressRules.zenBonusPercent(-2)).to.equal(0)
+		end)
+
+		it("marks the cap and never says level", function()
+			expect(StressRules.zenBonusText(0)).to.equal("Zen +0%")
+			expect(StressRules.zenBonusText(3)).to.equal("Zen +15%")
+			expect(StressRules.zenBonusText(max)).to.equal(
+				string.format("Zen +%d%% (max)", StressRules.zenBonusPercent(max))
+			)
+			expect((string.find(string.lower(StressRules.zenBonusText(max + 1)), "lv"))).to.equal(
+				nil
+			)
+		end)
+	end)
 end
