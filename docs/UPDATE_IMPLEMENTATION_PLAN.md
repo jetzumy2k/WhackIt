@@ -224,10 +224,10 @@ script (fake swings, swings out of reach, racing accepts, leaving mid-match).
   already sees: defeats, Zen, matches, furniture placed, coffee deliveries), reset windows in UTC,
   claims stored as ids. Career points come from quests/matches/co-op, ranks unlock furniture
   and titles only.
-- **5a Event of the Day: 🟡 implemented 2026-10-10 on branch `feat/phase5a-daily-event`**
+- **5a Event of the Day: ✅ complete 2026-10-10 on branch `feat/phase5a-daily-event`**
   (docs/DAILY_EVENTS.md, schema v14, D10/D12/D13). Also `Services/ActivityService`: one activity feed
   for quests and events (services report there instead of to `QuestService`). `scripts/check.ps1`
-  passes; Studio specs and playtest (`docs/PLAYTEST.md` 447-455) not run yet. Tiers pay automatically
+  passes; playtest (`docs/PLAYTEST.md` 447-455) reported working by the owner (2026-10-10). Tiers pay automatically
   (no claim button). **5b team boss missions** (D11) next.
 - **5 Events and co-op:** new `EventRules` types; co-op contribution counted per action.
 - **3 Tower:** new floors stacked above the existing building, behind the existing Level/unlock rules.
