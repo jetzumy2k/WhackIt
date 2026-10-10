@@ -33,6 +33,9 @@ export type BossDefinition = {
 	-- Event bosses only (Shared/EventRules): also Custom; they drop store
 	-- boosts by the normal office chance, not always like custom bosses.
 	Event: boolean?,
+	-- Team mission bosses only (Shared/MissionRules): also Custom; they drop
+	-- store boosts by the normal office chance, and only the team may hit them.
+	Mission: boolean?,
 	LookId: string?, -- the BossConfig boss whose model, colours and shouts it borrows
 }
 

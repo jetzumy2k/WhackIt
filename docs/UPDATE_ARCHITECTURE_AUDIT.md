@@ -81,7 +81,7 @@ New work should follow this layout: rules in `Shared` with specs, values in `Con
 
 ## 5. Data model: what each phase adds (proposal)
 
-Current: schema **v14** (it was v8 at the audit). Each phase that adds saved fields bumps the version once and adds a
+Current: schema **v15** (it was v8 at the audit). Each phase that adds saved fields bumps the version once and adds a
 migration, sanitize rules and specs (`docs/DATA_SCHEMA.md` "Changing the schema").
 
 | Version | Phase | New fields (all with safe defaults, nothing removed) |
@@ -92,7 +92,8 @@ migration, sanitize rules and specs (`docs/DATA_SCHEMA.md` "Changing the schema"
 | v12 ✅ | 4 Pickleball (2026-10-10) | `Recreation = {Rating, SeasonId, Wins, Losses, TotalWins, TotalLosses, DayKey, DayMatches, DayOpponents: {[opponentsKey]: n}}`; `ProcessedMatches: {string}` (last 50); `SeasonClaims: {number}` (last 24). `HideChallenges` is a setting (no migration) |
 | v13 ✅ | 2b Quests (2026-10-10) | `Quests = {DayKey, Daily, Rerolls, DailyBonus, WeekKey, Weekly, TutorialStep, TutorialProgress}` (slots `{Id, Progress, Claimed}`). No `Career` field: career = level titles (§21.4) |
 | v14 ✅ | 5a Event of the Day (2026-10-10) | `DailyEvent = {DayKey, Points, Tiers}` |
-| later | 5b–6 | co-op mission records, showcase settings |
+| v15 ✅ | 5b Team missions (2026-10-10) | `Missions = {DayKey, DayRewarded, Cleared}` |
+| later | 6 | showcase settings |
 
 Size check: a full layout is 60 × ~40 bytes ≈ 2.4 KB. Match history is **not** kept in the profile
 (only grant-once ids). The profile stays far below the 4 MB DataStore limit.

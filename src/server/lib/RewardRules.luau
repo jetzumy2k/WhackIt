@@ -70,7 +70,7 @@ function RewardRules.dropsBuff(
 	roll: number,
 	chance: number
 ): boolean
-	if boss.Custom and not boss.Event then
+	if boss.Custom and not boss.Event and not boss.Mission then
 		return true
 	end
 	return roll < chance

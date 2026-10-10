@@ -17,6 +17,8 @@ return table.freeze({
 	BossLook = "BossLook",
 	-- Event bosses only (docs/EVENTS.md): true, so the label can say so.
 	EventBoss = "EventBoss",
+	-- Team mission bosses only (docs/MISSIONS.md): true; only the team can hit them.
+	MissionBoss = "MissionBoss",
 
 	-- On each Player
 	Stress = "Stress",
@@ -35,6 +37,9 @@ return table.freeze({
 	-- Pickleball (docs/PICKLEBALL.md): the match this player is playing ("" =
 	-- none). While set, the hammer is put away and sprint is off.
 	RecMatch = "RecMatch",
+	-- Team mission (docs/MISSIONS.md): the mission run this player is in ("" =
+	-- none). While set, pickleball and office trips are refused.
+	InMission = "InMission",
 
 	-- On each incubator Model (Workspace.PetCenter.Incubators), docs/PETS.md
 	IncubatorIndex = "IncubatorIndex",

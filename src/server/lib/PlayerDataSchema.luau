@@ -21,6 +21,7 @@ local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
 local HammerRules = require(ReplicatedStorage.Shared.HammerRules)
 local LevelRewardRules = require(ReplicatedStorage.Shared.LevelRewardRules)
 local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
+local MissionRules = require(ReplicatedStorage.Shared.MissionRules)
 local OfficeConfig = require(ReplicatedStorage.Config.OfficeConfig)
 local PetConfig = require(ReplicatedStorage.Config.PetConfig)
 local PetRules = require(ReplicatedStorage.Shared.PetRules)
@@ -82,6 +83,8 @@ export type PlayerData = {
 	Quests: QuestRules.State, -- today's and this week's quests, the tutorial step
 	-- v14 (docs/DAILY_EVENTS.md)
 	DailyEvent: DailyEventRules.State, -- today's Event of the Day points and tiers paid
+	-- v15 (docs/MISSIONS.md)
+	Missions: MissionRules.Record, -- today's rewarded team missions, missions cleared
 }
 
 export type PendingGift = {
@@ -97,7 +100,7 @@ export type Migration = (data: RawData) -> ()
 
 local PlayerDataSchema = {}
 
-PlayerDataSchema.CURRENT_VERSION = 14
+PlayerDataSchema.CURRENT_VERSION = 15
 
 -- Upper bound for counters; far beyond legitimate play, small enough to stay
 -- an exact integer and to keep leaderboard values sane.
@@ -211,6 +214,10 @@ PlayerDataSchema.MIGRATIONS = table.freeze({
 		-- v13 -> v14: the Event of the Day. Nobody has points yet.
 		data.DailyEvent = nil
 	end,
+	[15] = function(data: RawData)
+		-- v14 -> v15: team missions. Nobody has played one yet.
+		data.Missions = nil
+	end,
 }) :: { [number]: Migration }
 
 -- Most recent purchase ids remembered for duplicate-receipt protection. Roblox
@@ -260,6 +267,7 @@ function PlayerDataSchema.template(): PlayerData
 		SeasonClaims = {},
 		Quests = QuestRules.default(),
 		DailyEvent = DailyEventRules.default(),
+		Missions = MissionRules.defaultRecord(),
 	}
 end
 
@@ -544,6 +552,7 @@ function PlayerDataSchema.sanitize(data: RawData): ()
 	-- Event of the Day: a broken day starts over (tiers already paid are kept
 	-- only for the saved day, so nothing pays twice).
 	data.DailyEvent = DailyEventRules.sanitize(data.DailyEvent)
+	data.Missions = MissionRules.sanitizeRecord(data.Missions)
 	local matches: { string } = {}
 	local rawMatches = data.ProcessedMatches
 	if typeof(rawMatches) == "table" then

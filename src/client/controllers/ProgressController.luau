@@ -14,6 +14,7 @@ local FurnitureRules =
 local PickleballRules =
 	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PickleballRules"))
 local QuestRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("QuestRules"))
+local MissionRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("MissionRules"))
 local DailyEventRules =
 	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("DailyEventRules"))
 local ProgressionRules =
@@ -209,6 +210,7 @@ local function parse(payload: unknown): Types.ProfileSnapshot?
 		Recreation = PickleballRules.sanitizeRecord(data.Recreation),
 		Quests = QuestRules.sanitize(data.Quests),
 		DailyEvent = DailyEventRules.sanitize(data.DailyEvent),
+		Missions = MissionRules.sanitizeRecord(data.Missions),
 	}
 end
 

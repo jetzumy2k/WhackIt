@@ -13,7 +13,7 @@ validation live in `src/server/lib/PlayerDataSchema.luau`; storage settings in
 | Session locking | ProfileStore | One server owns a profile at a time, so progress can't be duplicated by joining two servers |
 | Auto-save | ProfileStore | Periodic, plus on leave (`EndSession`) and server shutdown |
 
-## Schema v14 (current)
+## Schema v15 (current)
 ```lua
 type PlayerData = {
     SchemaVersion: number,        -- 11
@@ -88,6 +88,11 @@ type PlayerData = {
         Points: number,           -- 0..100000 (may have fractions, e.g. from coins)
         Tiers: number,            -- tiers already paid that day (0..3)
     },
+    Missions: {                   -- v15, docs/MISSIONS.md (Shared/MissionRules.Record)
+        DayKey: string,           -- UTC date DayRewarded belongs to ("" = none yet)
+        DayRewarded: number,      -- rewarded team missions that day (cap 3)
+        Cleared: number,          -- all-time missions cleared
+    },
 }
 ```
 New players start from `PlayerDataSchema.template()`: `StartingScore`, `StartingStress`, `StartingCoins`,
@@ -106,6 +111,7 @@ zero counters, `DefaultHammerId`, nothing bought, no defeats.
 | v10 | Level rework (2026-10-09): **no level is lost.** XP is raised to `max(Xp, LevelRules.scoreForLevel(min(oldLevel, 100)))`, where `oldLevel` is the old curve's `floor(sqrt(Xp / 600)) + 1` (`LevelRules.legacyLevelFor`); players at Level 10 or below keep their XP exactly. `LevelRewardsClaimed = that level` (no back-dated coins); `Cosmetics = {}`. XP only ever goes up, so the XP leaderboard keeps every player's order among themselves. |
 | v11 | Offices (2026-10-09): `Furniture = {}`, `OfficePrivacy = "Public"`; no `OfficeLayout` yet, so sanitize gives the starting furniture (`FurnitureConfig.DefaultLayout`: desk, chair, plant). |
 | v12 | Pickleball (2026-10-10): `Recreation` left empty (sanitize gives the starting record: rating 1000, no matches), `ProcessedMatches = {}`, `SeasonClaims = {}`. |
+| v15 | Team missions (2026-10-10): `Missions` left empty, so sanitize gives no day, 0 rewarded, 0 cleared. |
 | v14 | Event of the Day (2026-10-10): `DailyEvent` left empty, so sanitize gives no day, 0 points, 0 tiers. |
 | v13 | Quests (2026-10-10): `Quests` left empty, so sanitize gives the tutorial's first step and no daily or weekly quests; `QuestService` draws them on first use. |
 | v9 | Settings (2026-10-09): `Settings = {}`; sanitize fills every known setting with its default (`ReducedMotion = false`). |
@@ -182,6 +188,9 @@ claims, rerolls), plus `Coins`, `Xp` and `Furniture` for rewards.
 Sanitizing v14 (`DailyEventRules.sanitize`): a broken `DayKey` resets the whole entry; `Points` clamped
 to 0..100,000, `Tiers` whole and clamped to 0..3. Writer: `DailyEventService` only (plus `Coins`, `Xp`
 and `Furniture` for tier rewards).
+
+Sanitizing v15 (`MissionRules.sanitizeRecord`): counters whole and ≥ 0; a broken `DayKey` drops the
+day's count. Writer: `MissionService` only (plus `Coins`, `Xp`, `Furniture` and `Bag` for rewards).
 
 Player history and the admin audit log are **not** player data either: DataStore `PlayerHistory`,
 keys `Player_<UserId>` (last 200 entries) and `Admin_<YYYYMMDD>` (up to 500 per UTC day), written

@@ -674,3 +674,23 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 453 | Studio only: in the **server** command bar run `require(game.ServerScriptService.Services.PlayerDataService).get(game.Players:GetPlayers()[1]).DailyEvent.DayKey = "2000-01-01"`, then do something that counts | Points start over from 0 for today (an old day's points never count) |
 | 454 | Quests still work (a boss defeat moves the daily boss quests too) | Quests and the event both count the same activity |
 | 455 | Output | No errors from DailyEventService, ActivityService, QuestService, QuestController |
+
+### Team missions (Phase 5b; Local Server with 2-4 players)
+| # | Steps | Expected |
+|---|---|---|
+| 456 | Menu → 🏢 Social | A "🤝 Team Missions" section with a button; Help mentions team missions |
+| 457 | Open the Team Missions window | "Start a team" with ☕ Monday Survival and 📧 Reply-All Storm (text, 3 waves, 10 minutes, Open a team), "Open teams · 3 room(s) free", the rewards and "Rewarded today: 0 / 3" |
+| 458 | Player1: Open a team for Monday Survival | Player1 sees "Your team" with Start mission disabled (needs 2) and Leave team; Player2 gets a "🤝 TEAM MISSION" card with JOIN and sees the team in the window |
+| 459 | Player2: JOIN | Both see 2 of 4; Player1's Start mission is enabled; Player2 sees "Waiting for the leader to start…" |
+| 460 | Player1: Start mission | Both arrive in a walled room with a board "☕ Monday Survival · Get ready!"; a bar at the top "Get ready! 10:0x left"; after 5 s two "Snoozed Alarm" bosses appear and the bar says "Wave 1 of 3 · Bosses left: 2 of 2" |
+| 461 | Hit the bosses with both players | Hits count on the bar (updated every couple of seconds); each defeat pays the normal victory card; after both, "Wave 1 of 3 cleared! Next wave coming…", then wave 2, then The Monday Monster alone |
+| 462 | Clear wave 3 | "🎉 MISSION CLEARED!" card with +400 coins, +1,000 XP, an office supply (and sometimes a Common Egg); the board says so; 8 s later both are back in the lobby; "Rewarded today: 1 / 3" |
+| 463 | A third player (not in the team): in the **server** command bar move them into the room, e.g. `game.Players.Player3.Character:PivotTo(CFrame.new(2000, 304, 700))`, and swing at a mission boss | No damage (the server refuses hits from outside the team) |
+| 464 | One player barely hits (under 5 hits) | Their result card says the hits weren't enough for the mission reward; the others are paid |
+| 465 | Reset your character mid-mission | You're put back in the room |
+| 466 | Leave mission (two taps) mid-run | Back in the lobby; the other player gets "<name> left the mission." and can finish alone; the leaver gets nothing more |
+| 467 | Studio only: in `src/config/MissionConfig.luau` set Monday Survival's `TimeLimit` to 30, rebuild, start it and don't finish | "⏰ MISSION OVER" card, no mission reward, back to the lobby. Put it back to 600 |
+| 468 | While in a team or mission: try a pickleball challenge, or 🏢 Go to my office | Refused with a toast |
+| 469 | Clear 4 missions in one UTC day | The 4th card says today's 3 rewarded missions are used |
+| 470 | Exploits (command bar): `Remotes.Mission.Open:FireServer("nope!")`, `Remotes.Mission.Join:FireServer({})`, Begin as a non-leader, 10 Opens in a row | Bad ids rejected and logged; the rest answered with a toast; the rate limit holds |
+| 471 | Output | No errors from MissionService, BossService, MissionController, CombatService, RewardService |

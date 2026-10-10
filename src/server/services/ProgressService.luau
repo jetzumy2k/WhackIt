@@ -139,6 +139,7 @@ function ProgressService.snapshot(
 		},
 		Quests = QuestRules.copy(data.Quests),
 		DailyEvent = table.clone(data.DailyEvent),
+		Missions = table.clone(data.Missions),
 	}
 end
 
