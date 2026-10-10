@@ -430,4 +430,25 @@ return function()
 			office:Destroy()
 		end)
 	end)
+	describe("OfficeBuilder interior finish (visual overhaul V1c)", function()
+		it("finishes the lobby, the corridors and the podium rooms", function()
+			local office = build()
+			for _, name in
+				{ "Lobby Finish", "Corridor Art", "Room Finish", "FloorGuide", "ReceptionFront" }
+			do
+				expect(office:FindFirstChild(name, true)).never.to.equal(nil)
+			end
+			office:Destroy()
+		end)
+
+		it("lists every tower floor on the floor guide", function()
+			local office = build()
+			local guide = office:FindFirstChild("FloorGuide", true) :: Instance
+			local label = guide:FindFirstChildWhichIsA("TextLabel", true) :: TextLabel
+			for _, floor in ArenaConfig.Tower.Floors do
+				expect((string.find(label.Text, floor.Name, 1, true))).to.be.ok()
+			end
+			office:Destroy()
+		end)
+	end)
 end

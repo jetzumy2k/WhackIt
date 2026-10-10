@@ -741,3 +741,12 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 500 | Coffee Corner (east of the plaza) | The Calm Brew Café: building with awning, lit roof sign, counter with espresso machine and pastry case, menu board, side windows; parasols over the patio tables |
 | 501 | Look around from the plaza and the roof | The city is office blocks with window bands and rooftop plant rooms, lower and further out; none on the campus or the street; the HQ stands out |
 | 502 | Round the HQ | A paved apron round the building, no raw concrete strip; no grass blades through any floor |
+
+### Interiors (visual overhaul V1c) — screenshots please
+| # | Steps | Expected |
+|---|---|---|
+| 503 | Spawn in the lobby | Stone floor; three warm pendant lights hanging in the atrium; a rug and two low tables between the couches by the front glass; the walk out is still clear |
+| 504 | Look at reception | The desk has a dark front "RECEPTION · Welcome to Whack It Out!", a monitor and a bell; the receptionist behind it |
+| 505 | Look towards the corridor | Left of the welcome sign, the FLOOR GUIDE: 5 Rooftop Lounge … 1 Lobby & Offices, "← Elevator: west end of the corridor" |
+| 506 | Walk the ground and Senior corridors | Framed joke posters on the corridor walls beyond the lobby; blue-slate carpet on the ground floor, plum on the Senior floor, bronze on Department Heads, red in the CEO's suite |
+| 507 | Break Room / Meeting Room | Wood slat wall in the Break Room; coloured acoustic panels in the Meeting Room; doorways still open |

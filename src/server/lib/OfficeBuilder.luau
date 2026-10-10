@@ -15,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ArenaConfig = require(ReplicatedStorage.Config.ArenaConfig)
 local BossConfig = require(ReplicatedStorage.Config.BossConfig)
 local BossVisualConfig = require(ReplicatedStorage.Config.BossVisualConfig)
+local InteriorBuilder = require(script.Parent.InteriorBuilder)
 local RooftopBuilder = require(script.Parent.RooftopBuilder)
 local TowerShellBuilder = require(script.Parent.TowerShellBuilder)
 
@@ -42,7 +43,10 @@ local LED_UPPER = Color3.fromRGB(150, 90, 220) -- purple accent strip
 local LED_DEPARTMENT = Color3.fromRGB(230, 170, 60) -- amber accent strip (3rd floor)
 -- How much darker office carpets are than their configured tint.
 local CARPET_DEEPEN = 0.4
-local CORRIDOR_CARPET = Color3.fromRGB(46, 52, 68)
+local CORRIDOR_CARPET = Color3.fromRGB(46, 52, 68) -- ground floor: blue slate
+-- Each floor its own corridor colour (visual overhaul V1c).
+local UPPER_CARPET = Color3.fromRGB(58, 46, 70) -- Senior floor: plum
+local DEPARTMENT_CARPET = Color3.fromRGB(66, 56, 42) -- Department Heads: bronze
 local CORRIDOR = { MinZ = -20, MaxZ = 0 }
 local LOBBY = { HalfWidth = 36 }
 local RAIL_HEIGHT = 3.5
@@ -401,7 +405,7 @@ local function buildCommonAreas(parent: Instance): ()
 		"UpperCorridorCarpet",
 		Vector3.new(half * 2, 0.1, corridorDepth),
 		Vector3.new(0, upperY + 0.05, corridorZ),
-		CORRIDOR_CARPET,
+		UPPER_CARPET,
 		Enum.Material.Carpet
 	)
 	part(
@@ -819,7 +823,7 @@ local function buildDepartmentFloor(parent: Instance): ()
 		"DepartmentCorridorCarpet",
 		Vector3.new(half * 2, 0.1, corridorDepth),
 		Vector3.new(0, floor + 0.05, corridorZ),
-		CORRIDOR_CARPET,
+		DEPARTMENT_CARPET,
 		Enum.Material.Carpet
 	)
 	part(
@@ -927,6 +931,7 @@ function OfficeBuilder.build(parent: Instance): Folder
 	buildGroundElevator(folder)
 	TowerShellBuilder.build(folder)
 	RooftopBuilder.build(folder)
+	InteriorBuilder.build(folder)
 	folder.Parent = parent
 	return folder
 end

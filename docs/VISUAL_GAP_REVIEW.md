@@ -89,3 +89,8 @@ Visual work becomes its own track, done before Phase 6, each part with a Studio 
   find): Recreation Center moved in front of the HQ under a pavilion (V2 started), Stress-Relief Zone
   behind; Coffee Corner rebuilt as the Calm Brew Café; skyline rebuilt as office blocks (lower, further
   out, off the street); paved apron and paved court base instead of raw concrete.
+- **V1c interiors** (`Lib/InteriorBuilder`): lobby stone floor, reception front with sign, monitor and
+  bell, lounge rug and tables, atrium pendant lights, a floor guide; framed joke posters on the ground
+  and Senior corridors; per-floor corridor carpet colours (blue slate, plum, bronze, CEO red); wood
+  slat wall in the Break Room, acoustic panels in the Meeting Room. Owner confirmed the campus round
+  (pavilion, café, skyline) and a match under the pavilion roof (2026-10-10).
