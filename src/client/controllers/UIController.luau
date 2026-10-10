@@ -5,6 +5,7 @@
 	leaderstats or server messages; nothing here changes game state.
 ]]
 
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterGui = game:GetService("StarterGui")
@@ -30,6 +31,8 @@ local PANEL_COLOR = Color3.fromRGB(30, 30, 40)
 local HEALTH_COLOR = Color3.fromRGB(90, 210, 110)
 local XP_COLOR = Color3.fromRGB(110, 150, 255)
 local TEXT_COLOR = Color3.fromRGB(255, 255, 255)
+-- The Stress Meter in the top bar strip (pixels tall).
+local TOP_METER_HEIGHT = 34
 local TOAST_COLOR = Color3.fromRGB(255, 230, 80)
 local TOAST_SECONDS = 2.5
 local SAVED_SECONDS = 2
@@ -139,14 +142,30 @@ local function buildHud(): (ScreenGui, Frame)
 	end
 
 	-- Stress Meter: mood face, a track with a colour-shifting fill, the value.
-	local meter = pill("StressMeter", gui)
-	meter.AnchorPoint = Vector2.new(0.5, 0)
-	meter.Position = UDim2.new(0.5, 0, 0, 10)
-	meter.Size = UDim2.new(0.34, 0, 0, 40)
+	-- It sits in Roblox's top bar strip, between the menu buttons (owner
+	-- feedback 2026-10-10: under the bar it covered too much of the view), so
+	-- it has its own ScreenGui that ignores the top bar inset.
+	local topGui = Instance.new("ScreenGui")
+	topGui.Name = "HudTop"
+	topGui.ResetOnSpawn = false
+	topGui.IgnoreGuiInset = true
+	topGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	topGui.Parent = localPlayer:WaitForChild("PlayerGui")
+	local meter = pill("StressMeter", topGui)
+	meter.AnchorPoint = Vector2.new(0.5, 0.5)
+	meter.Size = UDim2.new(0.3, 0, 0, TOP_METER_HEIGHT)
 	local meterLimit = Instance.new("UISizeConstraint")
-	meterLimit.MinSize = Vector2.new(240, 36)
-	meterLimit.MaxSize = Vector2.new(460, 40)
+	meterLimit.MinSize = Vector2.new(200, 28)
+	meterLimit.MaxSize = Vector2.new(380, TOP_METER_HEIGHT)
 	meterLimit.Parent = meter
+	-- Centred in the top bar's height (it is taller on newer Roblox UIs).
+	local function placeMeter(): ()
+		local inset = GuiService:GetGuiInset().Y
+		local height = if inset >= TOP_METER_HEIGHT + 4 then inset else TOP_METER_HEIGHT + 12
+		meter.Position = UDim2.new(0.5, 0, 0, height / 2)
+	end
+	placeMeter()
+	task.delay(2, placeMeter) -- the inset is sometimes reported late
 	local mood = text("Mood", meter, 24, UiTokens.Font.Title)
 	mood.Size = UDim2.new(0, 36, 1, 0)
 	mood.Position = UDim2.fromOffset(4, 0)
@@ -203,7 +222,7 @@ local function buildHud(): (ScreenGui, Frame)
 	local stats = Instance.new("Frame")
 	stats.Name = "Stats"
 	stats.AnchorPoint = Vector2.new(0.5, 0)
-	stats.Position = UDim2.new(0.5, 0, 0, 56)
+	stats.Position = UDim2.new(0.5, 0, 0, 8)
 	stats.Size = UDim2.fromOffset(0, 30)
 	stats.AutomaticSize = Enum.AutomaticSize.X
 	stats.BackgroundTransparency = 1
@@ -338,7 +357,7 @@ local function buildHud(): (ScreenGui, Frame)
 	local boosts = Instance.new("Frame")
 	boosts.Name = "Boosts"
 	boosts.AnchorPoint = Vector2.new(0.5, 0)
-	boosts.Position = UDim2.new(0.5, 0, 0, 92)
+	boosts.Position = UDim2.new(0.5, 0, 0, 44)
 	boosts.Size = UDim2.fromOffset(0, 26)
 	boosts.AutomaticSize = Enum.AutomaticSize.X
 	boosts.BackgroundTransparency = 1

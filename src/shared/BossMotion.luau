@@ -37,6 +37,12 @@ local function pulse(progress: number): number
 	return math.sin(math.clamp(progress, 0, 1) * math.pi)
 end
 
+-- How far (radians per stud of BobHeight) the idle "breathing" rocks the
+-- boss forward and back. Feet stay on the floor: idle motion never lifts
+-- or sinks the boss (owner feedback 2026-10-10: bosses looked like they were
+-- floating or swimming in the floor).
+local BOB_ROCK = 0.15
+
 -- Idle motion at time `now` (seconds); `phase` de-syncs bosses.
 function BossMotion.idle(
 	personality: BossPersonalityConfig.Personality,
@@ -44,10 +50,10 @@ function BossMotion.idle(
 	phase: number
 ): Offsets
 	return {
-		Lift = math.sin(now * personality.BobSpeed + phase) * personality.BobHeight,
+		Lift = 0,
 		Shuffle = math.sin(now * personality.ShuffleSpeed + phase * 0.7) * personality.ShuffleStuds,
 		Yaw = math.sin(now * personality.SwaySpeed + phase) * math.rad(personality.SwayDegrees),
-		Lean = 0,
+		Lean = math.sin(now * personality.BobSpeed + phase) * personality.BobHeight * BOB_ROCK,
 		Roll = 0,
 		Scale = 1,
 	}

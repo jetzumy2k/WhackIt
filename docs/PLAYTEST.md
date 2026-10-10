@@ -846,3 +846,14 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 573 | Phone emulator: open Quests, Bag, Store, Showcase, Player Panel | Each window fills most of the screen, scrolls, closes |
 | 574 | Performance: Test tab → Clients and Servers → 4 players, Start. With each client stand ~30 s in the lobby, ~30 s at a boss while hitting, ~30 s on the campus (Recreation Center), ~30 s in an office. Then stop | Output shows `[Perf] server …` and `[Perf] client …` lines every 15 s; tell me when done, I read them from the log files |
 
+### Owner UI feedback round (2026-10-10)
+| # | Steps | Expected |
+|---|---|---|
+| 575 | Use a boost from the Bag while one of the same kind is running (Admin → Rewards can give two) | A question: the boost you have (+%, time left) and the combined result (+% for the total time); **Use it** applies, **Cancel** keeps the item |
+| 576 | Use a boost of a kind that isn't running | It starts at once, no question |
+| 577 | Look at bosses in their offices, on other floors and an event/admin boss outside | Feet on the floor or carpet; they don't sink or float while idle; hops on hit and walk steps still lift a little |
+| 578 | A big boss (the CEO) when hit and when defeated | Stays standing on the floor; the defeat shrinks it into the floor, not in mid-air |
+| 579 | Look at the top of the screen | The Stress Meter is in Roblox's top bar strip, between the menu buttons; the stat chips and boost chips sit just under it; more of the view is free |
+| 580 | Finish a quest (e.g. hit bosses) | A "📋 QUEST DONE!" card with the quest and a **CLAIM** button that opens the right Quests tab; the Quests badge pops |
+| 581 | Rejoin with quests ready | One "📋 QUESTS TO CLAIM" reminder with CLAIM, not a card per quest |
+

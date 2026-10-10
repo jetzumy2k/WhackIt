@@ -14,6 +14,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BagRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BagRules"))
+local BuffRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BuffRules"))
 local PanelKit = require(script.Parent.Parent.Lib.PanelKit)
 local ProgressController = require(script.Parent.ProgressController)
 local Responsive = require(script.Parent.Parent.Lib.Responsive)
@@ -43,6 +44,45 @@ local RARITY_ACCENT: { [string]: Color3 } = {
 	Rare = Color3.fromRGB(90, 160, 255),
 	Mythical = Color3.fromRGB(220, 120, 255),
 }
+
+local BUFF_NAMES: { [string]: string } =
+	{ Xp = "XP", Damage = "Damage", CritDamage = "Crit Damage" }
+
+local function playTime(seconds: number): string
+	local minutes = math.max(1, math.ceil(seconds / 60))
+	if minutes < 60 then
+		return string.format("%d min", minutes)
+	end
+	local hours, rest = minutes // 60, minutes % 60
+	return if rest == 0
+		then string.format("%d h", hours)
+		else string.format("%d h %d min", hours, rest)
+end
+
+--[[
+	The question to ask before using a boost of a kind that is already active
+	(owner feedback 2026-10-10), or nil if nothing of that kind is running.
+	The server combines them (Shared/BuffRules.add): the times add up and the
+	stronger boost applies to all of it, so nothing is lost.
+]]
+local function sameBuffQuestion(product: StoreConfig.Product): string?
+	local name = BUFF_NAMES[product.Kind]
+	local snapshot = ProgressController.get()
+	local active = if name and snapshot then snapshot.Buffs[product.Kind] else nil
+	if name == nil or active == nil or active.SecondsLeft <= 0 then
+		return nil
+	end
+	local combined = BuffRules.add(active, product.Percent, product.Seconds)
+	return string.format(
+		"You already have a %s boost running: +%d%% with %s left.\n\nUsing %s replaces it with one combined boost: +%d%% for %s. Use it now?",
+		name,
+		active.Percent,
+		playTime(active.SecondsLeft),
+		BagRules.itemText(product),
+		combined.Percent,
+		playTime(combined.SecondsLeft)
+	)
+end
 
 local function actionText(product: StoreConfig.Product): string
 	if product.Kind == "Egg" then
@@ -80,6 +120,7 @@ function BagController.start(): ()
 		DisplayOrder = 5,
 	}, Players.LocalPlayer:WaitForChild("PlayerGui"))
 	local content = window.Content
+	local confirm = PanelKit.confirmDialog(window, BAG_COLOR)
 
 	local function render(): ()
 		local snapshot = ProgressController.get()
@@ -122,7 +163,14 @@ function BagController.start(): ()
 			card.Button.Text = actionText(product)
 			PanelKit.setColor(card.Button, C.Good)
 			card.Button.Activated:Connect(function()
-				useRemote:FireServer(product.Key)
+				local question = sameBuffQuestion(product)
+				if question then
+					confirm.ask(question, "Use it", function()
+						useRemote:FireServer(product.Key)
+					end)
+				else
+					useRemote:FireServer(product.Key)
+				end
 			end)
 		end
 		if grid == nil then

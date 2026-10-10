@@ -131,6 +131,8 @@ type Entry = {
 	Rig: { RigPart },
 	FaceKey: string, -- the shown expression + eyes state (changes only on a switch)
 	-- Pacing while nobody is near (Shared/BossMotion.pace)
+	-- Top of the floor (or grass) under the boss, found once: the feet stand on it.
+	GroundY: number,
 	PaceWeight: number, -- 0 at home .. 1 strolling
 	PaceX: number, -- current offset along the boss's own X (studs)
 	Travelled: number, -- studs walked, for the step cycle
@@ -217,6 +219,34 @@ local function onHealthDrop(entry: Entry, now: number): ()
 end
 
 local burst: (entry: Entry) -> ()
+-- How far below its centre the mascot's feet are at scale 1 (Shared/BossVisual).
+local FOOT_DEPTH = 4
+-- The floor is looked for this far above and below the hitbox's bottom.
+local GROUND_SEARCH_UP = 1.5
+local GROUND_SEARCH_DOWN = 3
+
+-- The top of whatever the boss stands on (carpet, floor, terrain), so the
+-- drawn feet touch it; the hitbox's bottom if nothing is found close by.
+local function groundUnder(boss: Model, body: BasePart): number
+	local bottom = body.Position.Y - body.Size.Y / 2
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	local ignore: { Instance } = { boss }
+	if boss.Parent then
+		table.insert(ignore, boss.Parent)
+	end
+	for _, player in Players:GetPlayers() do
+		if player.Character then
+			table.insert(ignore, player.Character)
+		end
+	end
+	params.FilterDescendantsInstances = ignore
+	local from = Vector3.new(body.Position.X, bottom + GROUND_SEARCH_UP, body.Position.Z)
+	local hit =
+		Workspace:Raycast(from, Vector3.new(0, -(GROUND_SEARCH_UP + GROUND_SEARCH_DOWN), 0), params)
+	return if hit then hit.Position.Y else bottom
+end
+
 local attach: (boss: Model) -> ()
 function attach(boss: Model): ()
 	if entries[boss] then
@@ -298,6 +328,7 @@ function attach(boss: Model): ()
 		Sounds = {},
 		Rig = rig,
 		FaceKey = "",
+		GroundY = groundUnder(boss, body),
 		PaceWeight = 0,
 		PaceX = 0,
 		Travelled = 0,
@@ -603,7 +634,12 @@ local function animate(boss: Model, entry: Entry, now: number, dt: number): ()
 	end
 
 	entry.Visual:PivotTo(
-		CFrame.new(origin + PACE_AXIS * paceX + Vector3.new(0, motion.Lift + hop + stepLift, 0))
+		-- Feet on the ground at any size (scaling happens about the middle).
+		CFrame.new(
+			Vector3.new(origin.X, entry.GroundY + FOOT_DEPTH * entry.BaseScale * scale, origin.Z)
+				+ PACE_AXIS * paceX
+				+ Vector3.new(0, motion.Lift + hop + stepLift, 0)
+		)
 			* CFrame.Angles(0, entry.Yaw + motion.Yaw + spin, 0)
 			* CFrame.new(motion.Shuffle, 0, 0)
 			* CFrame.Angles(lean, 0, motion.Roll + waddle)
