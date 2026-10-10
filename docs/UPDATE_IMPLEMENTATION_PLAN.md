@@ -253,12 +253,12 @@ script (fake swings, swings out of reach, racing accepts, leaving mid-match).
 - **3 Tower:** new floors stacked above the existing building, behind the existing Level/unlock rules.
   Re-check every fixed-position spec.
 - **6 Showcase:** offline office visits (read-only layout), contests, voting limits, moderation.
-- **6a Office Showcase: 🟡 implemented 2026-10-10 on branch `feat/phase6a-showcase`** (docs/SHOWCASE.md,
+- **6a Office Showcase: ✅ complete 2026-10-10 on branch `feat/phase6a-showcase`** (docs/SHOWCASE.md,
   schema v16, D17/D20). Snapshots in DataStore `OfficeShowcase`, lists in OrderedDataStores, read-only
   copies in 8 copy rooms next to the Office Wing, likes (once, while visiting) and visits batched every
   60 s, reports with a per-player hide and a review queue, admin Approve / Remove / Feature from the copy's
   bar. In Studio without API access it runs on a store in that server only. `scripts/check.ps1` passes;
-  Studio specs and playtest (`docs/PLAYTEST.md` 537-552) not run yet. **6b weekly contests** (D18/D19) next.
+  Studio specs **804 passed**; playtest (`docs/PLAYTEST.md` 537-552) reported okay by the owner. **6b weekly contests** (D18/D19) next.
 
 ## 7. Files expected to change (2a + 4)
 New: `src/config/{FurnitureConfig,PickleballConfig}.luau`, `src/shared/{FurnitureRules,PickleballRules,BallFlight}.luau`,
