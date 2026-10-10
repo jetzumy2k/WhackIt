@@ -18,8 +18,30 @@ _Written 2026-10-09 (Phase 0). Results are recorded as ✅ passed · ❌ failed 
 | B1 | `scripts/check.ps1` | ✅ 2026-10-09 (Claude) |
 | B2 | Full spec suite in Studio, record the count | ✅ 2026-10-09 (owner): **533 passed, 0 failed, 0 skipped**. The first run had 531 passed and 2 failed, both outdated specs (a phone text-scale cap and a non-preset 2-hour event length), fixed the same day |
 | B3 | Polish-pass playtest `PLAYTEST.md` 110–214 | ✅ reported done by the owner (2026-10-09) |
-| B4 | MicroProfiler / Developer Console on a 4-client Team Test: client frame time in the lobby, at a boss fight and on campus; server heartbeat; memory; instance count; network in/out kB/s | 🟡 polish round (2026-10-10): `Services/PerfProbeService` and `Controllers/PerfProbeController` print a `[Perf]` line every 15 s in Studio only (server: heartbeat rate and worst frame, memory, Workspace instances and parts, players, network, StreamingEnabled; each client: fps, average and worst frame, memory, network, instances, position). Run a Team Test, stand ~30 s in each place; the numbers are read from Studio's log files. Not recorded yet |
-| B5 | `Workspace.StreamingEnabled` value in the built place | 🟡 the project doesn't set it; the probe's server line prints the built value. Not recorded yet |
+| B4 | MicroProfiler / Developer Console on a 4-client Team Test: client frame time in the lobby, at a boss fight and on campus; server heartbeat; memory; instance count; network in/out kB/s | 🟡 polish round (2026-10-10): `Services/PerfProbeService` and `Controllers/PerfProbeController` print a `[Perf]` line every 15 s in Studio only (server: heartbeat rate and worst frame, memory, Workspace instances and parts, players, network, StreamingEnabled; each client: fps, average and worst frame, memory, network, instances, position). Run a Team Test, stand ~30 s in each place; the numbers are read from Studio's log files. ✅ First baseline 2026-10-10 (owner's PC, Studio): see "Baseline 2026-10-10" below |
+| B5 | `Workspace.StreamingEnabled` value in the built place | ✅ 2026-10-10: **false** (the project doesn't set it). The audit's instance-streaming check stays open |
+
+
+### Baseline 2026-10-10 (B4, `[Perf]` probe, owner's PC in Studio)
+Two sessions after the polish round: a 1-player Play, and a 4-player Team Test (server + 4 clients
+on the same PC). Lines are 15-s windows; the first window of each session includes loading.
+
+| Measure | 1 player (Play) | 4 players (Team Test) |
+|---|---|---|
+| Server heartbeat | 60/s steady after loading (45/s while loading, worst frame ~1 s) | 60/s steady after loading (40-55/s while 4 joined, worst 1 s then 20 ms) |
+| Workspace instances / parts (server) | 3,395 / 2,284 | 4,502 / 2,401 |
+| Instances a client sees | 4,718 | 5,858 |
+| Network per client | recv ~0, send 0.4-0.7 kB/s | send 0.4-1.8 kB/s; server send 1.4-1.5 kB/s (71 kB/s during the first join) |
+| Client frame rate | 13-33 fps at the spawn | 6-43 fps (lobby 6-15, campus 35-43, tower 36) |
+| Memory (whole Studio process) | ~2.9 GB | 1.6-2.1 GB per process |
+| StreamingEnabled | false | false |
+
+Reading: the server side is light (steady 60/s, ~2,400 parts, under 2 kB/s per player), well inside
+Roblox limits. The **client frame rates are not a device baseline**: Studio was rendering the editor
+and, in the Team Test, four clients and the server on one PC, under Future lighting. The lobby is the
+slowest spot in both runs (the tower interior, many lights and the atrium). Next: check fps in the
+published game on a real phone and PC (F9 Developer Console); if the lobby stays low, try
+`Lighting.Technology = ShadowMap` and fewer PointLights in the atrium.
 
 ## 3. Per-phase tests
 
