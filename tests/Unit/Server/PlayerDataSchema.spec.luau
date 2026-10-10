@@ -982,4 +982,31 @@ return function()
 			expect(state.Hidden[1]).to.equal(9)
 		end)
 	end)
+	describe("PlayerDataSchema v17 (design contests)", function()
+		local ContestRules = require(ReplicatedStorage.Shared.ContestRules)
+
+		it("starts existing players with no contests, touching nothing else", function()
+			local data = validData()
+			data.SchemaVersion = 16
+			data.Contest = { Entered = { 5 }, Claimed = { 4 } } -- can't exist before v17
+			expect((PlayerDataSchema.prepare(data))).to.equal(true)
+			local state = data.Contest :: ContestRules.State
+			expect(#state.Entered).to.equal(0)
+			expect(#state.Claimed).to.equal(0)
+			expect(data.Coins).to.equal(250)
+			expect(data.SchemaVersion).to.equal(PlayerDataSchema.CURRENT_VERSION)
+		end)
+
+		it("keeps saved contest state", function()
+			local data = validData()
+			data.Contest =
+				{ Entered = { 2900 }, Claimed = { 2899 }, VotesToday = 4, VoteDay = 20000 }
+			PlayerDataSchema.prepare(data)
+			PlayerDataSchema.prepare(data)
+			local state = data.Contest :: ContestRules.State
+			expect(state.Entered[1]).to.equal(2900)
+			expect(state.Claimed[1]).to.equal(2899)
+			expect(state.VotesToday).to.equal(4)
+		end)
+	end)
 end

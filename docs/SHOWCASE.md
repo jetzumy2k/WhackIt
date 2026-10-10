@@ -3,7 +3,8 @@
 Added 2026-10-10 (major update Phase 6a, `docs/MAJOR_GAME_UPDATE.md` §11 Feature G; owner decisions
 D17 and D20 in `docs/UPDATE_IMPLEMENTATION_PLAN.md`). Players share a snapshot of their personal office
 (docs/OFFICES.md) with players in **every** server. Anyone can open a read-only copy, even while the
-owner is offline, like it and report it. Weekly design contests (D18/D19) are Phase 6b.
+owner is offline, like it and report it. Weekly design contests (D18/D19, Phase 6b) live in the same
+window (🏆 Contest tab) and copy rooms: docs/CONTESTS.md.
 
 Code: `Config/ShowcaseConfig`, `Shared/ShowcaseRules` (pure, unit-tested), `Lib/ShowcaseStore`
 (DataStores, or a store in this server only), `Services/ShowcaseService`, `Controllers/ShowcaseController`,

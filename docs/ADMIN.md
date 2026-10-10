@@ -172,7 +172,10 @@ queued. In Studio without API access, history stays in that server.
 Not in the Admin panel: open 🏢 Social → 🌟 Office Showcase. Admins see an extra **🛡️ Review** tab with
 offices hidden by player reports. Visiting any showcase office shows a second bar with **✅ Approve**,
 **🗑️ Remove**, **⭐ Feature** and **Unfeature** and the office's status. Each action is recorded in the
-History tab (action "Showcase"). Details: docs/SHOWCASE.md "Moderation".
+History tab (action "Showcase"). Contest entries in review show in the same tab ("🏆 … Entry"); in an
+entry's copy Approve and Remove act on the entry (action "Contest"). Details: docs/SHOWCASE.md
+"Moderation", docs/CONTESTS.md. In Studio, the Contest tab also has **⏩ Next phase** for admins (test
+clock, this server only).
 
 ## Moderation tab
 Bans use Roblox's own ban system (`Players:BanAsync`), so they:

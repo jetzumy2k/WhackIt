@@ -33,7 +33,7 @@ In an office, a bar at the bottom says whose office it is, with **✏️ Edit** 
 and **🚪 Lobby**.
 
 ## Furniture
-38 items in seven categories (`Config/FurnitureConfig`), each a few plain parts (at most 12, no uploads):
+41 items in seven categories (`Config/FurnitureConfig`), each a few plain parts (at most 12, no uploads):
 
 | Category | Items |
 |---|---|
@@ -43,7 +43,7 @@ and **🚪 Lobby**.
 | Decor | Round Rug, Office Rug, Floor Lamp, Whiteboard, Giant Stress Ball, Coat Rack, Motivational Poster |
 | Level rewards | Executive Desk (Lv 20), Aquarium (Lv 30), Zen Fountain (Lv 50), Golden Hammer Statue (Lv 100) |
 | Office supplies | Paddle Rack, Ball Bucket, Standing Fan, Mini Fridge, Snack Machine, Neon CALM Sign (pickleball drops) |
-| Trophies | Golden Hammer Trophy, Zen Bonsai, Champion Plaque |
+| Trophies | Golden Hammer Trophy, Zen Bonsai, Champion Plaque, Design Star Trophy, Top Design Plaque, Design Ribbon (design contest prizes, docs/CONTESTS.md) |
 
 - **Basic** items are **free and unlimited** (owner decision 2026-10-09): no grind for basic
   furniture. Only the room's 60-item cap applies.

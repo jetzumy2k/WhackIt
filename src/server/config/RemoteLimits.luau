@@ -68,6 +68,13 @@ local RemoteLimits = table.freeze({
 		RefillPerSecond = 0.5,
 	}),
 
+	-- Design contests: info, entering, ballots and votes. Votes need
+	-- ContestConfig.MinViewSeconds in each entry anyway; this stops floods.
+	Contest = table.freeze({
+		Capacity = 4,
+		RefillPerSecond = 0.5,
+	}),
+
 	-- Quest claims and rerolls: a few taps in a row are fine.
 	Quests = table.freeze({
 		Capacity = 6,

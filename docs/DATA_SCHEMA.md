@@ -13,7 +13,7 @@ validation live in `src/server/lib/PlayerDataSchema.luau`; storage settings in
 | Session locking | ProfileStore | One server owns a profile at a time, so progress can't be duplicated by joining two servers |
 | Auto-save | ProfileStore | Periodic, plus on leave (`EndSession`) and server shutdown |
 
-## Schema v16 (current)
+## Schema v17 (current)
 ```lua
 type PlayerData = {
     SchemaVersion: number,        -- 11
@@ -99,6 +99,15 @@ type PlayerData = {
         Liked: { number },        -- owners' UserIds liked, oldest first (at most 300)
         Hidden: { number },       -- owners' UserIds hidden by reporting (at most 100)
     },
+    Contest: {                    -- v17, docs/CONTESTS.md (Shared/ContestRules.State)
+        Entered: { number },      -- contest weeks entered (at most 6, oldest first)
+        LastEnteredAt: number,    -- unix seconds of the last entry or update (the cooldown)
+        Claimed: { number },      -- weeks whose prize was paid (at most 24)
+        VoteWeek: number,         -- the week Voted belongs to (-1 = none)
+        Voted: { number },        -- owners voted for that week (at most 500)
+        VoteDay: number,          -- UTC day number VotesToday belongs to
+        VotesToday: number,       -- entries dealt to vote on that day (0..30)
+    },
 }
 ```
 New players start from `PlayerDataSchema.template()`: `StartingScore`, `StartingStress`, `StartingCoins`,
@@ -117,6 +126,7 @@ zero counters, `DefaultHammerId`, nothing bought, no defeats.
 | v10 | Level rework (2026-10-09): **no level is lost.** XP is raised to `max(Xp, LevelRules.scoreForLevel(min(oldLevel, 100)))`, where `oldLevel` is the old curve's `floor(sqrt(Xp / 600)) + 1` (`LevelRules.legacyLevelFor`); players at Level 10 or below keep their XP exactly. `LevelRewardsClaimed = that level` (no back-dated coins); `Cosmetics = {}`. XP only ever goes up, so the XP leaderboard keeps every player's order among themselves. |
 | v11 | Offices (2026-10-09): `Furniture = {}`, `OfficePrivacy = "Public"`; no `OfficeLayout` yet, so sanitize gives the starting furniture (`FurnitureConfig.DefaultLayout`: desk, chair, plant). |
 | v12 | Pickleball (2026-10-10): `Recreation` left empty (sanitize gives the starting record: rating 1000, no matches), `ProcessedMatches = {}`, `SeasonClaims = {}`. |
+| v17 | Design contests (2026-10-10): `Contest` left empty, so sanitize gives nothing entered, voted or paid. |
 | v16 | Office Showcase (2026-10-10): `Showcase` left empty, so sanitize gives nothing shared, liked or hidden. |
 | v15 | Team missions (2026-10-10): `Missions` left empty, so sanitize gives no day, 0 rewarded, 0 cleared. |
 | v14 | Event of the Day (2026-10-10): `DailyEvent` left empty, so sanitize gives no day, 0 points, 0 tiers. |
@@ -198,6 +208,11 @@ and `Furniture` for tier rewards).
 
 Sanitizing v15 (`MissionRules.sanitizeRecord`): counters whole and ≥ 0; a broken `DayKey` drops the
 day's count. Writer: `MissionService` only (plus `Coins`, `Xp`, `Furniture` and `Bag` for rewards).
+
+Sanitizing v17 (`ContestRules.sanitizeState`): weeks whole and ≥ 0, owner ids whole and non-zero,
+duplicates dropped, lists cut to their caps, `VotesToday` clamped to 0..30. Writer: `ContestService` only
+(plus `Coins`, `Xp` and `Furniture` for prizes). Contest entries and results are not player data:
+DataStore `DesignContest` and OrderedDataStores `Contest_*` (docs/CONTESTS.md).
 
 Sanitizing v16 (`ShowcaseRules.sanitizeState`): ids whole and non-zero, duplicates dropped, the lists cut
 to their caps (oldest first). Writer: `ShowcaseService` only.
