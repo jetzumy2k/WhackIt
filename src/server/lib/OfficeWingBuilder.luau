@@ -111,11 +111,18 @@ function OfficeWingBuilder.paint(room: Room, wall: Color3, floor: Color3): ()
 end
 
 function OfficeWingBuilder.buildRoom(index: number, parent: Instance): Room
-	local origin = FurnitureRules.slotOrigin(index)
+	local room = OfficeWingBuilder.buildRoomAt(FurnitureRules.slotOrigin(index), index, parent)
+	room.Model.Name = "Office" .. index
+	room.Model:SetAttribute(OfficeWingBuilder.SLOT_ATTRIBUTE, index)
+	return room
+end
+
+-- The same room with its floor centre at `origin` (Office Showcase copies,
+-- ShowcaseService). `index` only labels it.
+function OfficeWingBuilder.buildRoomAt(origin: Vector3, index: number, parent: Instance): Room
 	local floor = CFrame.new(origin)
 	local model = Instance.new("Model")
-	model.Name = "Office" .. index
-	model:SetAttribute(OfficeWingBuilder.SLOT_ATTRIBUTE, index)
+	model.Name = "Room" .. index
 
 	local outer = SIZE + 2 * THICK
 	part(

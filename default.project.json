@@ -300,6 +300,46 @@
           }
         },
 
+        "Showcase": {
+          "$className": "Folder",
+
+          "Publish": {
+            "$className": "RemoteEvent"
+          },
+
+          "Unpublish": {
+            "$className": "RemoteEvent"
+          },
+
+          "List": {
+            "$className": "RemoteEvent"
+          },
+
+          "Visit": {
+            "$className": "RemoteEvent"
+          },
+
+          "Leave": {
+            "$className": "RemoteEvent"
+          },
+
+          "Like": {
+            "$className": "RemoteEvent"
+          },
+
+          "Report": {
+            "$className": "RemoteEvent"
+          },
+
+          "Moderate": {
+            "$className": "RemoteEvent"
+          },
+
+          "State": {
+            "$className": "RemoteEvent"
+          }
+        },
+
         "Quests": {
           "$className": "Folder",
 

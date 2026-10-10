@@ -23,7 +23,7 @@ P1 = must fix before release; P2 = fix soon; P3 = accept or watch._
 | R16 | Season prize granted twice or lost on a crash | P1 | 4 | Season result frozen once (`UpdateAsync` if missing); prize granted on join when the id isn't in `SeasonClaims`; both saved together in the profile | spec; test place with API |
 | R17 | Spec count unconfirmed (526 `it` blocks vs last run 398) | P1 | 0 | Run the full suite in Studio before Phase 1 | Studio F8 |
 | R18 | Moving the campus north boundary breaks position specs (event spots, campus clearance) | P2 | 4 | Only extend; re-run all `ArenaConfig`/`CampusBuilder`/`EventConfig` specs | specs |
-| R19 | Player-typed text (office names, contest entries) needs filtering | P1 | 6 | First release has no player text (office name = display name); Phase 6 uses `TextService` like `AdminService` | review |
+| R19 | Player-typed text (office names, contest entries) needs filtering | P1 | 6 | First release has no player text (office name = display name); Phase 6 uses `TextService` like `AdminService`. 6a (2026-10-10): still no player text: a showcase shows the Roblox display name; reports pick from fixed reasons | review |
 | R20 | Assets without known licences (animations, models, sounds) | P1 | all | Part-built and built-in sounds only unless an asset manifest entry (`docs/ASSETS.md`, to create when the first asset arrives) records source and permission | release checklist |
 | R21 | Scope: 7 phases, each larger than past features | P1 | all | One phase at a time with its gate; phases can ship separately behind their own buttons | phase reports |
 | R22 | Bosses become "attackers" through new content | P0 | all | Content rule spec-checked: no damage or attack paths from bosses; reviewed each phase | code review |

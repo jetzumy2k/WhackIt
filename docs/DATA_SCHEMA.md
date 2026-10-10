@@ -13,7 +13,7 @@ validation live in `src/server/lib/PlayerDataSchema.luau`; storage settings in
 | Session locking | ProfileStore | One server owns a profile at a time, so progress can't be duplicated by joining two servers |
 | Auto-save | ProfileStore | Periodic, plus on leave (`EndSession`) and server shutdown |
 
-## Schema v15 (current)
+## Schema v16 (current)
 ```lua
 type PlayerData = {
     SchemaVersion: number,        -- 11
@@ -93,6 +93,12 @@ type PlayerData = {
         DayRewarded: number,      -- rewarded team missions that day (cap 3)
         Cleared: number,          -- all-time missions cleared
     },
+    Showcase: {                   -- v16, docs/SHOWCASE.md (Shared/ShowcaseRules.State)
+        Published: boolean,       -- the player's office is in the Showcase (mirror of the snapshot)
+        PublishedAt: number,      -- unix seconds of the last publish (0 = never); the cooldown
+        Liked: { number },        -- owners' UserIds liked, oldest first (at most 300)
+        Hidden: { number },       -- owners' UserIds hidden by reporting (at most 100)
+    },
 }
 ```
 New players start from `PlayerDataSchema.template()`: `StartingScore`, `StartingStress`, `StartingCoins`,
@@ -111,6 +117,7 @@ zero counters, `DefaultHammerId`, nothing bought, no defeats.
 | v10 | Level rework (2026-10-09): **no level is lost.** XP is raised to `max(Xp, LevelRules.scoreForLevel(min(oldLevel, 100)))`, where `oldLevel` is the old curve's `floor(sqrt(Xp / 600)) + 1` (`LevelRules.legacyLevelFor`); players at Level 10 or below keep their XP exactly. `LevelRewardsClaimed = that level` (no back-dated coins); `Cosmetics = {}`. XP only ever goes up, so the XP leaderboard keeps every player's order among themselves. |
 | v11 | Offices (2026-10-09): `Furniture = {}`, `OfficePrivacy = "Public"`; no `OfficeLayout` yet, so sanitize gives the starting furniture (`FurnitureConfig.DefaultLayout`: desk, chair, plant). |
 | v12 | Pickleball (2026-10-10): `Recreation` left empty (sanitize gives the starting record: rating 1000, no matches), `ProcessedMatches = {}`, `SeasonClaims = {}`. |
+| v16 | Office Showcase (2026-10-10): `Showcase` left empty, so sanitize gives nothing shared, liked or hidden. |
 | v15 | Team missions (2026-10-10): `Missions` left empty, so sanitize gives no day, 0 rewarded, 0 cleared. |
 | v14 | Event of the Day (2026-10-10): `DailyEvent` left empty, so sanitize gives no day, 0 points, 0 tiers. |
 | v13 | Quests (2026-10-10): `Quests` left empty, so sanitize gives the tutorial's first step and no daily or weekly quests; `QuestService` draws them on first use. |
@@ -191,6 +198,13 @@ and `Furniture` for tier rewards).
 
 Sanitizing v15 (`MissionRules.sanitizeRecord`): counters whole and ≥ 0; a broken `DayKey` drops the
 day's count. Writer: `MissionService` only (plus `Coins`, `Xp`, `Furniture` and `Bag` for rewards).
+
+Sanitizing v16 (`ShowcaseRules.sanitizeState`): ids whole and non-zero, duplicates dropped, the lists cut
+to their caps (oldest first). Writer: `ShowcaseService` only.
+
+The Office Showcase itself is **not** player data: DataStore `OfficeShowcase` (keys `Office_<UserId>`:
+the snapshot, likes, visits and moderation; `Featured`: the admin-picked list) and OrderedDataStores
+`Showcase_Newest`, `Showcase_Top_<weekId>` and `Showcase_Review`, keyed by UserId (docs/SHOWCASE.md).
 
 Player history and the admin audit log are **not** player data either: DataStore `PlayerHistory`,
 keys `Player_<UserId>` (last 200 entries) and `Admin_<YYYYMMDD>` (up to 500 per UTC day), written

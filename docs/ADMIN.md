@@ -168,6 +168,12 @@ admin actions go in one key per UTC day with up to 500 entries (`Admin_<YYYYMMDD
 without limit. Writes are queued and saved every 30 s and on shutdown. Reads include anything still
 queued. In Studio without API access, history stays in that server.
 
+## Office Showcase moderation (2026-10-10)
+Not in the Admin panel: open 🏢 Social → 🌟 Office Showcase. Admins see an extra **🛡️ Review** tab with
+offices hidden by player reports. Visiting any showcase office shows a second bar with **✅ Approve**,
+**🗑️ Remove**, **⭐ Feature** and **Unfeature** and the office's status. Each action is recorded in the
+History tab (action "Showcase"). Details: docs/SHOWCASE.md "Moderation".
+
 ## Moderation tab
 Bans use Roblox's own ban system (`Players:BanAsync`), so they:
 - apply to **every server** of the experience and kick the player right away;

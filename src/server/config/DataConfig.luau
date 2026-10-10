@@ -22,6 +22,12 @@ local DataConfig = table.freeze({
 	RecRatingStorePrefix = "RecRating_",
 	RecSeasonsStoreName = "RecSeasons",
 
+	-- Office Showcase (ShowcaseService): snapshots and the Featured list
+	-- ("Office_<UserId>", "Featured"), plus OrderedDataStores
+	-- <prefix>Newest, <prefix>Top_<weekId> and <prefix>Review.
+	ShowcaseStoreName = "OfficeShowcase",
+	ShowcaseBoardPrefix = "Showcase_",
+
 	-- Shown when a player is kicked to protect their data.
 	LoadFailedMessage = "We couldn't load your saved progress. Please rejoin in a moment.",
 	SessionEndedMessage = "Your progress was opened on another server. Please rejoin.",
