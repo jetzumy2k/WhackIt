@@ -117,6 +117,7 @@ function LevelUpController.start(): ()
 				Body = body,
 				Detail = detail,
 				Accent = ACCENT,
+				Celebrate = true,
 				Seconds = CARD_SECONDS,
 			})
 		end)

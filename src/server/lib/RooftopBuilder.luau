@@ -394,16 +394,14 @@ local function buildStringLights(parent: Instance): ()
 			)
 		)
 		for x = fromX + 4, toX - 4, 5 do
-			local bulb = decor(
-				ball(
-					parent,
-					"LightBulb",
-					0.3,
-					Vector3.new(x, FLOOR + 10.2, z),
-					BULB,
-					Enum.Material.Neon
-				)
-			)
+			local bulb = decor(ball(
+				parent,
+				"LightBulb",
+				0.28, -- under the 0.3 Neon limit (sizes are stored as float32)
+				Vector3.new(x, FLOOR + 10.2, z),
+				BULB,
+				Enum.Material.Neon
+			))
 			bulb.Transparency = 0.3
 		end
 	end

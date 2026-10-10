@@ -28,13 +28,22 @@ local TestEZ = (require(ReplicatedStorage.DevPackages.TestEZ) :: any) :: TestEZA
 local results =
 	TestEZ.TestBootstrap:run({ ServerScriptService.Tests }, TestEZ.Reporters.TextReporter)
 
--- Raise so automated runners (and the Studio output) see a hard failure.
+-- Raise so automated runners (and the Studio output) see a hard failure. The
+-- first messages go into the same line, so copying just its tail shows why.
 if results.failureCount > 0 or #results.errors > 0 then
+	local reasons: { string } = {}
+	for index = 1, math.min(#results.errors, 5) do
+		table.insert(
+			reasons,
+			string.format("  (%d) %s", index, string.sub(tostring(results.errors[index]), 1, 400))
+		)
+	end
 	error(
 		string.format(
-			"[Tests] FAILED: %d failure(s), %d error(s)",
+			"[Tests] FAILED: %d failure(s), %d error(s)\n%s",
 			results.failureCount,
-			#results.errors
+			#results.errors,
+			table.concat(reasons, "\n")
 		)
 	)
 end

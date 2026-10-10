@@ -45,4 +45,19 @@ function HudFormat.stressColor(ratio: number): Color3
 	return TENSE:Lerp(FRAZZLED, (t - 0.5) / 0.5)
 end
 
+-- The emoji a title starts with, and the title without it ("🏆 YOU WON!"
+-- -> "🏆", "YOU WON!"); nil when it starts with plain text.
+function HudFormat.splitIcon(title: string): (string?, string)
+	local first = string.match(title, "^(%S+)%s+(.+)$")
+	if first == nil then
+		return nil, title
+	end
+	local ok, codepoint = pcall(utf8.codepoint, first, 1)
+	if not ok or typeof(codepoint) ~= "number" or codepoint < 0x2000 then
+		return nil, title
+	end
+	local rest = string.match(title, "^%S+%s+(.+)$") :: string
+	return first, rest
+end
+
 return HudFormat
