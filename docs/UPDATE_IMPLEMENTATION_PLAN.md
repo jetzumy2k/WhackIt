@@ -33,6 +33,9 @@ on pickleball. This plan splits Phase 2 and moves Recreation forward:
 | D4 | Doubles rewards | ✅ (2026-10-10) 60 / 20 coins **per player** (as in §21.2). Total coin output is twice the singles rate, which is acceptable because the daily caps limit it. | 4 |
 | D5 | Rating start and formula | ✅ (2026-10-10) Elo, start 1000, K = 32 (P). In doubles each player's change uses the team average. | 4 |
 | D6 | Season length | ✅ (2026-10-10) 4 weeks starting Monday 00:00 UTC (P) | 4 |
+| D7 | First quest release | ✅ (2026-10-10) tutorial + daily + weekly quests from existing activities only; new mini-activities (coffee delivery, documents, supplies) later as 2c | 2b |
+| D8 | Quest counts and resets | ✅ (2026-10-10) 3 daily (00:00 UTC) + 3 weekly (Monday 00:00 UTC), one free reroll of a daily a day | 2b |
+| D9 | Quest rewards | ✅ (2026-10-10) coins + XP; weekly quests add an office-supply roll; a bonus for claiming all 3 dailies | 2b |
 
 ## 3. Phase 1: GUI foundation
 
@@ -207,6 +210,11 @@ from `BallFlight`, paddle swing animation (SwingAnimator-style joint offsets), a
 script (fake swings, swings out of reach, racing accepts, leaving mid-match).
 
 ## 6. Later phases (planned in detail when reached)
+- **2b Quests: 🟡 implemented 2026-10-10 on branch `feat/phase2b-quests`** (docs/QUESTS.md, schema v13,
+  D7-D9). `scripts/check.ps1` passes; Studio specs and playtest (`docs/PLAYTEST.md` 434-446) not run yet.
+  Deviations: no `Career` points (career = level titles), finished but unclaimed quests are paid at the
+  reset instead of being lost, the tutorial has no pickleball or visiting step (both need other players).
+  Original plan:
 - **2b Quests (career = level titles since 2026-10-09, §21.4):** `QuestConfig` / `QuestRules` (objectives counted from events the server
   already sees: defeats, Zen, matches, furniture placed, coffee deliveries), reset windows in UTC,
   claims stored as ids. Career points come from quests/matches/co-op, ranks unlock furniture

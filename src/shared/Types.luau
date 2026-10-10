@@ -95,6 +95,17 @@ export type ProfileSnapshot = {
 		DayMatches: number,
 		DayOpponents: { [string]: number },
 	},
+	-- Quests (docs/QUESTS.md, Shared/QuestRules.State).
+	Quests: {
+		DayKey: string,
+		Daily: { { Id: string, Progress: number, Claimed: boolean } },
+		Rerolls: number,
+		DailyBonus: boolean,
+		WeekKey: string,
+		Weekly: { { Id: string, Progress: number, Claimed: boolean } },
+		TutorialStep: number,
+		TutorialProgress: number,
+	},
 }
 
 export type OwnedPet = {

@@ -81,7 +81,7 @@ New work should follow this layout: rules in `Shared` with specs, values in `Con
 
 ## 5. Data model: what each phase adds (proposal)
 
-Current: schema **v12** (it was v8 at the audit). Each phase that adds saved fields bumps the version once and adds a
+Current: schema **v13** (it was v8 at the audit). Each phase that adds saved fields bumps the version once and adds a
 migration, sanitize rules and specs (`docs/DATA_SCHEMA.md` "Changing the schema").
 
 | Version | Phase | New fields (all with safe defaults, nothing removed) |
@@ -90,7 +90,7 @@ migration, sanitize rules and specs (`docs/DATA_SCHEMA.md` "Changing the schema"
 | v10 ✅ | Levelling rework (2026-10-09) | `LevelRewardsClaimed`, `Cosmetics = {Trail, Glow}`; one-time XP raise so nobody loses a level |
 | v11 ✅ | 2a Offices (2026-10-09) | `Furniture: {[itemKey]: count}` (Special items only; Basic furniture is free); `OfficeLayout: {{Id, Item, X, Z, R}}` (at most 60, room-local, R in 0/90/180/270); `NextOfficeItemId`; `OfficePrivacy: "Public" \| "Friends" \| "Private"` |
 | v12 ✅ | 4 Pickleball (2026-10-10) | `Recreation = {Rating, SeasonId, Wins, Losses, TotalWins, TotalLosses, DayKey, DayMatches, DayOpponents: {[opponentsKey]: n}}`; `ProcessedMatches: {string}` (last 50); `SeasonClaims: {number}` (last 24). `HideChallenges` is a setting (no migration) |
-| v13 | 2b Quests | `Quests` (active, progress, claimed ids per reset window). No `Career` field: career = level titles (§21.4) |
+| v13 ✅ | 2b Quests (2026-10-10) | `Quests = {DayKey, Daily, Rerolls, DailyBonus, WeekKey, Weekly, TutorialStep, TutorialProgress}` (slots `{Id, Progress, Claimed}`). No `Career` field: career = level titles (§21.4) |
 | later | 5–6 | event objective claims, showcase settings |
 
 Size check: a full layout is 60 × ~40 bytes ≈ 2.4 KB. Match history is **not** kept in the profile

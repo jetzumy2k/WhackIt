@@ -636,3 +636,20 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 427 | Studio API access on, after 425: wait 2-3 minutes, stop, Play again | The board shows the players from the stored season board ("This server only" gone) |
 | 428 | Output | No errors from RecreationRankService; with API access off at most one `[RecRank]` warning per kind |
 | 429 | Season prizes (needs a season to end: a published test place, or in Studio with API access on set `PickleballConfig.Season.Seconds` to 600 and `SeasonBoard.FreezeDelay` to 30 and play 5 quick matches) | About a minute after the freeze the top players get a "🏆 SEASON RESULTS" card, the coins and the item in office storage; rejoining never pays it twice. Put the values back afterwards |
+
+### Quests (Phase 2b)
+| # | Steps | Expected |
+|---|---|---|
+| 434 | Join | A 📋 **Quests** button at the end of the HUD column (clear of the jump button on a phone); no badge yet |
+| 435 | Open it | Three tabs: 📅 Daily (3 quests with bars, rewards, "New quests in …"), 🗓️ Weekly (3 quests, "an office supply", "New quests in … (Monday)"), 🎓 Getting started ("Step 1 of 4: Whack your first boss") |
+| 436 | Defeat a boss (qualifying) | Toast "📋 Quest complete: Whack your first boss! …"; the badge shows 1; daily boss and coin quests move |
+| 437 | Getting started → Claim! | "📋 QUEST COMPLETE!" card with coins and XP; coins and XP go up; step 2 shows (Reach Zen); the badge clears |
+| 438 | Daily → 🎲 Swap quest on an unfinished quest | It changes to a quest not already on the list, progress 0; the swap buttons disappear ("Today's swap is used") |
+| 439 | Finish and claim all 3 dailies, then Claim bonus | Each pays once; the bonus pays 200 coins + 500 XP once; the button then says claimed |
+| 440 | Place a piece of furniture in your office; visit another player's office (2 clients) | The furniture and visit quests count; visiting your own office doesn't |
+| 441 | Play a rewarded pickleball match (2 clients) | "Play a pickleball match" counts for both, "Win" only for the winner; a friendly match (over the cap) counts for nothing |
+| 442 | Claim a weekly quest | The card lists an office supply too, and it's in office storage |
+| 443 | Exploits (command bar): `Remotes.Quests.Claim:FireServer("Daily", 99)`; `FireServer("Hack")`; claim the same quest twice quickly; `Remotes.Quests.Reroll:FireServer(1.5)` | Bad index/kind rejected and logged; the double claim pays once; a toast for the rest |
+| 444 | Studio only: finish a daily quest without claiming, then in the **server** command bar run `require(game.ServerScriptService.Services.PlayerDataService).get(game.Players:GetPlayers()[1]).Quests.DayKey = "2000-01-01"` and wait up to a minute | The finished quest is paid with a toast ("Unclaimed quest rewards…"), and new daily quests are drawn |
+| 445 | Rejoin (Studio API access on) | Progress, claims, swap used and the tutorial step are kept; a v12 profile loads at tutorial step 1 |
+| 446 | Output | No errors from QuestService, QuestController, CombatService, StressService, OfficeService, PetService, RecreationService |

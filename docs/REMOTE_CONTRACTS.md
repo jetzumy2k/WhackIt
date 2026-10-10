@@ -177,6 +177,17 @@ on the Executive Floor without access.
 | `Level.SetCosmetic` | client -> server | `kind: "Trail" \| "Glow" \| "Office", id: string` (`""` = default); `maxArgs` 2, `RemoteLimits.Settings` | `LevelRewardRules.parseChoice`: known kind and `""` or a known id (else rejected); the player's level unlocks it (else ignored, a UI race). Saves `Cosmetics`, sets `TrailStyle` / `GlowStyle` (re-equips the hammer for a new trail), repaints the office for a theme (`OfficeService.applyTheme`); `Profile.Sync` |
 | `Level.LevelUp` | server -> one client | `{ FromLevel, ToLevel, Coins }` | sent when XP reaches levels never rewarded before and their coins are paid (`SessionService.addXp`); display only (the level-up card) |
 
+## Quests (docs/QUESTS.md, 2026-10-10)
+| Remote | Direction | Payload | Server checks / handling |
+|---|---|---|---|
+| `Quests.Claim` | client -> server | `kind: "Daily" \| "Weekly" \| "Tutorial" \| "Bonus", index: 1..3` (only for Daily / Weekly); `maxArgs` 2, `RemoteLimits.Quests` (burst 6, 2/s) | known kind and whole index in range (else rejected); data loaded; the day / week is refreshed first; the quest is finished and not claimed (else a toast). Marks it claimed **before** paying, in session-locked data, so it pays once; pays coins and XP (`SessionService`), a weekly quest also an office supply; `Quests.Rewarded`; `Profile.Sync` |
+| `Quests.Reroll` | client -> server | `index: 1..3`; `maxArgs` 1, `RemoteLimits.Quests` | whole index in range (else rejected); a reroll left today and the quest unfinished (else a toast); swaps in a daily quest not already on the list; `Profile.Sync` |
+| `Quests.Rewarded` | server -> one client | `{ Title, Coins, Xp, Supply }` | after a claim (or a reset paying a finished, unclaimed quest); display only (the reward card) |
+
+Progress never comes from a client: services call `QuestService.record` after results they've decided
+(rewarded defeats and their coins, rewarded Zen, rewarded pickleball matches and wins, furniture placed,
+another player's office reached, a pet hatched).
+
 ## Rec: pickleball (docs/PICKLEBALL.md, 2026-10-10)
 | Remote | Direction | Payload | Server checks / handling |
 |---|---|---|---|
