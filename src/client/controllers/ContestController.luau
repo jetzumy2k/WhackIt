@@ -454,6 +454,7 @@ local function buildStarBar(gui: ScreenGui): ()
 	local stars: { TextButton } = {}
 	for value = ContestConfig.MinStars, ContestConfig.MaxStars do
 		local button = PanelKit.button(bar, "⭐" .. value, STAR_COLOR)
+		button.Name = "Star" .. value
 		button.LayoutOrder = value
 		button.Size = UDim2.new(0, 52, 1, 0)
 		button.Activated:Connect(function()
@@ -468,10 +469,18 @@ local function buildStarBar(gui: ScreenGui): ()
 		remote("Ballot"):FireServer()
 	end)
 
+	-- Phones: narrower (clear of the thumbstick and jump button), no label,
+	-- icon-only Next.
 	Responsive.onChanged(function()
-		bar.Size = if Responsive.formFactor() == "Phone"
-			then UDim2.new(0.95, 0, 0, 50)
-			else UDim2.fromOffset(560, 56)
+		local phone = Responsive.formFactor() == "Phone"
+		bar.Size = if phone then UDim2.new(0.6, 0, 0, 46) else UDim2.fromOffset(560, 56)
+		bar.Position = UDim2.new(0.5, 0, 1, if phone then -120 else -132)
+		label.Visible = not phone
+		for _, button in stars do
+			button.Size = UDim2.new(0, if phone then 44 else 52, 1, 0)
+		end
+		nextEntry.Text = if phone then "⏭️" else "⏭️ Next"
+		nextEntry.Size = UDim2.new(0, if phone then 46 else 90, 1, 0)
 	end)
 
 	local token = 0

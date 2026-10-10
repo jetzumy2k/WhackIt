@@ -8,7 +8,11 @@
 
 	Per frame (Shared/BossMotion, personalities in Config/BossPersonalityConfig):
 	  * idle bob, sway and a small side-to-side shuffle in the boss's style;
-	  * faces you when you're within FaceStuds, otherwise looks around;
+	  * faces you when you're within FaceStuds, otherwise looks around and
+	    strolls up to PACE_STUDS left and right of its spot with a little
+	    step bob and waddle, pausing at each end (polish round). It hurries
+	    home as soon as you're within FaceStuds, so it's always on its hitbox
+	    when you can reach it; no strolling with Reduced motion;
 	  * an occasional personal fidget (taps, glances, flinches, head tilts,
 	    yawns, puffing up);
 	  * a surprised hop, a "ping" and a short line when you walk up to it;
@@ -52,6 +56,10 @@ local BossVisualController = {}
 
 local TURN_SPEED = 6 -- higher = snappier turn toward the player
 local LOOK_TURN_SPEED = 2 -- gentler turn while looking around
+-- How fast a boss starts strolling, or hurries home when you come near.
+local PACE_BLEND = 3
+-- The boss's own X (sideways) at home: the line it paces along.
+local PACE_AXIS = CFrame.Angles(0, math.pi, 0).RightVector
 local HOME_YAW = math.pi -- facing +Z: office doors and the lobby are that way
 local HIT_SECONDS = 0.35
 local HIT_LEAN = math.rad(16)
@@ -122,6 +130,10 @@ type Entry = {
 	-- V3 face
 	Rig: { RigPart },
 	FaceKey: string, -- the shown expression + eyes state (changes only on a switch)
+	-- Pacing while nobody is near (Shared/BossMotion.pace)
+	PaceWeight: number, -- 0 at home .. 1 strolling
+	PaceX: number, -- current offset along the boss's own X (studs)
+	Travelled: number, -- studs walked, for the step cycle
 }
 
 local localPlayer = Players.LocalPlayer
@@ -286,6 +298,9 @@ function attach(boss: Model): ()
 		Sounds = {},
 		Rig = rig,
 		FaceKey = "",
+		PaceWeight = 0,
+		PaceX = 0,
+		Travelled = 0,
 	}
 	entries[boss] = entry
 	refreshLock(entry)
@@ -515,6 +530,26 @@ local function animate(boss: Model, entry: Entry, now: number, dt: number): ()
 		end
 	end
 
+	-- Stroll left and right while nobody is near; home as soon as you are.
+	local paceOffset, walking, direction = BossMotion.pace(now, entry.Phase, BossMotion.PACE_STUDS)
+	local strolling = faceTarget == nil
+		and entry.DefeatedAt == nil
+		and entry.HitAt == nil
+		and not SettingsController.get("ReducedMotion")
+	entry.PaceWeight += ((if strolling then 1 else 0) - entry.PaceWeight) * math.min(
+		1,
+		dt * PACE_BLEND
+	)
+	local paceX = paceOffset * entry.PaceWeight
+	entry.Travelled += math.abs(paceX - entry.PaceX)
+	entry.PaceX = paceX
+	local stepLift, waddle = BossMotion.walkCycle(entry.Travelled, walking * entry.PaceWeight)
+	if strolling and walking > 0.2 and entry.PaceWeight > 0.5 then
+		-- Face the way it walks.
+		local heading = yawToward(origin, origin + PACE_AXIS * direction, entry.Yaw)
+		entry.Yaw = lerpAngle(entry.Yaw, heading, math.min(1, dt * TURN_SPEED))
+	end
+
 	local motion = BossMotion.idle(personality, now, entry.Phase)
 
 	-- Fidget now and then, unless reacting to something else.
@@ -568,10 +603,10 @@ local function animate(boss: Model, entry: Entry, now: number, dt: number): ()
 	end
 
 	entry.Visual:PivotTo(
-		CFrame.new(origin + Vector3.new(0, motion.Lift + hop, 0))
+		CFrame.new(origin + PACE_AXIS * paceX + Vector3.new(0, motion.Lift + hop + stepLift, 0))
 			* CFrame.Angles(0, entry.Yaw + motion.Yaw + spin, 0)
 			* CFrame.new(motion.Shuffle, 0, 0)
-			* CFrame.Angles(lean, 0, motion.Roll)
+			* CFrame.Angles(lean, 0, motion.Roll + waddle)
 	)
 	if math.abs(scale - entry.Scale) > 0.001 then
 		entry.Visual:ScaleTo(scale * entry.BaseScale)

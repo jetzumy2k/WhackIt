@@ -111,6 +111,56 @@ function BossMotion.wobble(progress: number): number
 	return math.sin(p * math.pi * 3) * (1 - p) * WOBBLE_YAW
 end
 
+-- Pacing (polish round 2026-10-10) ------------------------------------------------
+-- While nobody is within FaceStuds, a boss strolls a little way left and right
+-- of its spot and pauses at each end. Players who can reach it are always
+-- closer than that, so they see it (and hit it) on its hitbox.
+
+BossMotion.PACE_STUDS = 2.5
+BossMotion.PACE_CYCLE = 12 -- seconds for one there-and-back
+-- Parts of the cycle: walk out right, pause, walk across, pause, walk home.
+local PACE_LEGS = {
+	{ Until = 0.2, From = 0, To = 1 },
+	{ Until = 0.35, From = 1, To = 1 },
+	{ Until = 0.65, From = 1, To = -1 },
+	{ Until = 0.8, From = -1, To = -1 },
+	{ Until = 1, From = -1, To = 0 },
+}
+local STEP_HEIGHT = 0.25
+local STEPS_PER_STUD = 1.2
+local WADDLE = math.rad(6)
+
+local function smooth(t: number): number
+	return t * t * (3 - 2 * t)
+end
+
+--[[
+	Where a pacing boss is at `now`: its offset along its own X (studs, within
+	±`studs`), whether it's walking (0 paused .. 1 walking) and the direction
+	(-1, 0 or 1).
+]]
+function BossMotion.pace(now: number, phase: number, studs: number): (number, number, number)
+	local u = ((now + phase * 3) % BossMotion.PACE_CYCLE) / BossMotion.PACE_CYCLE
+	local start = 0
+	for _, leg in PACE_LEGS do
+		if u <= leg.Until then
+			local t = (u - start) / (leg.Until - start)
+			local position = leg.From + (leg.To - leg.From) * smooth(t)
+			local direction = if leg.To > leg.From then 1 elseif leg.To < leg.From then -1 else 0
+			return position * studs, if direction ~= 0 then math.sin(t * math.pi) else 0, direction
+		end
+		start = leg.Until
+	end
+	return 0, 0, 0
+end
+
+-- The little step bob and waddle of a walking boss (`walking` 0..1) after
+-- moving `travelled` studs.
+function BossMotion.walkCycle(travelled: number, walking: number): (number, number)
+	local step = travelled * STEPS_PER_STUD * math.pi
+	return math.abs(math.sin(step)) * STEP_HEIGHT * walking, math.sin(step) * WADDLE * walking
+end
+
 -- Adds `b` onto `a` (scales multiply).
 function BossMotion.add(a: Offsets, b: Offsets): Offsets
 	return {
