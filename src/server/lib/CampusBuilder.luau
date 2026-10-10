@@ -314,53 +314,220 @@ local function buildTemplates(): { [string]: Model }
 			0.4
 	end)
 
-	-- Coffee kiosk: counter in front (-Z), back wall, striped canopy and a sign.
+	-- The Calm Brew Cafe (2026-10-10, was a bare kiosk): a small building open
+	-- at the front (-Z) with a counter, an espresso machine, a pastry case,
+	-- a back counter with jars, a menu board, glass side windows, a striped
+	-- awning and a lit sign on the roof. Footprint 14 x 10, front at z -3.
 	templates.CoffeeKiosk = template("CoffeeKiosk", function(model)
-		part(model, "Counter", Vector3.new(9, 3.6, 2.4), at(0, 1.8, -1.6), WOOD, Enum.Material.Wood)
+		local cream = Color3.fromRGB(232, 218, 195)
+		local charcoal = Color3.fromRGB(45, 48, 58)
+		local marble = Color3.fromRGB(225, 222, 215)
 		part(
 			model,
-			"CounterTop",
-			Vector3.new(9.4, 0.3, 2.8),
-			at(0, 3.75, -1.6),
-			Color3.fromRGB(230, 225, 215)
+			"CafeDeck",
+			Vector3.new(14, 0.3, 10),
+			at(0, 0.15, 2),
+			WOOD,
+			Enum.Material.WoodPlanks
 		)
-		part(model, "BackWall", Vector3.new(9, 8, 0.6), at(0, 4, 2.2), Color3.fromRGB(120, 80, 60))
-		for _, x in { -4.3, 4.3 } do
+		part(
+			model,
+			"CafeBackWall",
+			Vector3.new(14, 10, 0.6),
+			at(0, 5, 6.7),
+			cream,
+			Enum.Material.Plaster
+		)
+		for _, x in { -6.7, 6.7 } do
 			part(
 				model,
-				"Post",
-				Vector3.new(0.4, 8, 0.4),
-				at(x, 4, -2.6),
-				DARK_WOOD,
-				Enum.Material.Wood
+				"CafeSideWall",
+				Vector3.new(0.6, 4, 10),
+				at(x, 2, 2),
+				cream,
+				Enum.Material.Plaster
 			)
+			local window = part(
+				model,
+				"CafeWindow",
+				Vector3.new(0.3, 6, 10),
+				at(x, 7, 2),
+				Color3.fromRGB(160, 200, 225),
+				Enum.Material.Glass
+			)
+			window.Transparency = 0.4
 		end
 		part(
 			model,
-			"Canopy",
-			Vector3.new(10, 0.5, 5.6),
-			at(0, 8.25, -0.2),
-			Color3.fromRGB(240, 120, 90),
-			Enum.Material.Fabric
+			"CafeRoof",
+			Vector3.new(15, 0.8, 11),
+			at(0, 10.4, 2),
+			charcoal,
+			Enum.Material.Metal
 		)
-		local board = part(model, "SignBoard", Vector3.new(7, 1.6, 0.3), at(0, 9.3, -2.8), SIGN)
-		label(board, Enum.NormalId.Front, "COFFEE: free refills of patience")
+		-- Striped awning over the front, sloping down and out.
+		for i = 0, 3 do
+			local stripe = part(
+				model,
+				"CafeAwning",
+				Vector3.new(3.5, 0.25, 4),
+				CFrame.new(-5.25 + i * 3.5, 8.6, -4.6) * CFrame.Angles(math.rad(-18), 0, 0),
+				if i % 2 == 0 then Color3.fromRGB(215, 85, 70) else Color3.fromRGB(245, 240, 230),
+				Enum.Material.Fabric
+			)
+			stripe.CanCollide = false
+		end
+		local sign = part(
+			model,
+			"SignBoard",
+			Vector3.new(12, 2.4, 0.4),
+			at(0, 12.2, -3.2),
+			charcoal,
+			Enum.Material.Metal
+		)
+		label(sign, Enum.NormalId.Front, "☕ CALM BREW CAFÉ")
+		local signGui = sign:FindFirstChildOfClass("SurfaceGui") :: SurfaceGui
+		signGui.LightInfluence = 0
+		signGui.Brightness = 1.5
+		-- A warm glow strip along the roof's front edge.
+		local glow = part(
+			model,
+			"CafeGlow",
+			Vector3.new(14, 0.2, 0.2),
+			at(0, 9.9, -3.3),
+			LAMP,
+			Enum.Material.Neon
+		)
+		glow.Transparency = 0.4
+		glow.CanCollide = false
+		-- Front counter with the machine, cups and a pastry case.
+		part(
+			model,
+			"Counter",
+			Vector3.new(12, 3.6, 1.6),
+			at(0, 1.8, -2),
+			DARK_WOOD,
+			Enum.Material.Wood
+		)
+		part(
+			model,
+			"CounterTop",
+			Vector3.new(12.4, 0.3, 2),
+			at(0, 3.75, -2),
+			marble,
+			Enum.Material.Marble
+		)
 		part(
 			model,
 			"EspressoMachine",
-			Vector3.new(1.6, 1.4, 1.2),
-			at(-2.6, 4.6, -1.2),
+			Vector3.new(2, 1.8, 1.4),
+			at(-3.8, 4.8, -1.8),
 			METAL,
 			Enum.Material.Metal
 		)
-		local cup = part(
+		for i, x in { -1.6, -0.6 } do
+			local cup = part(
+				model,
+				"Cup",
+				Vector3.new(0.7, 0.6, 0.6),
+				upright(x, 4.25, -2.2 + i * 0.1),
+				Color3.new(1, 1, 1)
+			)
+			cup.Shape = Enum.PartType.Cylinder
+		end
+		local case = part(
 			model,
-			"Cup",
-			Vector3.new(0.8, 0.6, 0.6),
-			upright(1.5, 4.3, -1.8),
-			Color3.new(1, 1, 1)
+			"PastryCase",
+			Vector3.new(3.4, 1.6, 1.4),
+			at(3.4, 4.7, -2),
+			Color3.fromRGB(200, 225, 235),
+			Enum.Material.Glass
 		)
-		cup.Shape = Enum.PartType.Cylinder
+		case.Transparency = 0.45
+		for _, x in { 2.6, 3.6 } do
+			local pastry = part(
+				model,
+				"Pastry",
+				Vector3.new(0.8, 0.8, 0.8),
+				at(x, 4.3, -2),
+				Color3.fromRGB(215, 150, 80)
+			)
+			pastry.Shape = Enum.PartType.Ball
+		end
+		-- Back counter, a shelf of jars and the menu board.
+		part(
+			model,
+			"BackCounter",
+			Vector3.new(12, 3.4, 1.4),
+			at(0, 1.7, 5.8),
+			DARK_WOOD,
+			Enum.Material.Wood
+		)
+		part(
+			model,
+			"Shelf",
+			Vector3.new(12, 0.3, 1),
+			at(0, 6.4, 6.1),
+			DARK_WOOD,
+			Enum.Material.Wood
+		)
+		for _, x in { -4, -2.5, 2.5, 4 } do
+			local jar = part(
+				model,
+				"Jar",
+				Vector3.new(1.2, 0.9, 0.9),
+				upright(x, 7.15, 6.1),
+				Color3.fromRGB(150, 95, 55),
+				Enum.Material.Glass
+			)
+			jar.Shape = Enum.PartType.Cylinder
+		end
+		local menu = part(model, "MenuBoard", Vector3.new(5, 2.6, 0.2), at(0, 8.4, 6.3), charcoal)
+		label(menu, Enum.NormalId.Front, "Latte of Calm · Espresso Break · Decaf for Mondays")
+		-- Potted plants at the front corners.
+		for _, x in { -6.2, 6.2 } do
+			part(
+				model,
+				"CafePot",
+				Vector3.new(1.6, 1.6, 1.6),
+				at(x, 0.8, -3.6),
+				POT,
+				Enum.Material.SmoothPlastic
+			)
+			local leaves = part(
+				model,
+				"CafeLeaves",
+				Vector3.new(2.8, 2.8, 2.8),
+				at(x, 2.8, -3.6),
+				LEAF,
+				Enum.Material.Grass
+			)
+			leaves.Shape = Enum.PartType.Ball
+			leaves.CanCollide = false
+		end
+	end)
+
+	-- A patio parasol (pole and a round canopy), for the cafe's tables.
+	templates.Parasol = template("Parasol", function(model)
+		local pole = part(
+			model,
+			"ParasolPole",
+			Vector3.new(0.3, 8, 0.3),
+			at(0, 4, 0),
+			METAL,
+			Enum.Material.Metal
+		)
+		pole.CanCollide = false
+		local canopy = part(
+			model,
+			"ParasolCanopy",
+			Vector3.new(0.5, 9, 9),
+			upright(0, 8, 0),
+			Color3.fromRGB(215, 85, 70),
+			Enum.Material.Fabric
+		)
+		canopy.Shape = Enum.PartType.Cylinder
+		canopy.CanCollide = false
 	end)
 
 	-- Signpost: a pole with a board facing -Z (towards the entrance by default).
@@ -449,7 +616,7 @@ local function plaza(templates: { [string]: Model }, parent: Instance): ()
 		56,
 		0,
 		34,
-		"<- Relaxation Garden   Coffee Corner ->   v Stress-Relief Zone"
+		"<- Relaxation Garden   Coffee Corner ->   v Recreation Center (Pickleball)"
 	)
 end
 
@@ -557,10 +724,22 @@ local function coffeeCorner(templates: { [string]: Model }, parent: Instance): (
 		yawToward(center.X + 10, center.Z - 16, center.X, center.Z)
 	)
 	place(templates.TrashBin, area, center.X + 14, center.Z - 12)
+	-- Parasols over the patio tables.
+	for _, offset in { Vector2.new(-8, -10), Vector2.new(-8, 10) } do
+		place(templates.Parasol, area, center.X + offset.X, center.Z + offset.Y)
+	end
 	for _, point in around(center, 21, { 300, 330, 30, 60 }) do
 		place(templates.Planter, area, point.X, point.Y)
 	end
-	signAt(templates, area, 46, 97, 0, 97, "COFFEE CORNER & BREAK AREA\nFuel for the next whack")
+	signAt(
+		templates,
+		area,
+		46,
+		97,
+		0,
+		97,
+		"CALM BREW CAFÉ\nCoffee Corner · Fuel for the next whack"
+	)
 end
 
 local function stressReliefZone(templates: { [string]: Model }, parent: Instance): ()
@@ -576,13 +755,14 @@ local function stressReliefZone(templates: { [string]: Model }, parent: Instance
 	for _, offset in { Vector2.new(-9, -7), Vector2.new(10, -6), Vector2.new(-12, 6) } do
 		place(templates.Rock, area, center.X + offset.X, center.Z + offset.Y, offset.X * 10, 1)
 	end
+	-- Beside the walkway coming in from the building (south of the zone).
 	signAt(
 		templates,
 		area,
-		9,
-		110,
-		0,
-		100,
+		center.X + 9,
+		center.Z + 18,
+		center.X,
+		center.Z + 40,
 		"STRESS-RELIEF ZONE\nBreathe in. Breathe out. Reply later."
 	)
 end

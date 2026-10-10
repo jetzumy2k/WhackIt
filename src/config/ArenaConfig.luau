@@ -340,18 +340,19 @@ local ArenaConfig = table.freeze({
 		EntranceHeight = 10,
 		GroundY = -1,
 		-- Invisible walls keep players on the grounds; a low hedge marks them.
-		-- North edge moved from z -130 to -210 for the Recreation Center
-		-- (major update decision D3, 2026-10-09).
-		Boundary = table.freeze({ MinX = -130, MaxX = 130, MinZ = -210, MaxZ = 150 }),
+		-- North edge moved from z -130 to -210 (2026-10-09, now the
+		-- Stress-Relief Zone behind the HQ); south edge from 150 to 210 for the
+		-- Recreation Center in front of the HQ (owner request 2026-10-10).
+		Boundary = table.freeze({ MinX = -130, MaxX = 130, MinZ = -210, MaxZ = 210 }),
 		BoundaryHeight = 60,
 		-- Decorative road just outside the south boundary.
-		StreetNorthZ = 160,
-		StreetSouthZ = 176,
+		StreetNorthZ = 220,
+		StreetSouthZ = 236,
 		-- Paved plaza in front of the entrance.
 		Plaza = table.freeze({ MinX = -44, MaxX = 44, MinZ = 34, MaxZ = 52 }),
 		Walkways = table.freeze({
-			-- Entrance straight south to the Stress-Relief Zone.
-			table.freeze({ MinX = -5, MaxX = 5, MinZ = 52, MaxZ = 112 }),
+			-- Entrance straight south to the Recreation Center's entrance.
+			table.freeze({ MinX = -5, MaxX = 5, MinZ = 52, MaxZ = 116 }),
 			-- Cross walk from the Garden to the Coffee Corner.
 			table.freeze({ MinX = -48, MaxX = 48, MinZ = 84, MaxZ = 92 }),
 			-- Loop around the building (south legs meet the plaza).
@@ -363,13 +364,14 @@ local ArenaConfig = table.freeze({
 			-- Garden and Coffee Corner down to the cross walk's ends and the loop.
 			table.freeze({ MinX = -100, MaxX = -94, MinZ = 46, MaxZ = 88 }),
 			table.freeze({ MinX = 94, MaxX = 100, MinZ = 46, MaxZ = 88 }),
-			-- North from the loop to the Recreation Center.
-			table.freeze({ MinX = -4, MaxX = 4, MinZ = -140, MaxZ = -66 }),
+			-- North from the loop behind the HQ to the Stress-Relief Zone.
+			table.freeze({ MinX = -4, MaxX = 4, MinZ = -154, MaxZ = -66 }),
 		}),
 		-- Round areas: centre (Y = ground) and radius.
 		Garden = table.freeze({ Center = Vector3.new(-70, -1, 88), Radius = 24 }),
 		CoffeeCorner = table.freeze({ Center = Vector3.new(70, -1, 88), Radius = 22 }),
-		StressReliefZone = table.freeze({ Center = Vector3.new(0, -1, 126), Radius = 16 }),
+		-- Behind the HQ since 2026-10-10 (the Recreation Center took its place in front).
+		StressReliefZone = table.freeze({ Center = Vector3.new(0, -1, -170), Radius = 16 }),
 	}),
 
 	PlaceholderBossSize = Vector3.new(6, 8, 6),

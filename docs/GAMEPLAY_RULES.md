@@ -177,10 +177,11 @@ building, offices, stairs, elevator, leaderboard and spawn are unchanged.
 | Area | Where | What's there |
 |---|---|---|
 | Front Plaza | in front of the entrance | paving, benches facing the building, planters, lamp posts, signpost |
-| Walkways | entrance → zone; garden ↔ coffee corner; a loop around the building | concrete paths lined with lamp posts, trees and bushes; benches and trees behind the building |
+| Walkways | entrance → Recreation Center; garden ↔ coffee corner; a loop around the building; loop → Stress-Relief Zone | concrete paths lined with lamp posts, trees and bushes; benches and trees behind the building |
+| Recreation Center | south end of the main walkway (since 2026-10-10) | the pickleball pavilion (docs/PICKLEBALL.md) |
 | Relaxation Garden | west | soft grass, a shallow walk-over pond with stones, benches facing it, flower beds, trees ("No meetings beyond this point") |
-| Coffee Corner & Break Area | east | brick patio, coffee kiosk ("free refills of patience"), picnic tables with umbrellas, a vending machine ("SNACKS for feelings") |
-| Stress-Relief Zone | south end of the main walkway | sand garden, bean bags, a giant pink stress ball, rocks ("Breathe in. Breathe out. Reply later.") |
+| Coffee Corner & Break Area | east | brick patio, the **Calm Brew Café** (since 2026-10-10: a small building with a counter, espresso machine, pastry case, menu board, striped awning, glass side windows and a lit roof sign), picnic tables with parasols, a vending machine ("SNACKS for feelings") |
+| Stress-Relief Zone | behind the building, at the end of the walkway north from the loop (since 2026-10-10) | sand garden, bean bags, a giant pink stress ball, rocks ("Breathe in. Breathe out. Reply later.") |
 
 - **Clear paths:** every walkway and the entrance lane are kept free of props, and the spawn has an
   open walk out of the lobby (both spec-checked). The paths inside (bosses, stairs, elevator,

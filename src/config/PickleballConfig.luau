@@ -35,20 +35,22 @@ local PickleballConfig = table.freeze({
 		RunOff = 7,
 	}),
 
-	-- The Recreation Center north of the office (decision D3): two courts
-	-- side by side, long axis north-south. Centre = middle of the court
-	-- surface, world space. Courts are axis-aligned (no rotation).
+	-- The Recreation Center: since 2026-10-10 (owner request) in front of
+	-- the office, at the end of the main walkway from the lobby, under a
+	-- pavilion (Lib/CourtBuilder). Two courts side by side, long axis
+	-- north-south. Centre = middle of the court surface, world space. Courts
+	-- are axis-aligned (no rotation).
 	Center = table.freeze({
-		Area = table.freeze({ MinX = -60, MaxX = 60, MinZ = -200, MaxZ = -140 }),
+		Area = table.freeze({ MinX = -60, MaxX = 60, MinZ = 116, MaxZ = 200 }),
 		SurfaceY = -0.5,
 		Courts = table.freeze({
-			Vector3.new(-24, -0.5, -170),
-			Vector3.new(24, -0.5, -170),
+			Vector3.new(-24, -0.5, 162),
+			Vector3.new(24, -0.5, 162),
 		}),
 		-- Where players stand when a match ends or they're sent off a court.
-		ExitPoint = Vector3.new(0, 2.5, -143),
-		-- The board with the "Pickleball" prompt (opens the panel).
-		BoardPosition = Vector3.new(0, -0.5, -146),
+		ExitPoint = Vector3.new(0, 2.5, 120),
+		-- The sign with the "Pickleball" prompt (opens the panel), at the entrance.
+		BoardPosition = Vector3.new(0, -0.5, 124),
 	}),
 
 	-- The ball (server-owned; Shared/BallFlight). Court-local studs and seconds.

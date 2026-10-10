@@ -730,3 +730,14 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 493 | Ride to floor 5 | Out of the elevator house onto the Rooftop Lounge: deck, sofas, coffee cart, loungers, trees, string lights, telescope, the crown sign on the front edge |
 | 494 | Press E at the Mission Board / Event Board | The Team Missions window / the Quests window on 🌟 Today |
 | 495 | Walk the parapet edge | Nobody can fall off; no gaps; the view over the campus and to the Recreation Center |
+
+### Campus: Recreation Center in front, café, skyline (owner request 2026-10-10) — screenshots please
+| # | Steps | Expected |
+|---|---|---|
+| 496 | Walk out of the lobby and straight down the main path | It ends at the Recreation Center: a high pavilion roof on steel columns with the lit "🏓 RECREATION CENTER" sign facing you, planters at the entrance, the sign with the Pickleball prompt just inside |
+| 497 | Walk in | Two courts under the roof, blue stands down both sides, the "PLAY • RELAX • REPEAT" wall at the far end, lights under the roof; a 2-player match still plays normally (a lob stays under the roof) |
+| 498 | The plaza signpost | "v Recreation Center (Pickleball)" |
+| 499 | Behind the building: the walkway north from the loop | The Stress-Relief Zone (sand, bean bags, stress ball, its sign) where the courts used to be |
+| 500 | Coffee Corner (east of the plaza) | The Calm Brew Café: building with awning, lit roof sign, counter with espresso machine and pastry case, menu board, side windows; parasols over the patio tables |
+| 501 | Look around from the plaza and the roof | The city is office blocks with window bands and rooftop plant rooms, lower and further out; none on the campus or the street; the HQ stands out |
+| 502 | Round the HQ | A paved apron round the building, no raw concrete strip; no grass blades through any floor |

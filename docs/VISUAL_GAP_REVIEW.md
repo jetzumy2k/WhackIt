@@ -85,3 +85,7 @@ Visual work becomes its own track, done before Phase 6, each part with a Studio 
 - **CEO at the top + Rooftop Lounge** (owner request): Executive Floor moved to the 4th floor, Department
   Heads to the 3rd; `Lib/RooftopBuilder` on the 5th with the Mission and Event Boards. Not yet seen in
   Studio.
+- **Campus round** (owner: "looks like an on-going construction", empty coffee shop, courts hard to
+  find): Recreation Center moved in front of the HQ under a pavilion (V2 started), Stress-Relief Zone
+  behind; Coffee Corner rebuilt as the Calm Brew Café; skyline rebuilt as office blocks (lower, further
+  out, off the street); paved apron and paved court base instead of raw concrete.
