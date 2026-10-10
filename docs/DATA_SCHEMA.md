@@ -13,7 +13,7 @@ validation live in `src/server/lib/PlayerDataSchema.luau`; storage settings in
 | Session locking | ProfileStore | One server owns a profile at a time, so progress can't be duplicated by joining two servers |
 | Auto-save | ProfileStore | Periodic, plus on leave (`EndSession`) and server shutdown |
 
-## Schema v11 (current)
+## Schema v12 (current)
 ```lua
 type PlayerData = {
     SchemaVersion: number,        -- 11
@@ -61,6 +61,18 @@ type PlayerData = {
     OfficeLayout: {{Id, Item, X, Z, R}}, -- placed furniture, room-local whole studs, R 0/90/180/270
     NextOfficeItemId: number,     -- next layout id (never reused)
     OfficePrivacy: string,        -- "Public" | "Friends" | "Private"
+    -- v12 (docs/PICKLEBALL.md)
+    Recreation: {                 -- Shared/PickleballRules.Record
+        Rating: number,           -- Elo, this season (starts at 1000, 100..4000)
+        SeasonId: number,         -- the season the rating and Wins/Losses belong to
+        Wins: number, Losses: number,           -- this season
+        TotalWins: number, TotalLosses: number, -- all time
+        DayKey: string,           -- UTC date "YYYY-MM-DD" the day counters belong to ("" = none)
+        DayMatches: number,       -- rewarded matches that day (cap 10)
+        DayOpponents: {[opponentsKey]: number}, -- rewarded matches per opponent set that day (cap 3)
+    },
+    ProcessedMatches: {string},   -- last 50 rewarded match ids (a match pays once)
+    SeasonClaims: {number},       -- seasons whose prizes were handed out (last 24; prizes come later)
 }
 ```
 New players start from `PlayerDataSchema.template()`: `StartingScore`, `StartingStress`, `StartingCoins`,
@@ -78,6 +90,7 @@ zero counters, `DefaultHammerId`, nothing bought, no defeats.
 | v8 | Pets (2026-10-08): `Pets = {}`, `NextPetNumber = 1`, `EquippedPetId = ""`, `Incubation = nil`. Eggs are ordinary Bag items (`egg_common`, `egg_rare`, `egg_mythical`). |
 | v10 | Level rework (2026-10-09): **no level is lost.** XP is raised to `max(Xp, LevelRules.scoreForLevel(min(oldLevel, 100)))`, where `oldLevel` is the old curve's `floor(sqrt(Xp / 600)) + 1` (`LevelRules.legacyLevelFor`); players at Level 10 or below keep their XP exactly. `LevelRewardsClaimed = that level` (no back-dated coins); `Cosmetics = {}`. XP only ever goes up, so the XP leaderboard keeps every player's order among themselves. |
 | v11 | Offices (2026-10-09): `Furniture = {}`, `OfficePrivacy = "Public"`; no `OfficeLayout` yet, so sanitize gives the starting furniture (`FurnitureConfig.DefaultLayout`: desk, chair, plant). |
+| v12 | Pickleball (2026-10-10): `Recreation` left empty (sanitize gives the starting record: rating 1000, no matches), `ProcessedMatches = {}`, `SeasonClaims = {}`. |
 | v9 | Settings (2026-10-09): `Settings = {}`; sanitize fills every known setting with its default (`ReducedMotion = false`). |
 | v7 | Mystery Hammers (2026-10-08): each saved hammer without `BonusDamagePercent` gets `StoreConfig.Mystery.LegacyBonusDamagePercent` (15); `sanitize` then sets `Damage` to the fixed base (35). Old hammers rolled 20-35 damage, so every one ends up at least as strong. The crit roll is kept. The bump also stops older servers, which would drop the new field, from loading and saving this data. |
 
@@ -134,6 +147,14 @@ room, in the door, overlapping an earlier one, beyond 60, a duplicate id or not 
 exactly (an emptied office stays empty). `NextOfficeItemId` is at least one past every kept id.
 An unknown `OfficePrivacy` → Public. Writers: `OfficeService` → `OfficeLayout`, `NextOfficeItemId`,
 `OfficePrivacy`, `Furniture` (admin rewards via `grantSpecial`).
+Sanitizing v12: `Recreation` field by field (`PickleballRules.sanitizeRecord`): the rating a whole number
+clamped to 100..4,000 (broken → 1,000), counters whole and ≥ 0; a broken `DayKey` drops the day's
+counters; `DayOpponents` keeps at most 32 keys of digits and dashes. A new season or UTC day is applied
+when the record is used (`RecreationService`), not on load. `ProcessedMatches`: strings of 1-64
+characters, the newest 50. `SeasonClaims`: whole numbers ≥ 0, the newest 24. Writers:
+`RecreationService` → all three, `Furniture` (office-supply drops) and `Coins` (fees, refunds, rewards
+through `SessionService`). A player who leaves mid-match is recorded just before their data is saved
+for the last time (`PlayerDataService.beforeRelease`).
 
 Player history and the admin audit log are **not** player data either: DataStore `PlayerHistory`,
 keys `Player_<UserId>` (last 200 entries) and `Admin_<YYYYMMDD>` (up to 500 per UTC day), written

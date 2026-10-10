@@ -11,6 +11,8 @@ local CustomBossRules =
 	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CustomBossRules"))
 local FurnitureRules =
 	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("FurnitureRules"))
+local PickleballRules =
+	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PickleballRules"))
 local ProgressionRules =
 	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ProgressionRules"))
 local LevelRewardRules =
@@ -201,6 +203,7 @@ local function parse(payload: unknown): Types.ProfileSnapshot?
 		OfficePrivacy = if FurnitureRules.isPrivacy(data.OfficePrivacy)
 			then data.OfficePrivacy :: string
 			else "Public",
+		Recreation = PickleballRules.sanitizeRecord(data.Recreation),
 	}
 end
 

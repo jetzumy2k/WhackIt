@@ -788,4 +788,68 @@ return function()
 			expect(data.OfficePrivacy).to.equal("Public")
 		end)
 	end)
+
+	describe("PlayerDataSchema v12 (pickleball)", function()
+		local PickleballConfig = require(ReplicatedStorage.Config.PickleballConfig)
+		local PickleballRules = require(ReplicatedStorage.Shared.PickleballRules)
+
+		it("starts existing players unrated with no matches, and touches nothing else", function()
+			local data = validData()
+			data.SchemaVersion = 11
+			expect((PlayerDataSchema.prepare(data))).to.equal(true)
+			local record = data.Recreation :: PickleballRules.Record
+			expect(record.Rating).to.equal(PickleballConfig.Rating.Start)
+			expect(record.TotalWins).to.equal(0)
+			expect(#(data.ProcessedMatches :: { string })).to.equal(0)
+			expect(#(data.SeasonClaims :: { number })).to.equal(0)
+			expect(data.Coins).to.equal(250)
+		end)
+
+		it("keeps a saved record exactly", function()
+			local data = validData()
+			data.Recreation = {
+				Rating = 1234,
+				SeasonId = 740,
+				Wins = 3,
+				Losses = 2,
+				TotalWins = 10,
+				TotalLosses = 8,
+				DayKey = "2026-10-10",
+				DayMatches = 4,
+				DayOpponents = { ["5-9"] = 2 },
+			}
+			data.ProcessedMatches = { "m1", "m2" }
+			data.SeasonClaims = { 738, 739 }
+			PlayerDataSchema.prepare(data)
+			PlayerDataSchema.prepare(data) -- loading again changes nothing
+			local record = data.Recreation :: PickleballRules.Record
+			expect(record.Rating).to.equal(1234)
+			expect(record.SeasonId).to.equal(740)
+			expect(record.DayOpponents["5-9"]).to.equal(2)
+			expect((data.ProcessedMatches :: { string })[2]).to.equal("m2")
+			expect((data.SeasonClaims :: { number })[1]).to.equal(738)
+		end)
+
+		it("repairs broken pickleball fields and bounds the lists", function()
+			local data = validData()
+			data.Recreation = "champion"
+			local many: { unknown } = {}
+			for index = 1, PickleballConfig.MaxProcessedMatches + 5 do
+				table.insert(many, "m" .. index)
+			end
+			table.insert(many, 42)
+			data.ProcessedMatches = many
+			data.SeasonClaims = { -1, 2.5, "x", 7 } :: { unknown }
+			expect((PlayerDataSchema.prepare(data))).to.equal(true)
+			expect((data.Recreation :: PickleballRules.Record).Rating).to.equal(
+				PickleballConfig.Rating.Start
+			)
+			local matches = data.ProcessedMatches :: { string }
+			expect(#matches).to.equal(PickleballConfig.MaxProcessedMatches)
+			expect(matches[#matches]).to.equal("m" .. (PickleballConfig.MaxProcessedMatches + 5))
+			local claims = data.SeasonClaims :: { number }
+			expect(#claims).to.equal(1)
+			expect(claims[1]).to.equal(7)
+		end)
+	end)
 end

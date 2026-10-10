@@ -33,7 +33,7 @@ In an office, a bar at the bottom says whose office it is, with **✏️ Edit** 
 and **🚪 Lobby**.
 
 ## Furniture
-32 items in six categories (`Config/FurnitureConfig`), each a few plain parts (at most 12, no uploads):
+38 items in seven categories (`Config/FurnitureConfig`), each a few plain parts (at most 12, no uploads):
 
 | Category | Items |
 |---|---|
@@ -42,6 +42,7 @@ and **🚪 Lobby**.
 | Plants & storage | Small Plant, Tall Plant, Filing Cabinet, Bookshelf |
 | Decor | Round Rug, Office Rug, Floor Lamp, Whiteboard, Giant Stress Ball, Coat Rack, Motivational Poster |
 | Level rewards | Executive Desk (Lv 20), Aquarium (Lv 30), Zen Fountain (Lv 50), Golden Hammer Statue (Lv 100) |
+| Office supplies | Paddle Rack, Ball Bucket, Standing Fan, Mini Fridge, Snack Machine, Neon CALM Sign (pickleball drops) |
 | Trophies | Golden Hammer Trophy, Zen Bonsai, Champion Plaque |
 
 - **Basic** items are **free and unlimited** (owner decision 2026-10-09): no grind for basic
@@ -49,9 +50,9 @@ and **🚪 Lobby**.
 - **Level** items are level rewards (docs/GAMEPLAY_RULES.md "Level rewards"): free and unlimited from
   their level on; the strip shows "🔒 Lv 30" until then. Placed ones stay (and can be moved) if an admin
   lowers the level; new ones need the level back.
-- **Special** items (Trophies) are owned in counts (`PlayerData.Furniture`). For now admins give them
-  (Admin → Rewards → *Special office furniture*); pickleball office-supply drops (Phase 4) and quests
-  (Phase 2b) will too.
+- **Special** items (Office supplies, Trophies) are owned in counts (`PlayerData.Furniture`). They come
+  from pickleball office-supply drops (docs/PICKLEBALL.md "Prizes") and admin rewards (Admin → Rewards
+  → *Special office furniture*); quests (Phase 2b) will add more.
 - **New offices start furnished:** a Computer Desk against the back wall, its chair and a small plant.
   An office emptied by its owner stays empty.
 

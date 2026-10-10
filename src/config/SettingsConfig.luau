@@ -20,6 +20,12 @@ local list: { Setting } = {
 		Label = "Reduced motion",
 		Description = "Panels and cards appear without zooming, bars jump to their new value, hits don't shake the camera and sprinting doesn't zoom out. Roblox's own Reduced Motion setting turns this on too.",
 	},
+	{
+		Key = "HideChallenges",
+		Default = false,
+		Label = "Hide challenge notices",
+		Description = "Other players' pickleball challenges don't pop up as cards. You can still see and accept them in the Pickleball panel.",
+	},
 }
 
 local byKey: { [string]: Setting } = {}

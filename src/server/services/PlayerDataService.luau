@@ -56,6 +56,7 @@ local PlayerDataService = {}
 local store: Store = ProfileStore.New(DataConfig.StoreName, PlayerDataSchema.template())
 local profiles: { [Player]: Profile } = {}
 local loadedCallbacks: { LoadedCallback } = {}
+local releaseCallbacks: { LoadedCallback } = {}
 local loading: { [Player]: boolean } = {}
 
 local function keyFor(player: Player): string
@@ -176,10 +177,35 @@ function PlayerDataService.onLoaded(callback: LoadedCallback): ()
 	end
 end
 
+-- Runs `callback` when a player with loaded data leaves, just before that
+-- data is saved for the last time and released, so a last change (e.g. a
+-- pickleball match lost by leaving) is kept. Must not yield; an error is
+-- logged and never stops the save.
+function PlayerDataService.beforeRelease(callback: LoadedCallback): ()
+	table.insert(releaseCallbacks, callback)
+end
+
 function PlayerDataService.init(): ()
 	Players.PlayerAdded:Connect(load)
 	Players.PlayerRemoving:Connect(function(player: Player)
 		local profile = profiles[player]
+		if profile then
+			local data = asPlayerData(profile.Data)
+			for _, callback in releaseCallbacks do
+				local ok, message = pcall(function()
+					callback(player, data)
+				end)
+				if not ok then
+					warn(
+						string.format(
+							"[PlayerData] beforeRelease failed for %d: %s",
+							player.UserId,
+							tostring(message)
+						)
+					)
+				end
+			end
+		end
 		profiles[player] = nil
 		if profile then
 			profile:EndSession() -- saves and releases the session lock

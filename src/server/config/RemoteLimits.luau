@@ -43,6 +43,19 @@ local RemoteLimits = table.freeze({
 		RefillPerSecond = 0.5,
 	}),
 
+	-- Pickleball challenges, accepts, cancels and forfeits: rare actions.
+	Rec = table.freeze({
+		Capacity = 4,
+		RefillPerSecond = 0.5,
+	}),
+
+	-- Pickleball swings: PickleballConfig.Shot.SwingCooldown (0.5 s) is the
+	-- gameplay limit; this only stops floods.
+	RecSwing = table.freeze({
+		Capacity = 6,
+		RefillPerSecond = 4,
+	}),
+
 	-- At most one rejection warning per player every 5 seconds, so a flooding
 	-- client can't flood the server log too.
 	RejectLog = table.freeze({

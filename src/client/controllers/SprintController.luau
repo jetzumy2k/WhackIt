@@ -19,7 +19,10 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
+local Attributes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Attributes"))
 local GameConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("GameConfig"))
+local PickleballConfig =
+	require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("PickleballConfig"))
 
 local Responsive = require(script.Parent.Parent.Lib.Responsive)
 local UiTokens = require(script.Parent.Parent.Lib.UiTokens)
@@ -51,12 +54,20 @@ local function humanoid(): Humanoid?
 	return if character then character:FindFirstChildOfClass("Humanoid") else nil
 end
 
+-- During a pickleball match everyone walks at the same fixed speed.
+local function inMatch(): boolean
+	local match = localPlayer:GetAttribute(Attributes.RecMatch)
+	return typeof(match) == "string" and match ~= ""
+end
+
 local function apply(): ()
-	local wantSprint = held > 0 or toggled
+	local playing = inMatch()
+	local wantSprint = (held > 0 or toggled) and not playing
 	local currentHumanoid = humanoid()
 	if currentHumanoid then
-		currentHumanoid.WalkSpeed = if wantSprint
-			then GameConfig.SprintSpeed
+		currentHumanoid.WalkSpeed = if playing
+			then PickleballConfig.Game.WalkSpeed
+			elseif wantSprint then GameConfig.SprintSpeed
 			else GameConfig.WalkSpeed
 	end
 	if touchButton then
@@ -164,6 +175,11 @@ function SprintController.start(): ()
 		end
 	end)
 
+	-- A pickleball match starting or ending switches the walk speed.
+	localPlayer:GetAttributeChangedSignal(Attributes.RecMatch):Connect(function()
+		toggled = false
+		apply()
+	end)
 	localPlayer.CharacterAdded:Connect(function(character: Model)
 		character:WaitForChild("Humanoid", 10)
 		toggled = false

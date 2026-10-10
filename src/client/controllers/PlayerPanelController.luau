@@ -57,6 +57,7 @@ local AudioController = require(script.Parent.AudioController)
 local BagController = require(script.Parent.BagController)
 local EventController = require(script.Parent.EventController)
 local PetController = require(script.Parent.PetController)
+local PickleballController = require(script.Parent.PickleballController)
 local LeaderboardController = require(script.Parent.LeaderboardController)
 local OfficeController = require(script.Parent.OfficeController)
 local PanelKit = require(script.Parent.Parent.Lib.PanelKit)
@@ -754,6 +755,26 @@ function PlayerPanelController.start(): ()
 			PanelKit.text(my.Body, OfficeConfig.PrivacyText[snapshot.OfficePrivacy] or "", "Muted")
 		end
 
+		local pickleball = PanelKit.section(content, "🏓 Pickleball", false, true)
+		local openChallenges = #PickleballController.challenges()
+		PanelKit.text(
+			pickleball.Body,
+			if openChallenges > 0
+				then string.format(
+					"%d open challenge(s) right now. Play singles or doubles against other players at the Recreation Center.",
+					openChallenges
+				)
+				else "Play singles or doubles against other players at the Recreation Center behind the office.",
+			"Muted"
+		)
+		local pickleballRow = PanelKit.row(pickleball.Body)
+		local pickleballButton = PanelKit.button(pickleballRow, "🏓 Pickleball", C.Good)
+		pickleballButton.Size = UDim2.new(0.5, -4, 1, 0)
+		pickleballButton.Activated:Connect(function()
+			window:close()
+			PickleballController.open()
+		end)
+
 		local list = PanelKit.section(content, "Offices in this server", false, true)
 		local others: { OfficeController.Office } = {}
 		for _, office in OfficeController.offices() do
@@ -852,6 +873,7 @@ function PlayerPanelController.start(): ()
 				"Hammer vending machine: beside the stairs (press E).",
 				"Senior offices: up the stairs (Level 10+).",
 				"Outside: the Garden, the Coffee Corner and the Stress-Relief Zone.",
+				"Pickleball: the Recreation Center behind the office (🏢 Social → Pickleball).",
 			}
 		do
 			PanelKit.text(where.Body, line)
@@ -965,6 +987,11 @@ function PlayerPanelController.start(): ()
 	-- Live values: in place on the Profile page, a rebuild for the Hammers page.
 	OfficeController.Changed:Connect(function()
 		if activeTab == "Social" then
+			render()
+		end
+	end)
+	PickleballController.Changed:Connect(function()
+		if activeTab == "Social" and window:isOpen() then
 			render()
 		end
 	end)

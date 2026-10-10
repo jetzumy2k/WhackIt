@@ -179,8 +179,8 @@ building, offices, stairs, elevator, leaderboard and spawn are unchanged.
 - **Clear paths:** every walkway and the entrance lane are kept free of props, and the spawn has an
   open walk out of the lobby (both spec-checked). The paths inside (bosses, stairs, elevator,
   leaderboard) are untouched.
-- **Boundary:** invisible walls (60 studs tall, can't be clicked or raycast) at x ±130, z -130 / +150,
-  with a low hedge just inside them. The street, the ring of trees and the skyline are scenery
+- **Boundary:** invisible walls (60 studs tall, can't be clicked or raycast) at x ±130, z -210 / +150
+  (the north edge moved from -130 for the Recreation Center, 2026-10-10), with a low hedge just inside them. The street, the ring of trees and the skyline are scenery
   outside the walls.
 - **No traps or falls:** the ground is solid Terrain everywhere inside the walls; the pond is a thin
   surface you walk across (no deep water). `Workspace.FallenPartsDestroyHeight` is -60, so anyone
@@ -191,6 +191,8 @@ building, offices, stairs, elevator, leaderboard and spawn are unchanged.
   anchored, grouped in one folder per area under `Workspace.Outdoors.Campus`. No lights or particle
   emitters (lamp globes just glow softly). Spec cap: 500 parts.
 - Admins can now also place custom bosses outdoors (they're placed on the ground under the admin).
+- **Recreation Center** (2026-10-10): north of the building, reached by a walkway from the loop; two
+  pickleball courts for matches between players. Rules, prizes and rating: docs/PICKLEBALL.md.
 
 ## Progression (Phase 4, decided 2026-10-05)
 Rules in `src/shared/ProgressionRules.luau` (server enforces, client displays); values in `BossConfig`

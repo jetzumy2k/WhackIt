@@ -252,6 +252,46 @@
           }
         },
 
+        "Rec": {
+          "$className": "Folder",
+
+          "Challenge": {
+            "$className": "RemoteEvent"
+          },
+
+          "Accept": {
+            "$className": "RemoteEvent"
+          },
+
+          "Cancel": {
+            "$className": "RemoteEvent"
+          },
+
+          "Swing": {
+            "$className": "RemoteEvent"
+          },
+
+          "Forfeit": {
+            "$className": "RemoteEvent"
+          },
+
+          "Challenges": {
+            "$className": "RemoteEvent"
+          },
+
+          "MatchState": {
+            "$className": "RemoteEvent"
+          },
+
+          "Shot": {
+            "$className": "RemoteEvent"
+          },
+
+          "Result": {
+            "$className": "RemoteEvent"
+          }
+        },
+
         "Events": {
           "$className": "Folder",
 

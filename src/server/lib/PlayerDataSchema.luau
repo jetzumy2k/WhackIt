@@ -23,6 +23,8 @@ local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
 local OfficeConfig = require(ReplicatedStorage.Config.OfficeConfig)
 local PetConfig = require(ReplicatedStorage.Config.PetConfig)
 local PetRules = require(ReplicatedStorage.Shared.PetRules)
+local PickleballConfig = require(ReplicatedStorage.Config.PickleballConfig)
+local PickleballRules = require(ReplicatedStorage.Shared.PickleballRules)
 local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
 local SettingsRules = require(ReplicatedStorage.Shared.SettingsRules)
 local StoreConfig = require(ReplicatedStorage.Config.StoreConfig)
@@ -70,6 +72,10 @@ export type PlayerData = {
 	OfficeLayout: FurnitureRules.Layout, -- placed furniture, room-local
 	NextOfficeItemId: number, -- next layout entry id (never reused)
 	OfficePrivacy: string, -- "Public" | "Friends" | "Private"
+	-- v12 (docs/PICKLEBALL.md)
+	Recreation: PickleballRules.Record, -- rating, wins/losses, today's reward caps
+	ProcessedMatches: { string }, -- recent rewarded match ids, so a match pays once
+	SeasonClaims: { number }, -- seasons whose prizes were handed out
 }
 
 export type PendingGift = {
@@ -85,7 +91,7 @@ export type Migration = (data: RawData) -> ()
 
 local PlayerDataSchema = {}
 
-PlayerDataSchema.CURRENT_VERSION = 11
+PlayerDataSchema.CURRENT_VERSION = 12
 
 -- Upper bound for counters; far beyond legitimate play, small enough to stay
 -- an exact integer and to keep leaderboard values sane.
@@ -183,6 +189,13 @@ PlayerDataSchema.MIGRATIONS = table.freeze({
 		data.NextOfficeItemId = nil
 		data.OfficePrivacy = OfficeConfig.DefaultPrivacy
 	end,
+	[12] = function(data: RawData)
+		-- v11 -> v12: pickleball. Everyone starts unrated (sanitize() fills in
+		-- the starting record) with no matches played or prizes claimed.
+		data.Recreation = nil
+		data.ProcessedMatches = {}
+		data.SeasonClaims = {}
+	end,
 }) :: { [number]: Migration }
 
 -- Most recent purchase ids remembered for duplicate-receipt protection. Roblox
@@ -190,6 +203,8 @@ PlayerDataSchema.MIGRATIONS = table.freeze({
 PlayerDataSchema.MAX_PROCESSED_PURCHASES = 200
 -- Same idea for claimed gifts: an inbox entry is removed right after it's claimed.
 PlayerDataSchema.MAX_CLAIMED_GIFTS = 200
+-- Season prize claims kept (newest last); older seasons are long settled.
+PlayerDataSchema.MAX_SEASON_CLAIMS = 24
 local BUFF_KINDS = { "Xp", "Damage", "CritDamage" }
 
 function PlayerDataSchema.template(): PlayerData
@@ -225,6 +240,9 @@ function PlayerDataSchema.template(): PlayerData
 		OfficeLayout = FurnitureRules.defaultLayout(),
 		NextOfficeItemId = #FurnitureRules.defaultLayout() + 1,
 		OfficePrivacy = OfficeConfig.DefaultPrivacy,
+		Recreation = PickleballRules.defaultRecord(0),
+		ProcessedMatches = {},
+		SeasonClaims = {},
 	}
 end
 
@@ -498,6 +516,37 @@ function PlayerDataSchema.sanitize(data: RawData): ()
 	if not FurnitureRules.isPrivacy(data.OfficePrivacy) then
 		data.OfficePrivacy = OfficeConfig.DefaultPrivacy
 	end
+
+	-- Pickleball: the record repaired field by field (a new season's reset
+	-- happens when it's used, RecreationService), match ids and season
+	-- claims bounded, newest last.
+	data.Recreation = PickleballRules.sanitizeRecord(data.Recreation)
+	local matches: { string } = {}
+	local rawMatches = data.ProcessedMatches
+	if typeof(rawMatches) == "table" then
+		for _, id in rawMatches :: { unknown } do
+			if typeof(id) == "string" and #id > 0 and #id <= 64 then
+				table.insert(matches, id)
+			end
+		end
+	end
+	while #matches > PickleballConfig.MaxProcessedMatches do
+		table.remove(matches, 1)
+	end
+	data.ProcessedMatches = matches
+	local claims: { number } = {}
+	local rawClaims = data.SeasonClaims
+	if typeof(rawClaims) == "table" then
+		for _, id in rawClaims :: { unknown } do
+			if isFiniteNumber(id) and (id :: number) >= 0 and (id :: number) % 1 == 0 then
+				table.insert(claims, id :: number)
+			end
+		end
+	end
+	while #claims > PlayerDataSchema.MAX_SEASON_CLAIMS do
+		table.remove(claims, 1)
+	end
+	data.SeasonClaims = claims
 
 	-- Must be a hammer the player actually owns.
 	local hammerId = data.EquippedHammerId
