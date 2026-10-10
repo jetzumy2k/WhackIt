@@ -143,6 +143,23 @@ The "Elevator" prompt on each door only opens the client's panel; the old "Ride 
 prompts are gone. `ExecutiveService` still returns anyone on the Executive Floor without access, and
 `TowerService` anyone on the 4th floor below Level 30.
 
+## Showcase: the Office Showcase (docs/SHOWCASE.md, 2026-10-10)
+All client -> server remotes: `maxArgs` 2, `RemoteLimits.Showcase` (burst 4, 0.5/s). A player has at
+most one showcase request in progress (each may wait on a DataStore); a second one gets "One moment...".
+`userId` arguments: whole numbers, not 0, |id| < 2^53 (Studio test players are negative), else rejected.
+
+| Remote | Direction | Payload | Server checks / handling |
+|---|---|---|---|
+| `Showcase.Publish` | client -> server | none | data loaded; `ShowcaseRules.canPublish` (Level ≥ 5, ≥ 5 placed items, 5 min since the last publish); layout and theme copied **from saved data**; one `UpdateAsync` (`ShowcaseRules.publish`: likes, visits and moderation kept, a removed office refused for 7 days, then to review); Newest board updated. Toast + `Showcase.State` Mine |
+| `Showcase.Unpublish` | client -> server | none | snapshot `Published = false`, off the Newest board. Toast + State |
+| `Showcase.List` | both | client: `tab` ("Featured", "Newest", "Top"; "Review" admins only, else rejected; "Mine" answers with `Showcase.State` Mine). Server: `{ Tab, Available, Global, Entries = { { UserId, Name, Items, Likes, Visits, Reports, Liked } } }` | pages and snapshots cached 60 s / 120 s; only visible offices the player hasn't hidden (Review: only offices in review) |
+| `Showcase.Visit` | client -> server | `userId` | not in a pickleball match or team mission; the snapshot is visible (or yours, or you're an admin); a copy room showing it or a free one (8), else "busy"; `noteTeleport` then the move. The first visit per office per session counts a visit and the quest/event activity `VisitOffice` |
+| `Showcase.Leave` | client -> server | none | in a copy room: back to the lobby (the door prompt does the same) |
+| `Showcase.Like` | client -> server | `userId` | you stand in that office's copy; not your own; not liked before (saved `Liked`, 300); batched +1 like (saved every 60 s, also "Top this week") |
+| `Showcase.Report` | client -> server | `userId`, `reason` (one of `ShowcaseConfig.ReportReasons`, else rejected) | not your own; hidden for you at once (saved `Hidden`, 100) and you're sent out of its copy; `ShowcaseRules.report` in one `UpdateAsync` (each reporter once); 3 reporters (6 after an approval) put it in review (hidden for everyone, Review board). Logged on the server |
+| `Showcase.Moderate` | client -> server | `action` ("Approve", "Remove", "Feature", "Unfeature"), `userId` | admins only (`AdminService.isAdmin`), else rejected. Approve: shown again, reports cleared, approved. Remove: taken down, off every board, viewers sent out. Feature/Unfeature: the Featured list (12, newest kept). Every action in the admin history (`HistoryService.recordAdmin`, action "Showcase") |
+| `Showcase.State` | server -> one client | `{ Kind = "Mine", Available, Global, Reached, Published, Moderation, Likes, Visits, CanPublish, Reason }` or `{ Kind = "Room", OwnerId?, Name, Likes, Visits, Liked, Own, Moderation? }` | Mine on join and after a publish; Room whenever the player enters or leaves a copy (Moderation only for admins) |
+
 ## `Shop.BuyHammer`: client -> server
 | | |
 |---|---|

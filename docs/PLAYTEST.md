@@ -795,3 +795,24 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 534 | Claim a quest / reach an event tier / clear a mission / win a pickleball match | Each card has its icon and the sunburst; a lost match or failed mission has the icon but no sunburst |
 | 535 | A challenge card (pickleball or team mission) | Icon disc (🏓 / 🤝), no sunburst, the countdown bar, JOIN / ACCEPT still work |
 | 536 | Settings → Reduced motion on | Cards appear at full size at once, no sunburst |
+
+### Office Showcase (Phase 6a) — Studio with 2 players (Test → Clients and Servers), then a published place
+| # | Steps | Expected |
+|---|---|---|
+| 537 | 🏢 Social | A "🌟 Office Showcase" section with Open the Showcase and My showcase |
+| 538 | Open the Showcase in Studio with API access off | Tabs Featured, Newest, Top this week, My showcase; "🧪 Studio test" notes; empty notices |
+| 539 | My showcase below Level 5 or with under 5 items | Share is greyed out and says what's missing |
+| 540 | Admin → Set level 5+, place 5+ items, Share my office | Toast "Your office is in the Showcase!"; status "Shared · ❤️ 0 · 👀 0"; Share turns into Update (greyed for 5 min) |
+| 541 | Player 2: Newest | Player 1's card with avatar, name, item count; Visit |
+| 542 | Visit | Teleported into a copy with the same furniture and theme, "🌟 Name's Office" over the door; the bar shows Like / Report / Lobby; nothing can be edited |
+| 543 | Like, then Like again | Button turns "❤️ Liked"; second press does nothing; after ~1 min the card and Top this week show the like |
+| 544 | Player 1: See it | Your own copy; the bar shows "Your showcase" without Like / Report |
+| 545 | Player 1 changes the office, waits 5 min, Update | A new visit shows the new layout; likes kept |
+| 546 | Player 2: Report → pick a reason | Toast thanks; sent to the lobby; the office no longer shows in any tab for player 2 |
+| 547 | Admin: Review tab (needs 3 reporters, or set HideAfterReports to 1 for the test) | The office listed with its report count; Visit shows a second bar with Approve / Remove / Feature / Unfeature and "Status: Review" |
+| 548 | Admin: Approve | Shown again in Newest; Admin → History has "Showcase Approve" |
+| 549 | Admin: Feature | It appears under ⭐ Featured |
+| 550 | Admin: Remove while player 2 is inside | Player 2 is sent to the lobby; gone from every tab; player 1's My showcase says a moderator took it down and Share explains the 7-day wait |
+| 551 | Take my office out of the Showcase | Gone from Newest; status "isn't shared yet" |
+| 552 | Published place, two servers | An office shared in server A shows in server B's Newest within about a minute and can be visited while its owner is offline |
+

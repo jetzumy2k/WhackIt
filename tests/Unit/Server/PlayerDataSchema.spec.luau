@@ -955,4 +955,31 @@ return function()
 			expect(record.Cleared).to.equal(5)
 		end)
 	end)
+	describe("PlayerDataSchema v16 (office showcase)", function()
+		local ShowcaseRules = require(ReplicatedStorage.Shared.ShowcaseRules)
+
+		it("starts existing players with nothing shared, touching nothing else", function()
+			local data = validData()
+			data.SchemaVersion = 15
+			data.Showcase = { Published = true, PublishedAt = 5, Liked = { 1, 2 } } -- can't exist before v16
+			expect((PlayerDataSchema.prepare(data))).to.equal(true)
+			local state = data.Showcase :: ShowcaseRules.State
+			expect(state.Published).to.equal(false)
+			expect(#state.Liked).to.equal(0)
+			expect(data.Coins).to.equal(250)
+			expect(data.SchemaVersion).to.equal(PlayerDataSchema.CURRENT_VERSION)
+		end)
+
+		it("keeps saved showcase state", function()
+			local data = validData()
+			data.Showcase = { Published = true, PublishedAt = 1000, Liked = { 7 }, Hidden = { 9 } }
+			PlayerDataSchema.prepare(data)
+			PlayerDataSchema.prepare(data)
+			local state = data.Showcase :: ShowcaseRules.State
+			expect(state.Published).to.equal(true)
+			expect(state.PublishedAt).to.equal(1000)
+			expect(state.Liked[1]).to.equal(7)
+			expect(state.Hidden[1]).to.equal(9)
+		end)
+	end)
 end

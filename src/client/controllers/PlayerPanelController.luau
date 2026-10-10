@@ -66,6 +66,7 @@ local PanelKit = require(script.Parent.Parent.Lib.PanelKit)
 local Responsive = require(script.Parent.Parent.Lib.Responsive)
 local ProgressController = require(script.Parent.ProgressController)
 local SettingsController = require(script.Parent.SettingsController)
+local ShowcaseController = require(script.Parent.ShowcaseController)
 local ShopController = require(script.Parent.ShopController)
 local StoreController = require(script.Parent.StoreController)
 
@@ -809,6 +810,27 @@ function PlayerPanelController.start(): ()
 		missionButton.Activated:Connect(function()
 			window:close()
 			MissionController.open()
+		end)
+
+		local showcase = PanelKit.section(content, "🌟 Office Showcase", false, true)
+		PanelKit.text(
+			showcase.Body,
+			"Visit the best offices from every server and share your own. "
+				.. ShowcaseController.status(),
+			"Muted"
+		)
+		local showcaseRow = PanelKit.row(showcase.Body)
+		local gallery = PanelKit.button(showcaseRow, "🌟 Open the Showcase", ACCENT)
+		gallery.Size = UDim2.new(0.5, -4, 1, 0)
+		gallery.Activated:Connect(function()
+			window:close()
+			ShowcaseController.open(nil)
+		end)
+		local share = PanelKit.button(showcaseRow, "🏢 My showcase", C.Good)
+		share.Size = UDim2.new(0.5, -4, 1, 0)
+		share.Activated:Connect(function()
+			window:close()
+			ShowcaseController.open("Mine")
 		end)
 
 		local list = PanelKit.section(content, "Offices in this server", false, true)

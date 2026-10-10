@@ -81,6 +81,11 @@ local function isAdmin(player: Player): boolean
 	return admins[player] == true
 end
 
+-- For other services with admin-only actions (ShowcaseService moderation).
+function AdminService.isAdmin(player: Player): boolean
+	return isAdmin(player)
+end
+
 local function toast(player: Player, message: string): ()
 	ToastRemote:FireClient(player, string.sub(message, 1, 120))
 end

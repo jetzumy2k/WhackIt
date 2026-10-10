@@ -30,6 +30,7 @@ local PickleballRules = require(ReplicatedStorage.Shared.PickleballRules)
 local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
 local QuestRules = require(ReplicatedStorage.Shared.QuestRules)
 local SettingsRules = require(ReplicatedStorage.Shared.SettingsRules)
+local ShowcaseRules = require(ReplicatedStorage.Shared.ShowcaseRules)
 local StoreConfig = require(ReplicatedStorage.Config.StoreConfig)
 
 export type PlayerData = {
@@ -85,6 +86,8 @@ export type PlayerData = {
 	DailyEvent: DailyEventRules.State, -- today's Event of the Day points and tiers paid
 	-- v15 (docs/MISSIONS.md)
 	Missions: MissionRules.Record, -- today's rewarded team missions, missions cleared
+	-- v16 (docs/SHOWCASE.md)
+	Showcase: ShowcaseRules.State, -- last publish, offices liked and hidden
 }
 
 export type PendingGift = {
@@ -100,7 +103,7 @@ export type Migration = (data: RawData) -> ()
 
 local PlayerDataSchema = {}
 
-PlayerDataSchema.CURRENT_VERSION = 15
+PlayerDataSchema.CURRENT_VERSION = 16
 
 -- Upper bound for counters; far beyond legitimate play, small enough to stay
 -- an exact integer and to keep leaderboard values sane.
@@ -218,6 +221,10 @@ PlayerDataSchema.MIGRATIONS = table.freeze({
 		-- v14 -> v15: team missions. Nobody has played one yet.
 		data.Missions = nil
 	end,
+	[16] = function(data: RawData)
+		-- v15 -> v16: the Office Showcase. Nothing published, liked or hidden yet.
+		data.Showcase = nil
+	end,
 }) :: { [number]: Migration }
 
 -- Most recent purchase ids remembered for duplicate-receipt protection. Roblox
@@ -268,6 +275,7 @@ function PlayerDataSchema.template(): PlayerData
 		Quests = QuestRules.default(),
 		DailyEvent = DailyEventRules.default(),
 		Missions = MissionRules.defaultRecord(),
+		Showcase = ShowcaseRules.defaultState(),
 	}
 end
 
@@ -553,6 +561,7 @@ function PlayerDataSchema.sanitize(data: RawData): ()
 	-- only for the saved day, so nothing pays twice).
 	data.DailyEvent = DailyEventRules.sanitize(data.DailyEvent)
 	data.Missions = MissionRules.sanitizeRecord(data.Missions)
+	data.Showcase = ShowcaseRules.sanitizeState(data.Showcase)
 	local matches: { string } = {}
 	local rawMatches = data.ProcessedMatches
 	if typeof(rawMatches) == "table" then

@@ -42,6 +42,10 @@ on pickleball. This plan splits Phase 2 and moves Recreation forward:
 | D14 | Tower floors | ✅ (2026-10-10) floor 4 "Department Heads" with 5 Principal bosses, plus a Rooftop Lounge (social hub) | 3 |
 | D15 | Floor navigation | ✅ (2026-10-10) an elevator with a floor panel (locked floors show requirement and progress); stairs to floor 2 stay | 3 |
 | D16 | New boss tier | ✅ (2026-10-10) Principal bosses: Level 30 + 1 defeat of the Senior version; the CEO's unlock and health unchanged | 3 |
+| D17 | Offline office visits | ✅ (2026-10-10) a Showcase Gallery: players publish a snapshot of their office; anyone opens a read-only copy from Featured / Newest / Top this week, likes and visit counts | 6 |
+| D18 | Design contests | ✅ (2026-10-10) weekly themes from a rotation: days 1-5 enter (submit your layout), days 6-7 vote, results on Monday; every entrant rewarded, top places get trophies, plaques, titles | 6 |
+| D19 | Contest scoring | ✅ (2026-10-10) voters rate random entries 1-5 stars (not their own, once per entry, Lv 5+, a daily limit); score = a fair average that needs enough votes + a server-computed theme-fit bonus | 6 |
+| D20 | Moderation | ✅ (2026-10-10) Report hides an office for the reporter at once; several reports hide it for everyone until an admin approves or removes it; no player-typed text | 6 |
 | D9 | Quest rewards | ✅ (2026-10-10) coins + XP; weekly quests add an office-supply roll; a bonus for claiming all 3 dailies | 2b |
 
 ## 3. Phase 1: GUI foundation
@@ -249,6 +253,12 @@ script (fake swings, swings out of reach, racing accepts, leaving mid-match).
 - **3 Tower:** new floors stacked above the existing building, behind the existing Level/unlock rules.
   Re-check every fixed-position spec.
 - **6 Showcase:** offline office visits (read-only layout), contests, voting limits, moderation.
+- **6a Office Showcase: ✅ complete 2026-10-10 on branch `feat/phase6a-showcase`** (docs/SHOWCASE.md,
+  schema v16, D17/D20). Snapshots in DataStore `OfficeShowcase`, lists in OrderedDataStores, read-only
+  copies in 8 copy rooms next to the Office Wing, likes (once, while visiting) and visits batched every
+  60 s, reports with a per-player hide and a review queue, admin Approve / Remove / Feature from the copy's
+  bar. In Studio without API access it runs on a store in that server only. `scripts/check.ps1` passes;
+  Studio specs **804 passed**; playtest (`docs/PLAYTEST.md` 537-552) reported okay by the owner. **6b weekly contests** (D18/D19) next.
 
 ## 7. Files expected to change (2a + 4)
 New: `src/config/{FurnitureConfig,PickleballConfig}.luau`, `src/shared/{FurnitureRules,PickleballRules,BallFlight}.luau`,

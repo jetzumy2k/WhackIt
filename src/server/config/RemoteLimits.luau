@@ -61,6 +61,13 @@ local RemoteLimits = table.freeze({
 		RefillPerSecond = 0.5,
 	}),
 
+	-- Office Showcase: gallery pages, visits, likes, reports, publishing and
+	-- admin moderation. Each may touch a DataStore, so keep them slow.
+	Showcase = table.freeze({
+		Capacity = 4,
+		RefillPerSecond = 0.5,
+	}),
+
 	-- Quest claims and rerolls: a few taps in a row are fine.
 	Quests = table.freeze({
 		Capacity = 6,
