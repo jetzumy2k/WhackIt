@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local ArenaConfig = require(ReplicatedStorage.Config.ArenaConfig)
+local PickleballConfig = require(ReplicatedStorage.Config.PickleballConfig)
 local CampusBuilder = require(ServerScriptService.Lib.CampusBuilder)
 
 local OutdoorBuilder = {}
@@ -63,6 +64,27 @@ local function fillGround(terrain: Terrain): ()
 	terrain:FillBlock(
 		CFrame.new(0, -2.8, STREET.NorthZ - 3),
 		Vector3.new(GROUND_SIZE, 4, 6),
+		Enum.Material.Concrete
+	)
+end
+
+-- Concrete (no grass) under the headquarters and the Recreation Center.
+-- Terrain grass grows animated blades that poke up through thin floors laid
+-- on it (they showed through the lobby and podium room floors).
+local function underBuildings(terrain: Terrain): ()
+	local margin = 6
+	local half = ArenaConfig.BuildingHalfWidth + margin
+	local minZ = ArenaConfig.BuildingNorthZ - margin
+	local maxZ = ArenaConfig.BuildingSouthZ + margin
+	terrain:FillBlock(
+		CFrame.new(0, -3, (minZ + maxZ) / 2),
+		Vector3.new(half * 2, 4, maxZ - minZ),
+		Enum.Material.Concrete
+	)
+	local rec = PickleballConfig.Center.Area
+	terrain:FillBlock(
+		CFrame.new((rec.MinX + rec.MaxX) / 2, -3, (rec.MinZ + rec.MaxZ) / 2),
+		Vector3.new(rec.MaxX - rec.MinX + margin * 2, 4, rec.MaxZ - rec.MinZ + margin * 2),
 		Enum.Material.Concrete
 	)
 end
@@ -179,6 +201,7 @@ function OutdoorBuilder.build(parent: Instance, terrain: Terrain): Folder
 	folder.Name = "Outdoors"
 	fillGround(terrain)
 	CampusBuilder.paint(terrain)
+	underBuildings(terrain)
 	streetMarkings(folder)
 	trees(folder)
 	skyline(folder)
