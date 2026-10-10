@@ -6,8 +6,8 @@ elevator that serves every floor, with a floor panel showing what's where and wh
 The Rooftop Lounge (Phase 3b) comes next.
 
 Code: `Config/ArenaConfig` (`Tower`, `DepartmentFloor`, the Principal offices), `Config/BossConfig`
-(the Principal tier), `Lib/OfficeBuilder` (the 4th floor and the elevator doors), `Shared/TowerRules`
-(floors, access, arrivals; unit-tested), `Services/TowerService` (rides, the 4th-floor guard),
+(the Principal tier), `Lib/OfficeBuilder` (the 3rd floor and the elevator doors), `Lib/RooftopBuilder` (the 5th), `Shared/TowerRules`
+(floors, access, arrivals; unit-tested), `Services/TowerService` (rides, the 3rd-floor guard),
 `Services/ExecutiveService` (the Executive Floor guard), `Controllers/TowerController` (the panel).
 
 ## Floors
