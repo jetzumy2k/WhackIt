@@ -8,6 +8,10 @@
 	player may be offered the Mystery Hammer (PolicyService), and whether they
 	are an admin, who also gets an "Admin" tab to open, close or schedule the
 	store for every server.
+
+	Since the visual overhaul (V4b) a PanelKit window with tabs and item
+	cards (Lib/PanelKit.itemCard), like every newer panel; the friend picker
+	for gifts is its own window with a search box.
 ]]
 
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -19,7 +23,7 @@ local PetConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild(
 local StoreConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("StoreConfig"))
 
 local LocalTime = require(script.Parent.Parent.Lib.LocalTime)
-local GamepadNav = require(script.Parent.Parent.Lib.GamepadNav)
+local PanelKit = require(script.Parent.Parent.Lib.PanelKit)
 local Responsive = require(script.Parent.Parent.Lib.Responsive)
 
 local StoreController = {}
@@ -27,19 +31,22 @@ local StoreController = {}
 -- Set once the panel exists (start); lets the Player Panel open it.
 local openPanel: (() -> ())? = nil
 
-local PANEL_COLOR = Color3.fromRGB(30, 30, 40)
-local ROW_COLOR = Color3.fromRGB(48, 48, 62)
-local TEXT_COLOR = Color3.fromRGB(255, 255, 255)
-local ROBUX_COLOR = Color3.fromRGB(80, 190, 90)
-local TAB_COLOR = Color3.fromRGB(70, 70, 90)
-local TAB_ACTIVE_COLOR = Color3.fromRGB(70, 140, 230)
+local C = PanelKit.Colors
 local STORE_COLOR = Color3.fromRGB(230, 170, 40)
-local MUTED_COLOR = Color3.fromRGB(90, 90, 100)
-local ROW_HEIGHT = 56
-local MIN_TOUCH_SIZE = 44
--- Fixed tab width: the tab strip scrolls when they don't all fit.
-local TAB_WIDTH = 96
+local ROBUX_COLOR = Color3.fromRGB(80, 190, 90)
 local GIFT_COLOR = Color3.fromRGB(220, 90, 150)
+local CARD_WIDTH = 170
+local CARD_HEIGHT = 222
+local KIND_LOOK: { [string]: { Icon: string, Accent: Color3 } } = {
+	Xp = { Icon = "✨", Accent = Color3.fromRGB(110, 150, 255) },
+	Damage = { Icon = "💥", Accent = Color3.fromRGB(230, 110, 80) },
+	CritDamage = { Icon = "🎯", Accent = Color3.fromRGB(240, 185, 70) },
+}
+local RARITY_ACCENT: { [string]: Color3 } = {
+	Common = Color3.fromRGB(150, 210, 120),
+	Rare = Color3.fromRGB(90, 160, 255),
+	Mythical = Color3.fromRGB(220, 120, 255),
+}
 -- Friends shown in the gift picker (the friends list is read once per session).
 local MAX_FRIENDS = 200
 
@@ -91,16 +98,14 @@ local function loadFriends(): { Friend }
 	return friends
 end
 
-local openFriendPicker: (product: StoreConfig.Product, text: string) -> ()
-
 local TABS = {
-	{ Id = "Xp", Label = "XP Boost" },
-	{ Id = "Damage", Label = "Damage" },
-	{ Id = "CritDamage", Label = "Crit Dmg" },
-	{ Id = "Bundle", Label = "Bundles" },
-	{ Id = "Egg", Label = "Eggs" },
-	{ Id = "MysteryHammer", Label = "Mystery" },
-	{ Id = "Admin", Label = "Admin" },
+	{ Id = "Xp", Label = "✨ XP Boost" },
+	{ Id = "Damage", Label = "💥 Damage" },
+	{ Id = "CritDamage", Label = "🎯 Crit Dmg" },
+	{ Id = "Bundle", Label = "📦 Bundles" },
+	{ Id = "Egg", Label = "🥚 Eggs" },
+	{ Id = "MysteryHammer", Label = "🎁 Mystery" },
+	{ Id = "Admin", Label = "🛡️ Admin" },
 }
 
 local KIND_TEXT: { [string]: string } = { Xp = "XP", Damage = "Damage", CritDamage = "Crit Damage" }
@@ -115,36 +120,6 @@ type State = {
 }
 
 local localPlayer = Players.LocalPlayer
-
-local function corner(parent: Instance): ()
-	Instance.new("UICorner").Parent = parent
-end
-
-local function label(name: string, parent: Instance): TextLabel
-	local text = Instance.new("TextLabel")
-	text.Name = name
-	text.BackgroundTransparency = 1
-	text.TextColor3 = TEXT_COLOR
-	text.Font = Enum.Font.FredokaOne
-	text.TextScaled = true
-	text.TextXAlignment = Enum.TextXAlignment.Left
-	text.Parent = parent
-	Responsive.capText(text, 22)
-	return text
-end
-
-local function button(name: string, parent: Instance): TextButton
-	local clickable = Instance.new("TextButton")
-	clickable.Name = name
-	clickable.TextColor3 = TEXT_COLOR
-	clickable.Font = Enum.Font.FredokaOne
-	clickable.TextScaled = true
-	clickable.AutoButtonColor = true
-	clickable.Parent = parent
-	corner(clickable)
-	Responsive.capText(clickable, 20)
-	return clickable
-end
 
 local function parseState(payload: unknown): State?
 	if typeof(payload) ~= "table" then
@@ -259,150 +234,62 @@ function StoreController.start(): ()
 		EndsAt = 0,
 	}
 	local activeTab = "Xp"
-
-	local gui = Instance.new("ScreenGui")
-	gui.Name = "Store"
-	gui.ResetOnSpawn = false
-	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	local playerGui = localPlayer:WaitForChild("PlayerGui")
 
 	-- HUD button in the shared column (Lib/Responsive), above Hammers.
 	local open = Responsive.dockButton("OpenStore", "🛒", "Store", STORE_COLOR, 3)
 	open.Visible = false
 
-	local panel = Instance.new("Frame")
-	panel.Name = "Panel"
-	panel.AnchorPoint = Vector2.new(0.5, 0.5)
-	panel.Position = UDim2.fromScale(0.5, 0.5)
-	panel.Size = UDim2.fromScale(0.65, 0.7)
-	panel.BackgroundColor3 = PANEL_COLOR
-	panel.Visible = false
-	panel.Parent = gui
-	corner(panel)
-	local sizeLimit = Instance.new("UISizeConstraint")
-	sizeLimit.MinSize = Vector2.new(320, 300)
-	sizeLimit.MaxSize = Vector2.new(620, 520)
-	sizeLimit.Parent = panel
-	Responsive.fitPopup(panel, sizeLimit, Vector2.new(0.65, 0.7))
+	local window = PanelKit.window({
+		Name = "Store",
+		Title = "🛒 Store",
+		Subtitle = "Boosts, bundles, eggs and the Mystery Hammer. Everything goes to your Bag.",
+		Accent = STORE_COLOR,
+		DisplayOrder = 5,
+	}, playerGui)
+	local content = window.Content
 
-	local title = label("Title", panel)
-	title.Position = UDim2.fromOffset(16, 10)
-	title.Size = UDim2.new(1, -90, 0, 34)
-	title.Text = "Store"
-	Responsive.capText(title, 30)
-
-	local close = button("Close", panel)
-	close.Text = "X"
-	close.BackgroundColor3 = MUTED_COLOR
-	close.AnchorPoint = Vector2.new(1, 0)
-	close.Position = UDim2.new(1, -10, 0, 8)
-	close.Size = UDim2.fromOffset(MIN_TOUCH_SIZE, MIN_TOUCH_SIZE)
-
-	-- Scrolls sideways when the tabs don't all fit (narrow phone screens).
-	local tabBar = Instance.new("ScrollingFrame")
-	tabBar.Name = "Tabs"
-	tabBar.BackgroundTransparency = 1
-	tabBar.BorderSizePixel = 0
-	tabBar.Position = UDim2.fromOffset(10, 56)
-	tabBar.Size = UDim2.new(1, -20, 0, MIN_TOUCH_SIZE)
-	tabBar.ScrollingDirection = Enum.ScrollingDirection.X
-	tabBar.ScrollBarThickness = 0
-	tabBar.AutomaticCanvasSize = Enum.AutomaticSize.X
-	tabBar.CanvasSize = UDim2.new()
-	tabBar.Parent = panel
-	local tabLayout = Instance.new("UIListLayout")
-	tabLayout.FillDirection = Enum.FillDirection.Horizontal
-	tabLayout.Padding = UDim.new(0, 6)
-	tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	tabLayout.Parent = tabBar
-
-	local list = Instance.new("ScrollingFrame")
-	list.Name = "List"
-	list.BackgroundTransparency = 1
-	list.BorderSizePixel = 0
-	list.Position = UDim2.fromOffset(10, 108)
-	list.Size = UDim2.new(1, -20, 1, -118)
-	list.AutomaticCanvasSize = Enum.AutomaticSize.Y
-	list.CanvasSize = UDim2.new()
-	list.ScrollBarThickness = 6
-	list.Parent = panel
-	local layout = Instance.new("UIListLayout")
-	layout.Padding = UDim.new(0, 8)
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Parent = list
-
-	local function note(text: string, order: number, height: number): TextLabel
-		local line = label("Note", list)
-		line.LayoutOrder = order
-		line.Size = UDim2.new(1, 0, 0, height)
-		-- Grows when the text wraps onto more lines (narrow phone screens).
-		line.AutomaticSize = Enum.AutomaticSize.Y
-		line.TextScaled = false
-		line.TextSize = 16
-		line.TextWrapped = true
-		line.TextYAlignment = Enum.TextYAlignment.Top
-		line.TextTransparency = 0.15
-		line.Text = text
-		return line
-	end
-
-	-- Friend picker for gifts, drawn over the store list.
-	local picker = Instance.new("Frame")
-	picker.Name = "GiftPicker"
-	picker.BackgroundColor3 = PANEL_COLOR
-	picker.Position = UDim2.fromOffset(0, 0)
-	picker.Size = UDim2.fromScale(1, 1)
-	picker.ZIndex = 5
-	picker.Visible = false
-	picker.Parent = panel
-	corner(picker)
-	local pickerTitle = label("Title", picker)
-	pickerTitle.Position = UDim2.fromOffset(16, 10)
-	pickerTitle.Size = UDim2.new(1, -90, 0, 30)
-	pickerTitle.ZIndex = 6
-	local pickerClose = button("Cancel", picker)
-	pickerClose.Text = "X"
-	pickerClose.BackgroundColor3 = MUTED_COLOR
-	pickerClose.AnchorPoint = Vector2.new(1, 0)
-	pickerClose.Position = UDim2.new(1, -10, 0, 8)
-	pickerClose.Size = UDim2.fromOffset(MIN_TOUCH_SIZE, MIN_TOUCH_SIZE)
-	pickerClose.ZIndex = 6
-	pickerClose.Activated:Connect(function()
-		picker.Visible = false
-	end)
+	-- The friend picker for gifts: its own window, a search box that keeps
+	-- its focus while typing, and the matching friends under it.
+	local picker = PanelKit.window({
+		Name = "GiftPicker",
+		Title = "🎁 Send a gift",
+		Subtitle = "Pick a Roblox friend. It waits for them if they're offline.",
+		Accent = GIFT_COLOR,
+		DisplayOrder = 6,
+	}, playerGui)
 	local search = Instance.new("TextBox")
 	search.Name = "Search"
-	search.Position = UDim2.fromOffset(10, 56)
-	search.Size = UDim2.new(1, -20, 0, MIN_TOUCH_SIZE)
-	search.BackgroundColor3 = ROW_COLOR
-	search.TextColor3 = TEXT_COLOR
+	search.LayoutOrder = 1
+	search.Size = UDim2.new(1, 0, 0, PanelKit.ROW_HEIGHT)
+	search.BackgroundColor3 = C.Field
+	search.TextColor3 = C.Text
 	search.PlaceholderText = "Search friends"
-	search.Font = Enum.Font.FredokaOne
+	search.PlaceholderColor3 = C.Muted
+	search.Font = PanelKit.FONT_BOLD
 	search.TextSize = 18
 	search.ClearTextOnFocus = false
 	search.Text = ""
-	search.ZIndex = 6
-	search.Parent = picker
-	corner(search)
-	local friendList = Instance.new("ScrollingFrame")
-	friendList.Name = "Friends"
-	friendList.BackgroundTransparency = 1
-	friendList.BorderSizePixel = 0
-	friendList.Position = UDim2.fromOffset(10, 108)
-	friendList.Size = UDim2.new(1, -20, 1, -118)
-	friendList.AutomaticCanvasSize = Enum.AutomaticSize.Y
-	friendList.CanvasSize = UDim2.new()
-	friendList.ScrollBarThickness = 6
-	friendList.ZIndex = 6
-	friendList.Parent = picker
-	local friendLayout = Instance.new("UIListLayout")
-	friendLayout.Padding = UDim.new(0, 6)
-	friendLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	friendLayout.Parent = friendList
+	search.Parent = picker.Content
+	local searchCorner = Instance.new("UICorner")
+	searchCorner.CornerRadius = UDim.new(0, 8)
+	searchCorner.Parent = search
+	local rows = Instance.new("Frame")
+	rows.Name = "Friends"
+	rows.LayoutOrder = 2
+	rows.BackgroundTransparency = 1
+	rows.Size = UDim2.fromScale(1, 0)
+	rows.AutomaticSize = Enum.AutomaticSize.Y
+	rows.Parent = picker.Content
+	local rowsLayout = Instance.new("UIListLayout")
+	rowsLayout.Padding = UDim.new(0, 6)
+	rowsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	rowsLayout.Parent = rows
 
 	local giftProduct: StoreConfig.Product? = nil
 	local function showFriends(): ()
-		for _, child in friendList:GetChildren() do
-			if not child:IsA("UIListLayout") then
+		for _, child in rows:GetChildren() do
+			if child:IsA("GuiObject") then
 				child:Destroy()
 			end
 		end
@@ -415,144 +302,97 @@ function StoreController.start(): ()
 				or string.find(string.lower(friend.Username), query, 1, true) ~= nil
 			if matches then
 				shown += 1
-				local choice = button("Friend", friendList)
+				local choice = PanelKit.button(
+					rows,
+					string.format("%s (@%s)", friend.DisplayName, friend.Username),
+					C.Card
+				)
 				choice.LayoutOrder = index
-				choice.Size = UDim2.new(1, -8, 0, MIN_TOUCH_SIZE)
-				choice.BackgroundColor3 = ROW_COLOR
 				choice.TextXAlignment = Enum.TextXAlignment.Left
-				choice.ZIndex = 7
-				choice.Text = string.format("  %s (@%s)", friend.DisplayName, friend.Username)
+				local inset = Instance.new("UIPadding")
+				inset.PaddingLeft = UDim.new(0, 12)
+				inset.Parent = choice
 				choice.Activated:Connect(function()
 					local productToGift = giftProduct
 					if productToGift then
-						picker.Visible = false
+						picker:close()
 						giftRemote:FireServer(productToGift.Key, friend.Id)
 					end
 				end)
 			end
 		end
 		if shown == 0 then
-			local empty = label("Empty", friendList)
-			empty.Size = UDim2.new(1, 0, 0, 30)
-			empty.ZIndex = 7
-			empty.Text = if #friends == 0
-				then "No Roblox friends found."
-				else "No friend matches that name."
+			PanelKit.notice(
+				rows,
+				"Empty",
+				if #friends == 0 then "No Roblox friends found." else "No friend matches that name."
+			)
 		end
 	end
 	search:GetPropertyChangedSignal("Text"):Connect(function()
-		if picker.Visible then
+		if picker:isOpen() then
 			showFriends()
 		end
 	end)
-
-	function openFriendPicker(product: StoreConfig.Product, text: string): ()
+	local function openFriendPicker(product: StoreConfig.Product, text: string): ()
 		giftProduct = product
-		pickerTitle.Text = "Gift " .. text .. " to..."
+		picker.Subtitle.Text = "Gift "
+			.. text
+			.. " to a Roblox friend. It waits for them if they're offline."
 		search.Text = ""
-		picker.Visible = true
+		picker:open()
 		showFriends()
 	end
 
-	local function productRow(product: StoreConfig.Product, text: string, order: number): ()
-		local row = Instance.new("Frame")
-		row.Name = product.Key
-		row.LayoutOrder = order
-		row.Size = UDim2.new(1, 0, 0, ROW_HEIGHT)
-		row.BackgroundColor3 = ROW_COLOR
-		row.Parent = list
-		corner(row)
-
-		local giftable = BagRules.isGiftable(product)
-		local name = label("Name", row)
-		name.Position = UDim2.fromOffset(12, 10)
-		name.Size = UDim2.new(if giftable then 0.46 else 0.62, -12, 0, ROW_HEIGHT - 20)
-		name.Text = text
-
-		if giftable then
-			local gift = button("Gift", row)
-			gift.AnchorPoint = Vector2.new(1, 0.5)
-			gift.Position = UDim2.new(0.7, -14, 0.5, 0)
-			gift.Size = UDim2.new(0.2, 0, 0, MIN_TOUCH_SIZE)
-			gift.BackgroundColor3 = GIFT_COLOR
-			gift.Text = "Gift"
-			gift.Activated:Connect(function()
-				openFriendPicker(product, text)
-			end)
-		end
-
-		local buy = button("Buy", row)
-		buy.AnchorPoint = Vector2.new(1, 0.5)
-		buy.Position = UDim2.new(1, -10, 0.5, 0)
-		buy.Size = UDim2.new(if giftable then 0.28 else 0.33, 0, 0, MIN_TOUCH_SIZE)
-		buy.BackgroundColor3 = ROBUX_COLOR
-		buy.Text = "R$ " .. product.SuggestedPrice
-		buy.Activated:Connect(function()
+	-- Buy (and, when giftable, Gift) on a card; the live price fills in.
+	local function priceButton(button: TextButton, product: StoreConfig.Product, prefix: string): ()
+		button.Text = prefix .. "R$ " .. product.SuggestedPrice
+		PanelKit.setColor(button, ROBUX_COLOR)
+		button.Activated:Connect(function()
 			requestRemote:FireServer(product.Key)
 		end)
 		task.spawn(function()
 			local price = priceOf(product)
-			if buy.Parent ~= nil then
-				buy.Text = "R$ " .. price
+			if button.Parent ~= nil then
+				button.Text = prefix .. "R$ " .. price
 			end
 		end)
 	end
-
-	-- A bundle card: name, what it contains, and one purchase button.
-	local function bundleRow(product: StoreConfig.Product, order: number): ()
-		local card = Instance.new("Frame")
-		card.Name = product.Key
-		card.LayoutOrder = order
-		card.Size = UDim2.fromScale(1, 0)
-		card.AutomaticSize = Enum.AutomaticSize.Y
-		card.BackgroundColor3 = ROW_COLOR
-		card.Parent = list
-		corner(card)
-		local inset = Instance.new("UIPadding")
-		inset.PaddingLeft = UDim.new(0, 12)
-		inset.PaddingRight = UDim.new(0, 12)
-		inset.PaddingTop = UDim.new(0, 10)
-		inset.PaddingBottom = UDim.new(0, 10)
-		inset.Parent = card
-		local cardLayout = Instance.new("UIListLayout")
-		cardLayout.Padding = UDim.new(0, 6)
-		cardLayout.SortOrder = Enum.SortOrder.LayoutOrder
-		cardLayout.Parent = card
-
-		local name = label("Name", card)
-		name.LayoutOrder = 1
-		name.Size = UDim2.new(1, 0, 0, 30)
-		name.Text = string.upper(BagRules.itemText(product))
-		name.TextColor3 = STORE_COLOR
-		Responsive.capText(name, 24)
-
-		local contents = label("Contents", card)
-		contents.LayoutOrder = 2
-		contents.Size = UDim2.fromScale(1, 0)
-		contents.AutomaticSize = Enum.AutomaticSize.Y
-		contents.TextScaled = false
-		contents.TextSize = 17
-		contents.TextWrapped = true
-		contents.TextYAlignment = Enum.TextYAlignment.Top
-		contents.Text = table.concat(BagRules.contentsLines(product), "\n")
-
-		local buy = button("Buy", card)
-		buy.LayoutOrder = 3
-		buy.Size = UDim2.new(1, 0, 0, MIN_TOUCH_SIZE)
-		buy.BackgroundColor3 = ROBUX_COLOR
-		buy.Text = "PURCHASE  R$ " .. product.SuggestedPrice
-		buy.Activated:Connect(function()
-			requestRemote:FireServer(product.Key)
-		end)
-		task.spawn(function()
-			local price = priceOf(product)
-			if buy.Parent ~= nil then
-				buy.Text = "PURCHASE  R$ " .. price
-			end
-		end)
+	local function productCard(
+		grid: Frame,
+		product: StoreConfig.Product,
+		title: string,
+		detail: string,
+		icon: string,
+		accent: Color3
+	): ()
+		local card = PanelKit.itemCard(grid, title, detail, icon, accent)
+		card.Frame.Name = product.Key
+		priceButton(card.Button, product, "Buy · ")
+		if BagRules.isGiftable(product) then
+			local gift = Instance.new("TextButton")
+			gift.Name = "Gift"
+			gift.AnchorPoint = Vector2.new(0, 0)
+			gift.Position = UDim2.fromOffset(4, 4)
+			gift.Size = UDim2.fromOffset(64, 26)
+			gift.BackgroundColor3 = GIFT_COLOR
+			gift.TextColor3 = C.Text
+			gift.Font = PanelKit.FONT_BOLD
+			gift.TextSize = 14
+			gift.Text = "🎁 Gift"
+			gift.ZIndex = 3
+			gift.Parent = card.Picture
+			local giftCorner = Instance.new("UICorner")
+			giftCorner.CornerRadius = UDim.new(0, 13)
+			giftCorner.Parent = gift
+			gift.Activated:Connect(function()
+				openFriendPicker(product, title)
+			end)
+		end
 	end
 
 	local function adminPage(): ()
+		local section = PanelKit.section(content, "Store for every server", false, true)
 		local scheduleText = if state.Mode == "Schedule"
 			then string.format(
 				"Schedule: %s to %s (your local time)",
@@ -560,67 +400,51 @@ function StoreController.start(): ()
 				LocalTime.format(state.EndsAt)
 			)
 			else "Mode: " .. state.Mode
-		note(
+		PanelKit.text(
+			section.Body,
 			string.format(
-				"Store is %s for players right now. %s\nChanges apply to every server. Purchases already paid for are always delivered.",
+				"The store is %s for players right now. %s. Changes apply to every server; purchases already paid for are always delivered.",
 				if state.Open then "OPEN" else "CLOSED",
 				scheduleText
-			),
-			1,
-			66
+			)
 		)
-
-		local modeRow = Instance.new("Frame")
-		modeRow.Name = "Modes"
-		modeRow.LayoutOrder = 2
-		modeRow.BackgroundTransparency = 1
-		modeRow.Size = UDim2.new(1, 0, 0, MIN_TOUCH_SIZE)
-		modeRow.Parent = list
-		local onButton = button("TurnOn", modeRow)
-		onButton.Text = "Open now"
-		onButton.BackgroundColor3 = ROBUX_COLOR
-		onButton.Size = UDim2.fromScale(0.48, 1)
+		local modeRow = PanelKit.row(section.Body)
+		local onButton = PanelKit.button(modeRow, "Open now", C.Good)
+		onButton.Size = UDim2.new(0.5, -4, 1, 0)
 		onButton.Activated:Connect(function()
 			adminRemote:FireServer({ Mode = "On" })
 		end)
-		local offButton = button("TurnOff", modeRow)
-		offButton.Text = "Close now"
-		offButton.BackgroundColor3 = Color3.fromRGB(200, 80, 80)
-		offButton.AnchorPoint = Vector2.new(1, 0)
-		offButton.Position = UDim2.fromScale(1, 0)
-		offButton.Size = UDim2.fromScale(0.48, 1)
+		local offButton = PanelKit.button(modeRow, "Close now", C.Danger)
+		offButton.Size = UDim2.new(0.5, -4, 1, 0)
 		offButton.Activated:Connect(function()
 			adminRemote:FireServer({ Mode = "Off" })
 		end)
 
-		note("Or open it only between two times (YYYY-MM-DD HH:MM, your local time):", 3, 22)
-
-		local function timeBox(name: string, order: number, value: number): TextBox
+		local schedule = PanelKit.section(content, "Open it between two times", false, true)
+		PanelKit.text(schedule.Body, "YYYY-MM-DD HH:MM, your local time.", "Muted")
+		local function timeBox(name: string, value: number): TextBox
 			local box = Instance.new("TextBox")
 			box.Name = name
-			box.LayoutOrder = order
-			box.Size = UDim2.new(1, 0, 0, MIN_TOUCH_SIZE)
-			box.BackgroundColor3 = ROW_COLOR
-			box.TextColor3 = TEXT_COLOR
+			box.Size = UDim2.new(1, 0, 0, PanelKit.ROW_HEIGHT)
+			box.BackgroundColor3 = C.Field
+			box.TextColor3 = C.Text
 			box.PlaceholderText = name .. "  e.g. 2026-12-24 18:00"
-			box.Font = Enum.Font.FredokaOne
+			box.PlaceholderColor3 = C.Muted
+			box.Font = PanelKit.FONT_BOLD
 			box.TextSize = 18
 			box.ClearTextOnFocus = false
 			box.Text = LocalTime.format(value)
-			box.Parent = list
-			corner(box)
+			box.Parent = schedule.Body
+			local boxCorner = Instance.new("UICorner")
+			boxCorner.CornerRadius = UDim.new(0, 8)
+			boxCorner.Parent = box
 			return box
 		end
-		local startBox = timeBox("Start", 4, state.StartsAt)
-		local endBox = timeBox("End", 5, state.EndsAt)
-		local errorLine = note("", 7, 22)
+		local startBox = timeBox("Start", state.StartsAt)
+		local endBox = timeBox("End", state.EndsAt)
+		local scheduleButton = PanelKit.button(schedule.Body, "Set schedule", C.Primary)
+		local errorLine = PanelKit.text(schedule.Body, "", "Muted")
 		errorLine.TextColor3 = Color3.fromRGB(255, 140, 120)
-
-		local scheduleButton = button("SetSchedule", list)
-		scheduleButton.LayoutOrder = 6
-		scheduleButton.Size = UDim2.new(1, 0, 0, MIN_TOUCH_SIZE)
-		scheduleButton.BackgroundColor3 = TAB_ACTIVE_COLOR
-		scheduleButton.Text = "Set schedule"
 		scheduleButton.Activated:Connect(function()
 			local startsAt, endsAt = LocalTime.parse(startBox.Text), LocalTime.parse(endBox.Text)
 			if startsAt == nil or endsAt == nil then
@@ -632,128 +456,153 @@ function StoreController.start(): ()
 		end)
 	end
 
-	local tabButtons: { [string]: TextButton } = {}
+	-- Tabs some players don't see (Mystery and eggs need PolicyService, Admin an admin).
+	local function setTabVisible(id: string, visible: boolean): ()
+		local tab = window.Frame:FindFirstChild(id, true)
+		if tab and tab:IsA("GuiObject") then
+			tab.Visible = visible
+		end
+	end
 
 	local function render(): ()
-		for _, child in list:GetChildren() do
-			if not child:IsA("UIListLayout") then
-				child:Destroy()
-			end
-		end
 		open.Visible = state.Open or state.IsAdmin
-		tabButtons.MysteryHammer.Visible = state.MysteryAllowed
-		tabButtons.Egg.Visible = state.MysteryAllowed
-		tabButtons.Admin.Visible = state.IsAdmin
+		setTabVisible("MysteryHammer", state.MysteryAllowed)
+		setTabVisible("Egg", state.MysteryAllowed)
+		setTabVisible("Admin", state.IsAdmin)
 		if
 			((activeTab == "MysteryHammer" or activeTab == "Egg") and not state.MysteryAllowed)
 			or (activeTab == "Admin" and not state.IsAdmin)
 		then
 			activeTab = "Xp"
 		end
-		for id, tab in tabButtons do
-			tab.BackgroundColor3 = if id == activeTab then TAB_ACTIVE_COLOR else TAB_COLOR
+		window:selectTab(activeTab)
+		if not window:isOpen() then
+			return
 		end
+		window:clear()
 
 		if activeTab == "Admin" then
 			adminPage()
 			return
 		end
 		if not state.Open then
-			note("The store is closed right now. Check back later!", 1, 40)
+			PanelKit.notice(content, "Locked", "The store is closed right now. Check back later!")
 			return
 		end
 
-		local order = 10
 		if activeTab == "Bundle" then
-			note(
+			PanelKit.text(
+				content,
 				"Each bundle puts its boosts in your Bag as separate items. Use them one at a time, whenever you like. Bundles can't be gifted.",
-				1,
-				44
+				"Muted"
 			)
 			local any = false
 			for _, product in StoreConfig.Products do
 				if product.Kind == "Bundle" and product.ProductId ~= 0 then
 					any = true
-					order += 1
-					bundleRow(product, order)
+					local section = PanelKit.section(
+						content,
+						"📦 " .. BagRules.itemText(product),
+						false,
+						true
+					)
+					PanelKit.text(section.Body, table.concat(BagRules.contentsLines(product), "\n"))
+					priceButton(
+						PanelKit.button(section.Body, "", ROBUX_COLOR),
+						product,
+						"Purchase · "
+					)
 				end
 			end
 			if not any then
-				note("Coming soon.", order, 30)
+				PanelKit.notice(content, "Empty", "Coming soon.")
 			end
 			return
 		end
 		if activeTab == "Egg" then
-			note(eggOddsText(), 1, 120)
+			PanelKit.text(content, eggOddsText(), "Muted")
+			local grid = PanelKit.grid(content, CARD_WIDTH, CARD_HEIGHT)
 			local any = false
 			for _, product in StoreConfig.Products do
 				if product.Kind == "Egg" and product.ProductId ~= 0 then
 					any = true
-					order += 1
-					productRow(product, "🥚 " .. BagRules.itemText(product), order)
+					local accent = if product.Rarity and RARITY_ACCENT[product.Rarity]
+						then RARITY_ACCENT[product.Rarity]
+						else STORE_COLOR
+					productCard(
+						grid,
+						product,
+						BagRules.itemText(product),
+						"Hatches into a pet at the incubators outside.",
+						"🥚",
+						accent
+					)
 				end
 			end
 			if not any then
-				note("Coming soon.", order, 30)
+				PanelKit.notice(content, "Empty", "Coming soon.")
 			end
 			return
 		end
 		if activeTab == "MysteryHammer" then
+			PanelKit.text(content, oddsText(), "Muted")
 			local mystery = StoreConfig.ByKey.mystery_hammer
-			note(oddsText(), 1, 80)
 			if mystery and mystery.ProductId ~= 0 then
-				productRow(mystery, StoreConfig.Mystery.DisplayName, order)
+				local grid = PanelKit.grid(content, CARD_WIDTH, CARD_HEIGHT)
+				productCard(
+					grid,
+					mystery,
+					StoreConfig.Mystery.DisplayName,
+					"A hammer with surprise bonus stats, yours to keep.",
+					"🎁",
+					Color3.fromRGB(255, 120, 170)
+				)
 			else
-				note("Coming soon.", order, 30)
+				PanelKit.notice(content, "Empty", "Coming soon.")
 			end
 			return
 		end
 
-		note(
-			"Bought boosts go to your Bag: use them when you like. Gift sends one to a Roblox friend (it waits for them if they're offline). Active boosts count down only while you play.",
-			1,
-			62
+		PanelKit.text(
+			content,
+			"Bought boosts go to your Bag: use them when you like. 🎁 Gift sends one to a Roblox friend (it waits for them if they're offline). Active boosts count down only while you play.",
+			"Muted"
 		)
+		local grid = PanelKit.grid(content, CARD_WIDTH, CARD_HEIGHT)
 		local any = false
+		local look = KIND_LOOK[activeTab] or { Icon = "🛒", Accent = STORE_COLOR }
 		for _, product in StoreConfig.Products do
 			if product.Kind == activeTab and product.ProductId ~= 0 then
 				any = true
-				order += 1
-				productRow(
+				productCard(
+					grid,
 					product,
-					string.format(
-						"+%d%% %s  -  %s",
-						product.Percent,
-						KIND_TEXT[product.Kind],
-						durationText(product.Seconds)
-					),
-					order
+					string.format("+%d%% %s", product.Percent, KIND_TEXT[product.Kind]),
+					durationText(product.Seconds) .. " of play · goes to your Bag",
+					look.Icon,
+					look.Accent
 				)
 			end
 		end
 		if not any then
-			note("Coming soon.", order, 30)
+			PanelKit.notice(content, "Empty", "Coming soon.")
 		end
 	end
 
-	for order, tab in TABS do
-		local tabButton = button(tab.Id, tabBar)
-		tabButton.LayoutOrder = order
-		tabButton.Text = tab.Label
-		tabButton.Size = UDim2.new(0, TAB_WIDTH, 1, 0)
-		tabButton.Activated:Connect(function()
-			activeTab = tab.Id
-			render()
-		end)
-		tabButtons[tab.Id] = tabButton
-	end
+	window:setTabs(TABS, function(id: string)
+		activeTab = id
+		render()
+	end)
+	window:onOpen(function()
+		task.defer(render)
+	end)
 
 	stateRemote.OnClientEvent:Connect(function(payload: unknown)
 		local parsed = parseState(payload)
 		if parsed then
 			state = parsed
-			if not state.Open and not state.IsAdmin then
-				panel.Visible = false
+			if not state.Open and not state.IsAdmin and window:isOpen() then
+				window:close()
 			end
 			render()
 		end
@@ -761,22 +610,15 @@ function StoreController.start(): ()
 	render()
 
 	open.Activated:Connect(function()
-		panel.Visible = not panel.Visible
+		window:toggle()
 	end)
 	openPanel = function()
-		panel.Visible = true
+		if window:isOpen() then
+			render()
+		else
+			window:open()
+		end
 	end
-	close.Activated:Connect(function()
-		panel.Visible = false
-	end)
-	GamepadNav.watch(panel, function()
-		panel.Visible = false
-	end)
-	GamepadNav.watch(picker, function()
-		picker.Visible = false
-	end)
-
-	gui.Parent = localPlayer:WaitForChild("PlayerGui")
 end
 
 -- Opens the Robux Store panel (e.g. from the Player Panel). Display only:

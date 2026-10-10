@@ -112,3 +112,8 @@ Visual work becomes its own track, done before Phase 6, each part with a Studio 
   boost chips with timers, an XP bar with a level badge and gradient; dock/Menu/Music buttons restyled
   (dark card, coloured icon disc, outline, press squish; Reduced motion respected). Next: V4b (Bag,
   Hammer shop, Store on PanelKit with item grids), V4c (reward reveals, level-up and event cards).
+- **V4b panels** (branch `feat/v4b-shop-panels`): owner approved the new HUD (2026-10-10).
+  `PanelKit.itemCard` / `setBadge`; the Bag, the Hammer shop (3D previews built once, refreshed in
+  place) and the Robux Store (tabs, cards with live prices and a Gift button, bundles as sections,
+  odds text, the admin tab, a separate gift-picker window with a persistent search box) moved to
+  PanelKit windows. Next: V4c (reward reveals, level-up, event and notification cards).
