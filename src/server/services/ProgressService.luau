@@ -10,6 +10,7 @@ local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
 local PetConfig = require(ReplicatedStorage.Config.PetConfig)
+local QuestRules = require(ReplicatedStorage.Shared.QuestRules)
 local Types = require(ReplicatedStorage.Shared.Types)
 
 local SyncRemote = ReplicatedStorage.Remotes.Profile.Sync
@@ -136,6 +137,7 @@ function ProgressService.snapshot(
 			DayMatches = data.Recreation.DayMatches,
 			DayOpponents = table.clone(data.Recreation.DayOpponents),
 		},
+		Quests = QuestRules.copy(data.Quests),
 	}
 end
 

@@ -252,6 +252,22 @@
           }
         },
 
+        "Quests": {
+          "$className": "Folder",
+
+          "Claim": {
+            "$className": "RemoteEvent"
+          },
+
+          "Reroll": {
+            "$className": "RemoteEvent"
+          },
+
+          "Rewarded": {
+            "$className": "RemoteEvent"
+          }
+        },
+
         "Rec": {
           "$className": "Folder",
 

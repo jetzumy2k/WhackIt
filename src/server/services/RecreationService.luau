@@ -43,6 +43,7 @@ local PickleballConfig = require(ReplicatedStorage.Config.PickleballConfig)
 local PickleballRules = require(ReplicatedStorage.Shared.PickleballRules)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressService = require(script.Parent.ProgressService)
+local QuestService = require(script.Parent.QuestService)
 local RecreationRankService = require(script.Parent.RecreationRankService)
 local RemoteController = require(ServerScriptService.Controllers.RemoteController)
 local RemoteLimits = require(ServerScriptService.Config.RemoteLimits)
@@ -778,6 +779,10 @@ local function reward(match: Match, player: Player, team: number, won: boolean, 
 		end
 		payload.Coins = coins
 		payload.RatingChange = applyRecord(match, player, team, won)
+		QuestService.record(player, "PlayMatch", 1)
+		if won then
+			QuestService.record(player, "WinMatch", 1)
+		end
 	end
 	local record = recordOf(player)
 	payload.Rating = if record then record.Rating else 0

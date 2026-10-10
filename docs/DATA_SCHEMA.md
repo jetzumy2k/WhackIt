@@ -13,7 +13,7 @@ validation live in `src/server/lib/PlayerDataSchema.luau`; storage settings in
 | Session locking | ProfileStore | One server owns a profile at a time, so progress can't be duplicated by joining two servers |
 | Auto-save | ProfileStore | Periodic, plus on leave (`EndSession`) and server shutdown |
 
-## Schema v12 (current)
+## Schema v13 (current)
 ```lua
 type PlayerData = {
     SchemaVersion: number,        -- 11
@@ -72,7 +72,17 @@ type PlayerData = {
         DayOpponents: {[opponentsKey]: number}, -- rewarded matches per opponent set that day (cap 3)
     },
     ProcessedMatches: {string},   -- last 50 rewarded match ids (a match pays once)
-    SeasonClaims: {number},       -- seasons whose prizes were handed out (last 24; prizes come later)
+    SeasonClaims: {number},       -- seasons whose prizes were handed out (last 24)
+    Quests: {                     -- v13, docs/QUESTS.md (Shared/QuestRules.State)
+        DayKey: string,           -- UTC date the daily quests belong to ("" = draw on next use)
+        Daily: {{Id: string, Progress: number, Claimed: boolean}}, -- up to 3
+        Rerolls: number,          -- rerolls used that day (0..1)
+        DailyBonus: boolean,      -- that day's all-dailies bonus claimed
+        WeekKey: string,          -- "W<weeks since Monday 1970-01-05>" ("" = draw on next use)
+        Weekly: {{Id: string, Progress: number, Claimed: boolean}}, -- up to 3
+        TutorialStep: number,     -- 1..#Tutorial+1 (past the end = done)
+        TutorialProgress: number,
+    },
 }
 ```
 New players start from `PlayerDataSchema.template()`: `StartingScore`, `StartingStress`, `StartingCoins`,
@@ -91,6 +101,7 @@ zero counters, `DefaultHammerId`, nothing bought, no defeats.
 | v10 | Level rework (2026-10-09): **no level is lost.** XP is raised to `max(Xp, LevelRules.scoreForLevel(min(oldLevel, 100)))`, where `oldLevel` is the old curve's `floor(sqrt(Xp / 600)) + 1` (`LevelRules.legacyLevelFor`); players at Level 10 or below keep their XP exactly. `LevelRewardsClaimed = that level` (no back-dated coins); `Cosmetics = {}`. XP only ever goes up, so the XP leaderboard keeps every player's order among themselves. |
 | v11 | Offices (2026-10-09): `Furniture = {}`, `OfficePrivacy = "Public"`; no `OfficeLayout` yet, so sanitize gives the starting furniture (`FurnitureConfig.DefaultLayout`: desk, chair, plant). |
 | v12 | Pickleball (2026-10-10): `Recreation` left empty (sanitize gives the starting record: rating 1000, no matches), `ProcessedMatches = {}`, `SeasonClaims = {}`. |
+| v13 | Quests (2026-10-10): `Quests` left empty, so sanitize gives the tutorial's first step and no daily or weekly quests; `QuestService` draws them on first use. |
 | v9 | Settings (2026-10-09): `Settings = {}`; sanitize fills every known setting with its default (`ReducedMotion = false`). |
 | v7 | Mystery Hammers (2026-10-08): each saved hammer without `BonusDamagePercent` gets `StoreConfig.Mystery.LegacyBonusDamagePercent` (15); `sanitize` then sets `Damage` to the fixed base (35). Old hammers rolled 20-35 damage, so every one ends up at least as strong. The crit roll is kept. The bump also stops older servers, which would drop the new field, from loading and saving this data. |
 
@@ -155,6 +166,12 @@ characters, the newest 50. `SeasonClaims`: whole numbers ≥ 0, the newest 24. W
 `RecreationService` → all three, `Furniture` (office-supply drops) and `Coins` (fees, refunds, rewards
 through `SessionService`). A player who leaves mid-match is recorded just before their data is saved
 for the last time (`PlayerDataService.beforeRelease`).
+
+Sanitizing v13 (`QuestRules.sanitize`): quest ids must exist in `QuestConfig` with the right kind
+(unknown, duplicate or wrong-kind entries are dropped), progress whole and clamped to 0..target, at most
+3 per list; a broken `DayKey` / `WeekKey` or an empty list means "draw again"; `Rerolls` 0..1;
+`TutorialStep` 1..#Tutorial+1. Writers: `QuestService` only (progress from other services' results,
+claims, rerolls), plus `Coins`, `Xp` and `Furniture` for rewards.
 
 Player history and the admin audit log are **not** player data either: DataStore `PlayerHistory`,
 keys `Player_<UserId>` (last 200 entries) and `Admin_<YYYYMMDD>` (up to 500 per UTC day), written

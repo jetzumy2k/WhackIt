@@ -49,6 +49,12 @@ local RemoteLimits = table.freeze({
 		RefillPerSecond = 0.5,
 	}),
 
+	-- Quest claims and rerolls: a few taps in a row are fine.
+	Quests = table.freeze({
+		Capacity = 6,
+		RefillPerSecond = 2,
+	}),
+
 	-- Pickleball swings: PickleballConfig.Shot.SwingCooldown (0.5 s) is the
 	-- gameplay limit; this only stops floods.
 	RecSwing = table.freeze({

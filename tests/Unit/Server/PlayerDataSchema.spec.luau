@@ -852,4 +852,55 @@ return function()
 			expect(claims[1]).to.equal(7)
 		end)
 	end)
+
+	describe("PlayerDataSchema v13 (quests)", function()
+		local QuestConfig = require(ReplicatedStorage.Config.QuestConfig)
+		local QuestRules = require(ReplicatedStorage.Shared.QuestRules)
+
+		it("starts existing players at the first tutorial step, touching nothing else", function()
+			local data = validData()
+			data.SchemaVersion = 12
+			data.Quests = { TutorialStep = 3 } -- can't exist before v13; dropped
+			expect((PlayerDataSchema.prepare(data))).to.equal(true)
+			local quests = data.Quests :: QuestRules.State
+			expect(quests.TutorialStep).to.equal(1)
+			expect(quests.DayKey).to.equal("")
+			expect(#quests.Daily).to.equal(0)
+			expect(data.Coins).to.equal(250)
+			expect(data.SchemaVersion).to.equal(PlayerDataSchema.CURRENT_VERSION)
+		end)
+
+		it("keeps saved quests exactly", function()
+			local data = validData()
+			local daily = QuestConfig.Daily[1]
+			local weekly = QuestConfig.Weekly[1]
+			data.Quests = {
+				DayKey = "2026-10-10",
+				Daily = { { Id = daily.Id, Progress = 1, Claimed = false } },
+				Rerolls = 1,
+				DailyBonus = false,
+				WeekKey = "W2961",
+				Weekly = { { Id = weekly.Id, Progress = weekly.Target, Claimed = true } },
+				TutorialStep = 2,
+				TutorialProgress = 0,
+			}
+			PlayerDataSchema.prepare(data)
+			PlayerDataSchema.prepare(data) -- loading again changes nothing
+			local quests = data.Quests :: QuestRules.State
+			expect(quests.DayKey).to.equal("2026-10-10")
+			expect(quests.Daily[1].Id).to.equal(daily.Id)
+			expect(quests.Daily[1].Progress).to.equal(1)
+			expect(quests.Rerolls).to.equal(1)
+			expect(quests.WeekKey).to.equal("W2961")
+			expect(quests.Weekly[1].Claimed).to.equal(true)
+			expect(quests.TutorialStep).to.equal(2)
+		end)
+
+		it("repairs broken quests", function()
+			local data = validData()
+			data.Quests = "busy"
+			expect((PlayerDataSchema.prepare(data))).to.equal(true)
+			expect((data.Quests :: QuestRules.State).TutorialStep).to.equal(1)
+		end)
+	end)
 end

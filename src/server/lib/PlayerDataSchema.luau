@@ -26,6 +26,7 @@ local PetRules = require(ReplicatedStorage.Shared.PetRules)
 local PickleballConfig = require(ReplicatedStorage.Config.PickleballConfig)
 local PickleballRules = require(ReplicatedStorage.Shared.PickleballRules)
 local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
+local QuestRules = require(ReplicatedStorage.Shared.QuestRules)
 local SettingsRules = require(ReplicatedStorage.Shared.SettingsRules)
 local StoreConfig = require(ReplicatedStorage.Config.StoreConfig)
 
@@ -76,6 +77,8 @@ export type PlayerData = {
 	Recreation: PickleballRules.Record, -- rating, wins/losses, today's reward caps
 	ProcessedMatches: { string }, -- recent rewarded match ids, so a match pays once
 	SeasonClaims: { number }, -- seasons whose prizes were handed out
+	-- v13 (docs/QUESTS.md)
+	Quests: QuestRules.State, -- today's and this week's quests, the tutorial step
 }
 
 export type PendingGift = {
@@ -91,7 +94,7 @@ export type Migration = (data: RawData) -> ()
 
 local PlayerDataSchema = {}
 
-PlayerDataSchema.CURRENT_VERSION = 12
+PlayerDataSchema.CURRENT_VERSION = 13
 
 -- Upper bound for counters; far beyond legitimate play, small enough to stay
 -- an exact integer and to keep leaderboard values sane.
@@ -196,6 +199,11 @@ PlayerDataSchema.MIGRATIONS = table.freeze({
 		data.ProcessedMatches = {}
 		data.SeasonClaims = {}
 	end,
+	[13] = function(data: RawData)
+		-- v12 -> v13: quests. Everyone starts the tutorial chain; daily and
+		-- weekly quests are drawn on first use (QuestService).
+		data.Quests = nil
+	end,
 }) :: { [number]: Migration }
 
 -- Most recent purchase ids remembered for duplicate-receipt protection. Roblox
@@ -243,6 +251,7 @@ function PlayerDataSchema.template(): PlayerData
 		Recreation = PickleballRules.defaultRecord(0),
 		ProcessedMatches = {},
 		SeasonClaims = {},
+		Quests = QuestRules.default(),
 	}
 end
 
@@ -521,6 +530,9 @@ function PlayerDataSchema.sanitize(data: RawData): ()
 	-- happens when it's used, RecreationService), match ids and season
 	-- claims bounded, newest last.
 	data.Recreation = PickleballRules.sanitizeRecord(data.Recreation)
+	-- Quests: unknown ids dropped, progress clamped; a broken day or week is
+	-- drawn again (QuestService).
+	data.Quests = QuestRules.sanitize(data.Quests)
 	local matches: { string } = {}
 	local rawMatches = data.ProcessedMatches
 	if typeof(rawMatches) == "table" then
