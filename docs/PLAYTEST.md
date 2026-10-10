@@ -903,3 +903,14 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 610 | 11th spin / under 200 coins / below Level 5 | SPIN greyed with the reason |
 | 611 | Tap SPIN twice quickly | Only one spin is charged |
 
+### Paper Toss Showdown (2026-10-10)
+| # | Steps | Expected |
+|---|---|---|
+| 612 | Walk to the 🗑️ PAPER TOSS booth (east end of the Recreation Center entrance) or 🏢 Social → 🗑️ Paper Toss | Window with Intern Izzy open, Max and Cora locked, your best score, how to play |
+| 613 | Play Izzy | Game screen: an office with a bin and a breeze label; AIM marker sweeps; tap stops it; POWER bar sweeps; tap throws |
+| 614 | Throws | The paper arcs and lands in the bin (swish / in) or off the rim / on the floor; the coworker throws after; the scoreboard and round update |
+| 615 | Far bin / strong breeze | You need more power / aim against the arrow |
+| 616 | Win the game | Card "YOU WON THE TOSS-OFF!" with 80 coins and 240 XP (first win today ×2); Max unlocks |
+| 617 | Lose / tie / 🚪 Quit | No reward; Quit closes the game |
+| 618 | Beat CEO Cora | The first win of the day also gives an office supply |
+

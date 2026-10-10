@@ -300,6 +300,26 @@
           }
         },
 
+        "PaperToss": {
+          "$className": "Folder",
+
+          "Start": {
+            "$className": "RemoteEvent"
+          },
+
+          "Throw": {
+            "$className": "RemoteEvent"
+          },
+
+          "Quit": {
+            "$className": "RemoteEvent"
+          },
+
+          "State": {
+            "$className": "RemoteEvent"
+          }
+        },
+
         "Capsule": {
           "$className": "Folder",
 

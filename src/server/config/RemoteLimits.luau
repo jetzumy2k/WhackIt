@@ -88,6 +88,13 @@ local RemoteLimits = table.freeze({
 		RefillPerSecond = 0.5,
 	}),
 
+	-- Paper Toss: starting, throwing, quitting (throws also wait
+	-- PaperTossConfig.MinThrowSeconds).
+	PaperToss = table.freeze({
+		Capacity = 4,
+		RefillPerSecond = 1,
+	}),
+
 	-- Quest claims and rerolls: a few taps in a row are fine.
 	Quests = table.freeze({
 		Capacity = 6,

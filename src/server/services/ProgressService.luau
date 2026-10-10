@@ -146,6 +146,7 @@ function ProgressService.snapshot(
 			DayKey = data.PetArena.DayKey,
 		},
 		Capsule = table.clone(data.Capsule),
+		PaperToss = { Cleared = data.PaperToss.Cleared, Best = data.PaperToss.Best },
 	}
 end
 
