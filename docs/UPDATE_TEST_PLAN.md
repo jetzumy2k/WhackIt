@@ -43,6 +43,22 @@ slowest spot in both runs (the tower interior, many lights and the atrium). Next
 published game on a real phone and PC (F9 Developer Console); if the lobby stays low, try
 `Lighting.Technology = ShadowMap` and fewer PointLights in the atrium.
 
+**Lobby experiment 2026-10-10** (1-player Play at the lobby spawn, the probe's Studio-only 🧪 Perf
+button switching this client's effects, lights and shadows, 10-s windows):
+
+| Mode | fps |
+|---|---|
+| Normal, while loading | 30.6 |
+| Normal, loaded | **60.1** (the 60 fps cap) |
+| No post effects | 61.7 |
+| No room lights | 60.0 / 66.0 / 48.5 |
+| No global shadows | 19.8 |
+
+Reading: once loaded, the lobby reaches the 60 fps cap with everything on, and no single feature
+raises it. The low readings (here 19.8 with shadows *off*, earlier 13-20 with everything on) don't
+follow the settings, so they come from outside the game (Studio still loading, other programs). **No
+graphics were cut.** Still to do: the published game on a real phone and PC (F9 Developer Console).
+
 ## 3. Per-phase tests
 
 ### 3.1 Phase 2a: offices
