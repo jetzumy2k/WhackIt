@@ -400,6 +400,132 @@ function PanelKit.grid(parent: Instance, minWidth: number, height: number): Fram
 	return frame
 end
 
+-- An item card for grids (visual overhaul V4b): a picture area on top (an
+-- emoji `Icon`, or the caller puts a ViewportFrame in `Picture`), a title,
+-- a muted detail line, an optional badge in the corner and an action
+-- button at the bottom. `Accent` tints the outline and the picture area.
+export type ItemCard = {
+	Frame: Frame,
+	Picture: Frame,
+	Title: TextLabel,
+	Detail: TextLabel,
+	Badge: TextLabel,
+	Button: TextButton,
+}
+
+function PanelKit.itemCard(
+	parent: Instance,
+	title: string,
+	detail: string,
+	icon: string?,
+	accent: Color3?
+): ItemCard
+	local tint = accent or C.Primary
+	local card = Instance.new("Frame")
+	card.Name = "ItemCard"
+	card.LayoutOrder = nextOrder(parent)
+	card.BackgroundColor3 = C.Card
+	card.Parent = parent
+	corner(card, UiTokens.Radius.Card)
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = tint
+	stroke.Transparency = 0.55
+	stroke.Thickness = 1.5
+	stroke.Parent = card
+	padding(card, 8)
+
+	local picture = Instance.new("Frame")
+	picture.Name = "Picture"
+	picture.BackgroundColor3 = tint:Lerp(C.Window, 0.7)
+	picture.Size = UDim2.new(1, 0, 0, 72)
+	picture.Parent = card
+	corner(picture, UiTokens.Radius.Tile)
+	if icon then
+		local glyph = Instance.new("TextLabel")
+		glyph.Name = "Icon"
+		glyph.BackgroundTransparency = 1
+		glyph.Size = UDim2.fromScale(1, 1)
+		glyph.Font = UiTokens.Font.Title
+		glyph.TextScaled = true
+		glyph.Text = icon
+		glyph.TextColor3 = C.Text
+		glyph.Parent = picture
+		local limit = Instance.new("UITextSizeConstraint")
+		limit.MaxTextSize = 44
+		limit.Parent = glyph
+	end
+
+	local badge = Instance.new("TextLabel")
+	badge.Name = "Badge"
+	badge.AnchorPoint = Vector2.new(1, 0)
+	badge.Position = UDim2.new(1, -4, 0, 4)
+	badge.Size = UDim2.fromOffset(0, 20)
+	badge.AutomaticSize = Enum.AutomaticSize.X
+	badge.BackgroundColor3 = tint
+	badge.Font = PanelKit.FONT_BOLD
+	badge.TextColor3 = C.Text
+	badge.TextSize = 13
+	badge.Text = ""
+	badge.Visible = false
+	badge.ZIndex = 3
+	badge.Parent = picture
+	corner(badge, 10)
+	local badgePad = Instance.new("UIPadding")
+	badgePad.PaddingLeft = UDim.new(0, 6)
+	badgePad.PaddingRight = UDim.new(0, 6)
+	badgePad.Parent = badge
+
+	local titleLabel = Instance.new("TextLabel")
+	titleLabel.Name = "Title"
+	titleLabel.BackgroundTransparency = 1
+	titleLabel.Position = UDim2.fromOffset(0, 78)
+	titleLabel.Size = UDim2.new(1, 0, 0, 22)
+	titleLabel.Font = PanelKit.FONT_BOLD
+	titleLabel.TextColor3 = C.Text
+	titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+	titleLabel.TextTruncate = Enum.TextTruncate.AtEnd
+	titleLabel.Text = title
+	titleLabel.Parent = card
+	PanelKit.setTextSize(titleLabel, PanelKit.TEXT_SIZE)
+
+	local detailLabel = Instance.new("TextLabel")
+	detailLabel.Name = "Detail"
+	detailLabel.BackgroundTransparency = 1
+	detailLabel.Position = UDim2.fromOffset(0, 100)
+	detailLabel.Size = UDim2.new(1, 0, 1, -100 - PanelKit.ROW_HEIGHT - 6)
+	detailLabel.Font = PanelKit.FONT
+	detailLabel.TextColor3 = C.Muted
+	detailLabel.TextXAlignment = Enum.TextXAlignment.Left
+	detailLabel.TextYAlignment = Enum.TextYAlignment.Top
+	detailLabel.TextWrapped = true
+	detailLabel.TextTruncate = Enum.TextTruncate.AtEnd
+	detailLabel.Text = detail
+	detailLabel.Parent = card
+	PanelKit.setTextSize(detailLabel, PanelKit.SMALL_SIZE)
+
+	local button = PanelKit.button(card, "", tint)
+	button.AnchorPoint = Vector2.new(0, 1)
+	button.Position = UDim2.fromScale(0, 1)
+	button.Size = UDim2.new(1, 0, 0, PanelKit.ROW_HEIGHT)
+	return {
+		Frame = card,
+		Picture = picture,
+		Title = titleLabel,
+		Detail = detailLabel,
+		Badge = badge,
+		Button = button,
+	}
+end
+
+-- Shows `text` in an item card's corner badge, or hides it ("").
+function PanelKit.setBadge(card: ItemCard, text: string, color: Color3?): ()
+	card.Badge.Text = text
+	card.Badge.Visible = text ~= ""
+	if color then
+		card.Badge.BackgroundColor3 = color
+	end
+end
+
 -- An on/off switch: the setting's name and description on the left, an
 -- "On" / "Off" button on the right. Clicking flips it at once and calls
 -- `onChange`; the caller may correct it later with `set` (e.g. the server's

@@ -771,3 +771,17 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 518 | Use a boost / reach Zen | Boost chips (✨ XP, 💥 DMG, 🎯 CRIT DMG, 🧘 ZEN) with time left appear under the stats and disappear when they run out |
 | 519 | Bottom of the screen | The XP bar: a round level badge, a blue-violet fill, "1,234 / 5,000 XP to Lv n" (👑 MAX LEVEL at 100) |
 | 520 | The buttons (right column, Menu, Music) | Dark cards with a coloured round icon disc, a white label and a coloured outline; they squish slightly when pressed; on a phone the compact layout still fits clear of the jump button |
+
+### Bag and Hammer shop panels (visual overhaul V4b) — screenshots please
+| # | Steps | Expected |
+|---|---|---|
+| 521 | 🔨 Hammers | The same window style as Quests/Pickleball: a grid of cards, each with a 3D hammer, its name, "Damage n · description", a badge (✓ Equipped / Owned / SALE -n%) and a button (Buy · 🪙 n / Need 🪙 n / 🔒 Reach Lv n / Equip / Equipped) |
+| 522 | Buy and equip a hammer | The card's button and badge change in place; coins drop |
+| 523 | 🎒 Bag with items (Admin → Rewards can give some) | Cards with an icon (✨ 💥 🎯 🥚 📦 🎁), the item, a short explanation, an "xN" badge and Use / Open / Incubate |
+| 524 | Use an item until the Bag is empty | The card disappears; an empty notice when nothing is left; the Bag button's count follows |
+| 525 | Phone emulator and a controller | Cards wrap to fewer columns; the window scrolls; the controller can move between buttons and close the window |
+| 526 | 🛒 Store (open; Admin → Store "Open now" if closed) | The same window style: tabs ✨ XP Boost, 💥 Damage, 🎯 Crit Dmg, 📦 Bundles, 🥚 Eggs, 🎁 Mystery (+ 🛡️ Admin for admins); boost tabs show cards with "+n% XP", "30 min of play · goes to your Bag", "Buy · R$ n" (the live price fills in) and a 🎁 Gift button in the corner |
+| 527 | 🎁 Gift on a boost | A "🎁 Send a gift" window with a search box (typing filters friends without losing focus) and your friends as buttons; picking one sends the gift request and closes it |
+| 528 | Eggs and Mystery tabs | The odds text first, then the cards (egg cards tinted by rarity); Bundles as sections listing their contents with "Purchase · R$ n" |
+| 529 | Store closed (Admin → Close now) | A non-admin sees a 🔒 notice "The store is closed right now"; the button hides for non-admins |
+| 530 | 🛡️ Admin tab | Status text, Open now / Close now, Start and End boxes, Set schedule with an error line for a bad format |
