@@ -750,3 +750,14 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 505 | Look towards the corridor | Left of the welcome sign, the FLOOR GUIDE: 5 Rooftop Lounge … 1 Lobby & Offices, "← Elevator: west end of the corridor" |
 | 506 | Walk the ground and Senior corridors | Framed joke posters on the corridor walls beyond the lobby; blue-slate carpet on the ground floor, plum on the Senior floor, bronze on Department Heads, red in the CEO's suite |
 | 507 | Break Room / Meeting Room | Wood slat wall in the Break Room; coloured acoustic panels in the Meeting Room; doorways still open |
+
+### Boss creatures (visual overhaul V3) — screenshots or a short clip please
+| # | Steps | Expected |
+|---|---|---|
+| 508 | Look at any boss from a few studs away | A friendly face: round eyes with a shine, flat brows, a smile (no angry brows, no teeth); it blinks every few seconds; its arms sway gently |
+| 509 | Walk up to it, then move left and right | Brows jump up with an "O" mouth when it notices you; its pupils follow you |
+| 510 | Hit it | Eyes squeezed shut, worried brows, blushing, arms flailing; then a dizzy moment (wobbly mouth, rolling pupils), then back to smiling |
+| 511 | Defeat it | Eyes closed, a big relieved smile, arms up while it spins away, and a confetti burst |
+| 512 | Settings → Reduced motion on, defeat a boss | No confetti |
+| 513 | Senior, Principal, CEO and an event/mission boss | Same faces on every boss (with crowns where they had them) |
+| 514 | Performance: stand in the lobby with many bosses in view (View → Stats) | No big frame drop compared with before |
