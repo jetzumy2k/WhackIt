@@ -304,9 +304,10 @@ function PlayerPanelController.start(): ()
 		PanelKit.text(
 			you.Body,
 			string.format(
-				"Stress goes down with every hit and climbs again 15 s after your last hit. Reach 0 for Zen! Each Zen adds +%d%% boss coins to your Zen bonus, up to +%d%%. Your level comes from XP, not from Zen.",
+				"Stress goes down with every hit and climbs again 15 s after your last hit. Reach 0 for Zen! Each Zen adds +%d%% boss coins to your Zen bonus, up to +%d%%. After a Zen, your stress has to climb back to %d before the next one counts. Your level comes from XP, not from Zen.",
 				StressRules.zenBonusPercent(1),
-				StressRules.zenBonusPercent(GameConfig.ZenCoinBonusMaxLevel)
+				StressRules.zenBonusPercent(GameConfig.ZenCoinBonusMaxLevel),
+				GameConfig.ZenRearmStress
 			),
 			"Muted"
 		)

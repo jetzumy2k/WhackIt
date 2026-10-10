@@ -642,5 +642,5 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 |---|---|---|
 | 430 | Join; look at the top bar | `Lv n   Score …   Coins …   Zen +x%` (no "Zen Lv") |
 | 431 | Reach Zen with a second client watching | Your card: "Zen bonus now +x% boss coins"; the other client's toast: "<name> reached Zen!" with no level number |
-| 432 | Menu → Profile | Tile "Zen bonus (boss coins)" shows "+x% (n/10)"; the line under the tiles says each Zen adds +5 % up to +50 % and that your level comes from XP |
+| 432 | Menu → Profile | Tile "Zen bonus (boss coins)" shows "+x% (n/10)"; the line under the tiles says each Zen adds +5 % up to +50 %, that stress must climb back to 50 before the next Zen counts, and that your level comes from XP |
 | 433 | A player with 10+ Zens | Top bar `Zen +50% (max)`, Profile "+50% (10/10)", card "Zen bonus +50% boss coins (max)" |
