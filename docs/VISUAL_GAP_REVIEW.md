@@ -100,3 +100,9 @@ Visual work becomes its own track, done before Phase 6, each part with a Studio 
   animated in `Controllers/BossVisualController` (expression per state, pupils follow you, arm swing and
   flail, confetti burst on defeat unless Reduced motion; only within 140 studs). Walking bosses and
   meshes are not done.
+- **V3 redo** (owner: "very ugly", screenshots): the first V3 face used blocks and balls, so the brows and
+  smile read as black bars (a "mustache" on the CEO), the eyes bulged like googly balls and the long
+  stick arms looked spidery. Rebuilt as a rounded mascot from ellipsoids (built-in sphere meshes, no
+  uploaded assets): an egg-shaped body with a belly, oval eyes set into the face with oval pupils and a
+  shine, "^" closed eyes, thin rounded brows, an open "D" smile with a tongue, short stubby arms, oval
+  feet, a smaller crown, the sign held by the hand. Expressions and animation unchanged.
