@@ -39,6 +39,9 @@ on pickleball. This plan splits Phase 2 and moves Recreation forward:
 | D11 | Co-op missions | ✅ (2026-10-10) team boss missions (2-4 players, rewards by contribution with a floor) | 5 |
 | D12 | Event / co-op rewards | ✅ (2026-10-10) direct rewards (coins, XP, supplies, sometimes an egg or boost); no new currency | 5 |
 | D13 | Where progress counts | ✅ (2026-10-10) personal goals only (co-op per team); no server or global community goals | 5 |
+| D14 | Tower floors | ✅ (2026-10-10) floor 4 "Department Heads" with 5 Principal bosses, plus a Rooftop Lounge (social hub) | 3 |
+| D15 | Floor navigation | ✅ (2026-10-10) an elevator with a floor panel (locked floors show requirement and progress); stairs to floor 2 stay | 3 |
+| D16 | New boss tier | ✅ (2026-10-10) Principal bosses: Level 30 + 1 defeat of the Senior version; the CEO's unlock and health unchanged | 3 |
 | D9 | Quest rewards | ✅ (2026-10-10) coins + XP; weekly quests add an office-supply roll; a bonus for claiming all 3 dailies | 2b |
 
 ## 3. Phase 1: GUI foundation
@@ -236,6 +239,13 @@ script (fake swings, swings out of reach, racing accepts, leaving mid-match).
   passes; Studio specs **747 passed, 0 failed**; playtest (`docs/PLAYTEST.md` 456-471) reported working by the owner (2026-10-10). Not done: non-combat
   co-op activities (coffee, paperwork), which belong with Phase 2c.
 - **5 Events and co-op:** new `EventRules` types; co-op contribution counted per action.
+- **3a Tower: 🟡 implemented 2026-10-10 on branch `feat/phase3a-tower`** (docs/TOWER.md, D14-D16): one
+  elevator shaft with a floor panel (`Tower.Ride`, `TowerRules`, `TowerService`), the 4th floor with 5
+  Principal bosses (Lv 30 + Senior, `PostCeo` so the CEO is unchanged). No schema change. Specs changed
+  on purpose: the boss difficulty ladder now skips the CEO, the CEO's "bosses left" count and health
+  ignore the Principal tier, office floors include the 4th, every floor has an elevator door.
+  `scripts/check.ps1` passes; Studio specs and playtest (`docs/PLAYTEST.md` 472-483) not run yet.
+  **3b Rooftop Lounge** next. The streaming check (audit "Instance streaming") is still open.
 - **3 Tower:** new floors stacked above the existing building, behind the existing Level/unlock rules.
   Re-check every fixed-position spec.
 - **6 Showcase:** offline office visits (read-only layout), contests, voting limits, moderation.

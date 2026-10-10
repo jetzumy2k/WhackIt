@@ -292,6 +292,14 @@
           }
         },
 
+        "Tower": {
+          "$className": "Folder",
+
+          "Ride": {
+            "$className": "RemoteEvent"
+          }
+        },
+
         "Quests": {
           "$className": "Folder",
 

@@ -193,7 +193,24 @@ return function()
 
 		it("counts how many bosses are still left to beat", function()
 			local status = ProgressionRules.unlockStatus(ceoId, {}, level)
-			expect(status.DefeatsNeeded).to.equal(#BossConfig.List - 1)
+			-- Every boss but the CEO and the Principal tier (PostCeo, 4th floor).
+			local others = 0
+			for _, boss in BossConfig.List do
+				if boss.Id ~= ceoId and not boss.PostCeo then
+					others += 1
+				end
+			end
+			expect(status.DefeatsNeeded).to.equal(others)
+		end)
+
+		it("never needs the Principal tier (Phase 3a)", function()
+			local defeats = allDefeatedExcept(nil)
+			for _, boss in BossConfig.List do
+				if boss.PostCeo then
+					defeats[boss.Id] = nil
+				end
+			end
+			expect(ProgressionRules.isBossUnlocked(ceoId, defeats, level)).to.equal(true)
 		end)
 
 		it("unlocks once every other boss is beaten at the required level", function()
@@ -206,6 +223,22 @@ return function()
 			expect(ProgressionRules.isBossUnlocked(ceoId, allDefeatedExcept(nil), level - 1)).to.equal(
 				false
 			)
+		end)
+	end)
+	describe("ProgressionRules Principal bosses (4th floor)", function()
+		local principal = BossConfig.ById.principal_deadline_boss
+		local senior = "senior_deadline_boss"
+
+		it("needs Level 30 and a defeat of the Senior version", function()
+			expect(principal).never.to.equal(nil)
+			local high = GameConfig.PrincipalMinLevel
+			expect(ProgressionRules.isBossUnlocked(principal.Id, { [senior] = 1 }, high)).to.equal(
+				true
+			)
+			expect(ProgressionRules.isBossUnlocked(principal.Id, { [senior] = 1 }, high - 1)).to.equal(
+				false
+			)
+			expect(ProgressionRules.isBossUnlocked(principal.Id, {}, high)).to.equal(false)
 		end)
 	end)
 	describe("ProgressionRules admin unlocks and custom bosses", function()

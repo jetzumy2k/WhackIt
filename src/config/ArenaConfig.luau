@@ -48,6 +48,9 @@ local BASE_BOSS_SIZE = Vector3.new(6, 8, 6)
 local EXECUTIVE_FLOOR_Y = 30
 -- Floor top of the upper storey (ground walls are 14 tall, plus a 1-stud slab).
 local UPPER_FLOOR_Y = 15
+-- 4th floor (Department Heads, Phase 3a): on the Executive Floor's roof slab
+-- (its ceiling is 14 above its floor, plus a 1-stud slab).
+local DEPARTMENT_FLOOR_Y = EXECUTIVE_FLOOR_Y + 15
 -- Bosses stand a little behind the room centre, leaving space to walk around them.
 local BOSS_OFFSET = Vector3.new(0, 4, -2)
 
@@ -137,6 +140,49 @@ local offices: { Office } = {
 		"MON 8:00 AM",
 		"Mondays never end"
 	),
+
+	-- 4th floor (Department Heads): Principal offices over the CEO's suite,
+	-- in the same columns as the floors below.
+	office(
+		"principal_deadline_boss",
+		-68,
+		DEPARTMENT_FLOOR_Y,
+		Color3.fromRGB(140, 85, 65),
+		"DUE: -1 DAYS",
+		"Ahead of schedule? Never."
+	),
+	office(
+		"principal_meeting_master",
+		-34,
+		DEPARTMENT_FLOOR_Y,
+		Color3.fromRGB(110, 90, 150),
+		"MEETINGS: 24/7",
+		"Per our sync"
+	),
+	office(
+		"principal_reply_all_boss",
+		0,
+		DEPARTMENT_FLOOR_Y,
+		Color3.fromRGB(80, 115, 165),
+		"INBOX: INFINITE",
+		"Looping in everyone"
+	),
+	office(
+		"principal_production_bug",
+		34,
+		DEPARTMENT_FLOOR_Y,
+		Color3.fromRGB(90, 135, 85),
+		"UPTIME: 3%",
+		"It's a feature"
+	),
+	office(
+		"principal_monday_monster",
+		68,
+		DEPARTMENT_FLOOR_Y,
+		Color3.fromRGB(100, 105, 130),
+		"MON MON MON",
+		"Weekend? Never heard of it"
+	),
 }
 
 -- A boss's hitbox grows with its visual Scale, and it stands on its floor.
@@ -169,6 +215,59 @@ local ArenaConfig = table.freeze({
 	DoorWidth = 10,
 	DoorHeight = 10,
 	UpperFloorY = UPPER_FLOOR_Y,
+	-- 4th floor (Department Heads): offices along the north half, the corridor
+	-- south of them, both over the Executive Floor's footprint.
+	DepartmentFloor = table.freeze({
+		FloorY = DEPARTMENT_FLOOR_Y,
+		CeilingY = DEPARTMENT_FLOOR_Y + 14,
+		NorthZ = -52,
+		SouthZ = 0,
+	}),
+
+	-- The tower elevator (Phase 3a, docs/TOWER.md): one shaft at the corridor's
+	-- west end with a door on every floor; each door opens the floor panel
+	-- (TowerService checks every ride). Floors in order, bottom first.
+	Tower = table.freeze({
+		DoorX = -85,
+		DoorZ = -10,
+		ArriveX = -78,
+		-- The 2nd and 3rd floor doors keep their old names (ElevatorUpDoor,
+		-- ElevatorDownDoor). Text is what the floor panel says about the floor.
+		Floors = table.freeze({
+			table.freeze({
+				Id = "Ground",
+				Number = 1,
+				Name = "Lobby & Offices",
+				Text = "The lobby, the Hall of Calm and 5 office bosses",
+				FloorY = 0,
+				DoorName = "ElevatorGroundDoor",
+			}),
+			table.freeze({
+				Id = "Senior",
+				Number = 2,
+				Name = "Senior Floor",
+				Text = "5 Senior bosses (Level 10+)",
+				FloorY = UPPER_FLOOR_Y,
+				DoorName = "ElevatorUpDoor",
+			}),
+			table.freeze({
+				Id = "Executive",
+				Number = 3,
+				Name = "Executive Floor",
+				Text = "The CEO's suite. Stress level: MAXIMUM",
+				FloorY = EXECUTIVE_FLOOR_Y,
+				DoorName = "ElevatorDownDoor",
+			}),
+			table.freeze({
+				Id = "Department",
+				Number = 4,
+				Name = "Department Heads",
+				Text = "5 Principal bosses (Level 30+)",
+				FloorY = DEPARTMENT_FLOOR_Y,
+				DoorName = "ElevatorDepartmentDoor",
+			}),
+		}),
+	}),
 
 	-- Straight stairs along the lobby's east wall, from the lobby floor (south
 	-- end) up to the upper corridor (north end): one 1-stud step every 2 studs.

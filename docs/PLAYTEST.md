@@ -694,3 +694,19 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 469 | Clear 4 missions in one UTC day | The 4th card says today's 3 rewarded missions are used |
 | 470 | Exploits (command bar): `Remotes.Mission.Open:FireServer("nope!")`, `Remotes.Mission.Join:FireServer({})`, Begin as a non-leader, 10 Opens in a row | Bad ids rejected and logged; the rest answered with a toast; the rate limit holds |
 | 471 | Output | No errors from MissionService, BossService, MissionController, CombatService, RewardService |
+
+### The tower: elevator and Department Heads (Phase 3a)
+| # | Steps | Expected |
+|---|---|---|
+| 472 | From the lobby walk into the corridor | A sign "← ELEVATOR · ALL FLOORS" just west of the lobby; at the corridor's west end an elevator door "ELEVATOR · ALL FLOORS" with an **Elevator · Floor 1** prompt |
+| 473 | Press E (a new Level 1 player) | The 🛗 Elevator panel: 4 · Department Heads (🔒 "Reach Level 30 (you're Level 1)" with a bar), 3 · Executive Floor (🔒 "Reach Level 10…"), 2 · Senior Floor (Go), 1 · Lobby & Offices (📍 You are here) |
+| 474 | Go to floor 2 | Arrive by the floor-2 elevator door, facing into the corridor; its door now says "ELEVATOR · FLOOR 2" and has the same panel (no more "Ride up") |
+| 475 | Below Level 30, standing at an elevator door, run in the **client** command bar `game.ReplicatedStorage.Remotes.Tower.Ride:FireServer("Department")` | A toast "Department Heads: Reach Level 30 (you're Level n) first."; nothing moves |
+| 476 | Admin → set Level 30 (or the boss bypass), ride to floor 4 | Arrive on the Department Heads floor: a corridor with a window wall over the campus, amber lights, the "FLOOR 4 · DEPARTMENT HEADS" sign and five offices "Principal … 's Office" |
+| 477 | Walk into a Principal office | A darker, slightly bigger, crowned boss with its own sign; locked until you've beaten its Senior version ("LOCKED…" bar, the swing message says what's missing) |
+| 478 | Beat a Senior boss, then its Principal | The Principal fights and pays like any boss (more than the Senior), shouts its own lines |
+| 479 | Executive Floor with every ground and Senior boss beaten but no Principal | The panel shows floor 3 open; riding there spikes stress to 100 % with the welcome toast; the CEO is fightable (Principals aren't needed) |
+| 480 | Command bar (server): move a Level 1 player onto floor 4, e.g. `game.Players.Player1.Character:PivotTo(CFrame.new(-40, 48, -10))` | Within a second they're sent to the Senior floor with a toast saying what's missing |
+| 481 | Ride from a spot far from any elevator door (fire the remote from the lobby) | A toast "Use the elevator at the west end of the corridor."; nothing moves |
+| 482 | Phone emulator: open the panel | Floors readable, buttons tappable, it scrolls |
+| 483 | Output | No errors from TowerService, ExecutiveService, TowerController, OfficeBuilder, BossService |

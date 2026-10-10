@@ -6,6 +6,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local ArenaConfig = require(ReplicatedStorage.Config.ArenaConfig)
 local BossConfig = require(ReplicatedStorage.Config.BossConfig)
 local OfficeBuilder = require(ServerScriptService.Lib.OfficeBuilder)
+local TowerRules = require(ReplicatedStorage.Shared.TowerRules)
 
 -- Free space kept around each boss so players can walk up and swing.
 local BOSS_CLEARANCE = 7
@@ -228,10 +229,16 @@ return function()
 			office:Destroy()
 		end)
 
-		it("puts Senior offices on the upper floor", function()
+		it("puts Senior offices on the upper floor and Principal offices on the 4th", function()
 			for _, entry in ArenaConfig.Offices do
 				local isSenior = string.sub(entry.BossId, 1, 7) == "senior_"
-				expect(entry.Center.Y).to.equal(if isSenior then ArenaConfig.UpperFloorY else 0)
+				local isPrincipal = string.sub(entry.BossId, 1, 10) == "principal_"
+				expect(entry.Center.Y).to.equal(
+					if isSenior
+						then ArenaConfig.UpperFloorY
+						elseif isPrincipal then ArenaConfig.DepartmentFloor.FloorY
+						else 0
+				)
 			end
 		end)
 	end)
@@ -294,22 +301,45 @@ return function()
 		end)
 	end)
 	describe("OfficeBuilder Executive Floor", function()
-		it("builds an elevator door on the 2nd and the 3rd floor", function()
+		it("builds an elevator door on every floor", function()
 			local office = build()
-			local up = office:FindFirstChild("ElevatorUpDoor", true)
-			local down = office:FindFirstChild("ElevatorDownDoor", true)
-			expect(up).never.to.equal(nil)
-			expect(down).never.to.equal(nil)
+			for _, floor in ArenaConfig.Tower.Floors do
+				local door = office:FindFirstChild(floor.DoorName, true)
+				expect(door).never.to.equal(nil)
+				expect(math.abs((door :: BasePart).Position.Y - (floor.FloorY + 4)) < 1e-3).to.equal(
+					true
+				)
+			end
 			office:Destroy()
 		end)
 
 		it("keeps the elevator arrival spots clear", function()
 			local office = build()
 			local executive = ArenaConfig.Executive
-			for _, point in { executive.ArriveUp, executive.ArriveDown } do
+			local points = { executive.ArriveUp, executive.ArriveDown }
+			for _, floor in ArenaConfig.Tower.Floors do
+				table.insert(points, TowerRules.arrival(floor.Id) :: Vector3)
+			end
+			for _, point in points do
 				for _, p in parts(office) do
 					expect(contains(p, point)).to.equal(false)
 				end
+			end
+			office:Destroy()
+		end)
+
+		it("gives each tower arrival a floor to stand on", function()
+			local office = build()
+			for _, floor in ArenaConfig.Tower.Floors do
+				local arrival = TowerRules.arrival(floor.Id) :: Vector3
+				local below = arrival - Vector3.new(0, 3.2, 0)
+				local supported = floor.FloorY == 0 -- the ground floor is the baseplate
+				for _, p in parts(office) do
+					if p.CanCollide and contains(p, below) then
+						supported = true
+					end
+				end
+				expect(supported).to.equal(true)
 			end
 			office:Destroy()
 		end)

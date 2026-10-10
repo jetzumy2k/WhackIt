@@ -95,7 +95,7 @@ local function lockedHint(bossId: string): string
 		then BossConfig.ById[status.PreviousBossId]
 		else nil
 	if status and status.LevelNeeded > 0 then
-		return string.format("Reach Level %d to fight this Senior boss!", status.LevelNeeded)
+		return string.format("Reach Level %d to fight this boss!", status.LevelNeeded)
 	end
 	if status and previous == nil and status.DefeatsNeeded > 0 then
 		return string.format(

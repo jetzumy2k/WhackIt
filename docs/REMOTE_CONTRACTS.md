@@ -134,11 +134,14 @@ claim wins; claimer within 14 studs; data loaded).
 `Notify.Announcement` may carry an optional `Title` (≤ 60 characters, e.g. "🥚 NEW EGG FOUND!"),
 used only by server-made announcements.
 
-## Executive Elevator (ProximityPrompt, not a RemoteEvent)
-`ProximityPrompt.Triggered` gives the server the real player, so there is no client payload to
-validate. "Ride up" checks `ProgressionRules.isBossUnlocked("the_ceo", …)` on the server before moving
-the player (and spiking stress); "Ride down" always works. `ExecutiveService` also returns anyone found
-on the Executive Floor without access.
+## Tower: the elevator (docs/TOWER.md, 2026-10-10)
+| Remote | Direction | Payload | Server checks / handling |
+|---|---|---|---|
+| `Tower.Ride` | client -> server | `floorId: string` ("Ground", "Senior", "Executive", "Department"); `maxArgs` 1, `RemoteLimits.Tower` (burst 3, 0.5/s) | `Validate.id` and a known floor (else rejected); the player stands within 16 studs of an elevator door; not already on that floor; access from saved data (`TowerRules.status`: Executive = the CEO unlocked, Department = Level 30, admin bypass opens all). Then `noteTeleport` and the move; the Executive Floor spikes stress. Refused: a toast |
+
+The "Elevator" prompt on each door only opens the client's panel; the old "Ride up" / "Ride down"
+prompts are gone. `ExecutiveService` still returns anyone on the Executive Floor without access, and
+`TowerService` anyone on the 4th floor below Level 30.
 
 ## `Shop.BuyHammer`: client -> server
 | | |

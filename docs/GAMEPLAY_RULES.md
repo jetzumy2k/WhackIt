@@ -396,8 +396,13 @@ version in the office directly above it: tougher than every ground-floor boss, p
 ground version, with a gold crown and its own jokes (numbers in the table above).
 A Senior boss unlocks with **Player Level ≥ `UpstairsMinLevel` (10)** and **1 defeat of its
 ground-floor version** (`BossConfig.UnlockAfterBossId` / `UnlockDefeats` / `MinLevel`). Below the
-level its bar reads "LOCKED: reach Lv 10" and swings show "Reach Level 10 to fight this Senior boss!".
+level its bar reads "LOCKED: reach Lv 10" and swings show "Reach Level 10 to fight this boss!".
 This spreads experienced players across two floors instead of crowding one boss.
+
+### Department Heads (4th floor, Level 30+, 2026-10-10)
+Each Senior boss has a **Principal** version on the 4th floor, reached by the tower elevator: Level 30
+and 1 defeat of its Senior version, tougher than every Senior boss and paying more. Numbers and the
+floor: docs/TOWER.md.
 
 ### Boss labels (2026-10-06)
 A boss's name, HP bar and speech bubble float above it, sized in studs (they shrink with distance) and
@@ -606,10 +611,12 @@ and a spec rejects a blocklist of bad words, including for the angry CEO.
 ## Executive Floor and the CEO (2026-10-05)
 - **Unlock:** defeat **every** ground-floor and Senior boss at least once (Level 10 is implied by the
   Senior bosses). Rule: `BossConfig.UnlockAfterAllBosses` on the CEO.
-- **Getting there:** the **Executive Elevator** at the west end of the 2nd-floor corridor ("Ride up"
-  prompt; "Ride down" on the 3rd floor). The server checks access; without it a message says what's
-  missing ("defeat every boss once first (N to go)"). Anyone found on the floor without access is
-  sent back down.
+- **Getting there:** the **tower elevator** at the west end of the corridor (since 2026-10-10 one
+  shaft for every floor with a floor panel, docs/TOWER.md). The server checks access; without it the
+  panel and a toast say what's missing ("Defeat every boss once (N to go)"). Anyone found on the floor
+  without access is sent back down.
+- The Principal tier (4th floor, docs/TOWER.md) is **not** part of this unlock and not counted in the
+  CEO's health.
 - **Stress spike:** arriving on the Executive Floor sets the Stress Meter to **100 %** (and re-arms Zen).
 - **The CEO:** a 1.6× size, crowned raid boss. **MaxHealth = 150 × the toughest other boss**
   (`GameConfig.CeoHealthMultiplier`, derived from config: 150 × 600 = **90,000** today). Rewards

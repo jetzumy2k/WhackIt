@@ -55,6 +55,12 @@ local RemoteLimits = table.freeze({
 		RefillPerSecond = 0.5,
 	}),
 
+	-- Tower elevator rides: a few in a row are fine (picking a floor).
+	Tower = table.freeze({
+		Capacity = 3,
+		RefillPerSecond = 0.5,
+	}),
+
 	-- Quest claims and rerolls: a few taps in a row are fine.
 	Quests = table.freeze({
 		Capacity = 6,
