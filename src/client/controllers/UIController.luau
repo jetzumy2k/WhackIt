@@ -17,6 +17,7 @@ local BossConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild
 local GameConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("GameConfig"))
 local GameplayController = require(script.Parent.GameplayController)
 local LevelRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("LevelRules"))
+local StressRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("StressRules"))
 local ProgressController = require(script.Parent.ProgressController)
 local Responsive = require(script.Parent.Parent.Lib.Responsive)
 local UiTokens = require(script.Parent.Parent.Lib.UiTokens)
@@ -148,7 +149,7 @@ local function buildHud(): (ScreenGui, Frame)
 	scoreLabel.AnchorPoint = Vector2.new(0.5, 0)
 	scoreLabel.Position = UDim2.new(0.5, 0, 0, 48)
 	scoreLabel.Size = UDim2.new(0.6, 0, 0, 26)
-	scoreLabel.Text = "Lv 1   Score: 0   Coins: 0   Zen Lv 0"
+	scoreLabel.Text = "Lv 1   Score: 0   Coins: 0   Zen +0%"
 	Responsive.capText(scoreLabel, 22)
 	task.spawn(function()
 		local leaderstats = localPlayer:WaitForChild("leaderstats")
@@ -162,11 +163,11 @@ local function buildHud(): (ScreenGui, Frame)
 			local zenLevel = if snapshot then snapshot.ZenLevel else 0
 			local level = localPlayer:GetAttribute(Attributes.Level)
 			scoreLabel.Text = string.format(
-				"Lv %d   Score: %d   Coins: %d   Zen Lv %d",
+				"Lv %d   Score: %d   Coins: %d   %s",
 				if typeof(level) == "number" then level else 1,
 				score.Value,
 				coins.Value,
-				zenLevel
+				StressRules.zenBonusText(zenLevel)
 			)
 		end
 		score.Changed:Connect(refreshStats)
@@ -517,13 +518,21 @@ local function onZenAchieved(card: Frame, payload: unknown): ()
 		showCard(
 			card,
 			string.format(
-				"ZEN ACHIEVED!\n+%d coins   Zen Level %d\nYour hammer glows while you stay Zen.",
+				"ZEN ACHIEVED!\n+%d coins   %s\nYour hammer glows while you stay Zen.",
 				if typeof(bonus) == "number" then bonus else 0,
-				level
+				if StressRules.zenBonusIsMax(level)
+					then string.format(
+						"Zen bonus +%d%% boss coins (max)",
+						StressRules.zenBonusPercent(level)
+					)
+					else string.format(
+						"Zen bonus now +%d%% boss coins",
+						StressRules.zenBonusPercent(level)
+					)
 			)
 		)
 	else
-		UIController.showToast(string.format("%s reached Zen! (Level %d)", name, level))
+		UIController.showToast(string.format("%s reached Zen!", name))
 	end
 end
 
