@@ -143,7 +143,9 @@ return function()
 			for _, slot in state.Daily do
 				before[slot.Id] = true
 			end
-			state.Daily[1].Progress = 1
+			-- Partly done (one short of the target, which may be 1).
+			local first = QuestRules.questOf(state.Daily[1]) :: QuestConfig.Quest
+			state.Daily[1].Progress = first.Target - 1
 			expect((QuestRules.reroll(state, 1, 50, Random.new(4)))).to.equal(true)
 			expect(before[state.Daily[1].Id]).to.equal(nil)
 			expect(state.Daily[1].Progress).to.equal(0)
