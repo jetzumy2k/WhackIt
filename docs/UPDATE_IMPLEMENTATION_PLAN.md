@@ -259,13 +259,13 @@ script (fake swings, swings out of reach, racing accepts, leaving mid-match).
   60 s, reports with a per-player hide and a review queue, admin Approve / Remove / Feature from the copy's
   bar. In Studio without API access it runs on a store in that server only. `scripts/check.ps1` passes;
   Studio specs **804 passed**; playtest (`docs/PLAYTEST.md` 537-552) reported okay by the owner. **6b weekly contests** (D18/D19) next.
-- **6b Design contests: 🟡 implemented 2026-10-10 on branch `feat/phase6b-contests`** (docs/CONTESTS.md,
+- **6b Design contests: ✅ merged 2026-10-10 on branch `feat/phase6b-contests`** (docs/CONTESTS.md,
   schema v17, D18/D19). Six rotating themes; entries Monday-Friday, voting Saturday-Sunday (UTC); random
   ballots (30 dealt a day, skips count), 5 s in the entry, once per entry; Bayesian average + theme-fit
   bonus; results frozen once on Monday, top 10 get trophies (3 new Special items), everyone else who
   entered gets coins and XP. Copy rooms, reports and moderation shared with the Showcase
   (`ShowcaseService.registerKind`). Studio admins can move the contest clock (⏩ Next phase).
-  `scripts/check.ps1` passes; Studio specs and playtest (`docs/PLAYTEST.md` 553-566) not run yet.
+  `scripts/check.ps1` passes; Studio specs **823 passed**; playtest (`docs/PLAYTEST.md` 553-566) not reported yet.
 
 ## 7. Files expected to change (2a + 4)
 New: `src/config/{FurnitureConfig,PickleballConfig}.luau`, `src/shared/{FurnitureRules,PickleballRules,BallFlight}.luau`,
