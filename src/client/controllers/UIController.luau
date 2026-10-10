@@ -159,10 +159,13 @@ local function buildHud(): (ScreenGui, Frame)
 	meterLimit.MaxSize = Vector2.new(380, TOP_METER_HEIGHT)
 	meterLimit.Parent = meter
 	-- Centred in the top bar's height (it is taller on newer Roblox UIs).
+	-- The stat and boost chips follow right under the meter (set further down).
+	local placeChips: (meterBottom: number) -> () = function() end
 	local function placeMeter(): ()
 		local inset = GuiService:GetGuiInset().Y
 		local height = if inset >= TOP_METER_HEIGHT + 4 then inset else TOP_METER_HEIGHT + 12
 		meter.Position = UDim2.new(0.5, 0, 0, height / 2)
+		placeChips(height / 2 + TOP_METER_HEIGHT / 2)
 	end
 	placeMeter()
 	task.delay(2, placeMeter) -- the inset is sometimes reported late
@@ -222,11 +225,11 @@ local function buildHud(): (ScreenGui, Frame)
 	local stats = Instance.new("Frame")
 	stats.Name = "Stats"
 	stats.AnchorPoint = Vector2.new(0.5, 0)
-	stats.Position = UDim2.new(0.5, 0, 0, 8)
+	stats.Position = UDim2.new(0.5, 0, 0, 52)
 	stats.Size = UDim2.fromOffset(0, 30)
 	stats.AutomaticSize = Enum.AutomaticSize.X
 	stats.BackgroundTransparency = 1
-	stats.Parent = gui
+	stats.Parent = topGui
 	local statsLayout = Instance.new("UIListLayout")
 	statsLayout.FillDirection = Enum.FillDirection.Horizontal
 	statsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -259,7 +262,7 @@ local function buildHud(): (ScreenGui, Frame)
 	end
 	local levelValue = chip(stats, "LevelChip", "⭐", 1)
 	local scoreValue = chip(stats, "ScoreChip", "🏆", 2)
-	local coinsValue = chip(stats, "CoinsChip", "🪙", 3)
+	local coinsValue = chip(stats, "CoinsChip", "💰", 3)
 	local zenValue = chip(stats, "ZenChip", "🧘", 4)
 	coinsValue.TextColor3 = Color3.fromRGB(255, 220, 120)
 
@@ -357,11 +360,17 @@ local function buildHud(): (ScreenGui, Frame)
 	local boosts = Instance.new("Frame")
 	boosts.Name = "Boosts"
 	boosts.AnchorPoint = Vector2.new(0.5, 0)
-	boosts.Position = UDim2.new(0.5, 0, 0, 44)
+	boosts.Position = UDim2.new(0.5, 0, 0, 88)
 	boosts.Size = UDim2.fromOffset(0, 26)
 	boosts.AutomaticSize = Enum.AutomaticSize.X
 	boosts.BackgroundTransparency = 1
-	boosts.Parent = gui
+	boosts.Parent = topGui
+	-- 6 px under the meter, boosts 6 px under the stat chips (30 tall).
+	placeChips = function(meterBottom: number)
+		stats.Position = UDim2.new(0.5, 0, 0, meterBottom + 6)
+		boosts.Position = UDim2.new(0.5, 0, 0, meterBottom + 6 + 30 + 6)
+	end
+	placeMeter()
 	local boostsLayout = Instance.new("UIListLayout")
 	boostsLayout.FillDirection = Enum.FillDirection.Horizontal
 	boostsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
