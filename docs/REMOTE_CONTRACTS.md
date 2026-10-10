@@ -175,6 +175,12 @@ Client -> server remotes: `RemoteLimits.Contest` (burst 4, 0.5/s); one contest r
 | `Contest.State` | server -> one client | `{ Available, Global, Week, Phase, Remaining, Test, Entered, EntryModeration, EntryItems, EntryFit, ThemeItemsUsed, CanEnter, EnterReason, CanVote, VoteReason, VotesLeft, Winners = { { UserId, Name, Score } }, WinnersWeek }` | after Info, Enter |
 | `Contest.Result` | server -> one client | `{ Week, Theme, Rank?, Coins, Xp, Item }` | once per entered week when its prize is paid |
 
+## Capsule: the Lucky Capsule Machine (docs/CAPSULE.md, 2026-10-10)
+| Remote | Direction | Payload | Server checks / handling |
+|---|---|---|---|
+| `Capsule.Spin` | client -> server | none; `maxArgs` 0; `RemoteLimits.Capsule` (burst 2, 0.5/s) | data and session loaded; `CapsuleRules.canSpin` (Level ≥ 5, a spin left today, coins ≥ 200); `trySpendCoins(200)`; spin counted; prize rolled with the server's Random (last spin of the day: Rare+ only); paid at once (coins, XP, a Bag item, or an office supply); history entry. Never yields |
+| `Capsule.Result` | server -> one client | `{ PrizeId, Label, Icon, Tier, Detail, Lucky, SpinsLeft }` | after every spin |
+
 ## PetArena: pet battles (docs/PET_ARENA.md, 2026-10-10)
 Client -> server remotes: `RemoteLimits.PetArena` (burst 5, 1/s). Pet ids must name one of the
 sender's own pets (`PetRules.isPetId` + saved `Pets`), else rejected. A player in a battle, a

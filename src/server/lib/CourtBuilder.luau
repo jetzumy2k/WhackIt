@@ -388,6 +388,116 @@ local function arenaKiosk(parent: Instance): ()
 	model.Parent = parent
 end
 
+-- The Lucky Capsule Machine (docs/CAPSULE.md): a big gumball-style machine
+-- east of the entrance path, across from the Pet Arena. Its prompt opens the
+-- machine window (Controllers/CapsuleController), which turns the handle.
+CourtBuilder.CAPSULE_PROMPT_NAME = "CapsulePrompt"
+CourtBuilder.CAPSULE_POSITION = Vector3.new(34, 0, 121)
+local CAPSULE_COLORS = {
+	Color3.fromRGB(255, 110, 130),
+	Color3.fromRGB(110, 200, 255),
+	Color3.fromRGB(255, 210, 80),
+	Color3.fromRGB(140, 230, 140),
+	Color3.fromRGB(210, 150, 255),
+	Color3.fromRGB(255, 160, 90),
+}
+
+local function capsuleMachine(parent: Instance): ()
+	local model = Instance.new("Model")
+	model.Name = "LuckyCapsule"
+	local base = CourtBuilder.CAPSULE_POSITION + Vector3.new(0, CENTER.SurfaceY, 0)
+	local red = Color3.fromRGB(215, 60, 70)
+	local foot = part(
+		model,
+		"Foot",
+		Vector3.new(1, 5, 5),
+		base + Vector3.new(0, 0.5, 0),
+		Color3.fromRGB(60, 62, 72),
+		Enum.Material.Metal
+	)
+	foot.Shape = Enum.PartType.Cylinder
+	foot.Orientation = Vector3.new(0, 0, 90)
+	part(model, "Body", Vector3.new(4, 4, 4), base + Vector3.new(0, 3, 0), red)
+	part(
+		model,
+		"Chute",
+		Vector3.new(1.4, 1.2, 0.6),
+		base + Vector3.new(0, 2, -2.2),
+		Color3.fromRGB(40, 42, 50),
+		Enum.Material.Metal
+	)
+	local handle = part(
+		model,
+		"CapsuleHandle",
+		Vector3.new(0.3, 1.6, 0.3),
+		base + Vector3.new(0, 3.6, -2.25),
+		Color3.fromRGB(240, 240, 245),
+		Enum.Material.Metal
+	)
+	handle.Orientation = Vector3.new(0, 0, 0)
+	local knob = part(
+		model,
+		"HandleKnob",
+		Vector3.new(0.6, 0.6, 0.6),
+		base + Vector3.new(0, 4.4, -2.25),
+		Color3.fromRGB(255, 210, 80)
+	)
+	knob.Shape = Enum.PartType.Ball
+	local dome = part(
+		model,
+		"Dome",
+		Vector3.new(5, 5, 5),
+		base + Vector3.new(0, 7.3, 0),
+		Color3.fromRGB(220, 240, 255),
+		Enum.Material.Glass
+	)
+	dome.Shape = Enum.PartType.Ball
+	dome.Transparency = 0.55
+	for index, offset in
+		{
+			Vector3.new(-1, -1.2, -0.6),
+			Vector3.new(0.9, -1.3, 0.4),
+			Vector3.new(0.1, -1.4, 1.1),
+			Vector3.new(-0.6, -0.4, 0.9),
+			Vector3.new(0.8, -0.3, -0.8),
+			Vector3.new(-1.1, 0.4, 0),
+			Vector3.new(0.3, 0.5, 0.2),
+			Vector3.new(1.0, 0.6, 0.6),
+		}
+	do
+		local ball = part(
+			model,
+			"Capsule",
+			Vector3.new(1.1, 1.1, 1.1),
+			base + Vector3.new(0, 7.3, 0) + offset,
+			CAPSULE_COLORS[(index - 1) % #CAPSULE_COLORS + 1]
+		)
+		ball.Shape = Enum.PartType.Ball
+	end
+	local cap = part(model, "Cap", Vector3.new(0.6, 1.6, 1.6), base + Vector3.new(0, 9.9, 0), red)
+	cap.Shape = Enum.PartType.Cylinder
+	cap.Orientation = Vector3.new(0, 0, 90)
+	local panel = part(model, "Sign", Vector3.new(8, 3, 0.5), base + Vector3.new(0, 12.4, 0), BOARD)
+	label(panel, Enum.NormalId.Back, "🎁 LUCKY CAPSULES", BOARD_TEXT)
+	label(panel, Enum.NormalId.Front, "🎁 LUCKY CAPSULES", BOARD_TEXT)
+	part(
+		model,
+		"SignPole",
+		Vector3.new(0.4, 1.6, 0.4),
+		base + Vector3.new(0, 10.9, 0),
+		POST,
+		Enum.Material.Metal
+	)
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = CourtBuilder.CAPSULE_PROMPT_NAME
+	prompt.ObjectText = "Lucky Capsule Machine"
+	prompt.ActionText = "Spin"
+	prompt.MaxActivationDistance = 10
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = handle
+	model.Parent = parent
+end
+
 -- The pavilion over the courts (visual overhaul V2): a high roof on steel
 -- columns (lobs fly up to ~40 studs, so the roof is above them), a lit
 -- fascia sign facing the HQ, three-tier stands down both sides, a mural
@@ -526,6 +636,7 @@ function CourtBuilder.build(parent: Instance): Center
 	local prompt = signpost(folder)
 	pavilion(folder)
 	arenaKiosk(folder)
+	capsuleMachine(folder)
 	folder.Parent = parent
 	return { Folder = folder, Courts = courts, Prompt = prompt }
 end

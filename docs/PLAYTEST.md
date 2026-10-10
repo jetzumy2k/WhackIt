@@ -893,3 +893,13 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 604 | Two players: Challenge | The other player gets a card with ACCEPT; the battle starts on both screens; moves wait for both; 15 s timeout boops |
 | 605 | Win 10 trainer battles in a day | The 11th says no reward today |
 
+### Lucky Capsule Machine (2026-10-10) — Level 5+, coins (Admin can give)
+| # | Steps | Expected |
+|---|---|---|
+| 606 | Walk to the machine east of the Recreation Center entrance (or 🏢 Social → 🎁 Capsules) | A gumball machine with coloured capsules in a glass dome and a "🎁 LUCKY CAPSULES" sign; the prompt opens the window |
+| 607 | The window | Price 200 coins, "10 of 10 spins left", the lucky-spin note, SPIN, and the odds list (adds up to 100 %) plus the lucky-spin odds |
+| 608 | SPIN | Coins drop by 200; the handle turns; the capsule wobbles, pops and shows the prize in its tier colour; you get it (coins / XP / Bag item / office supply) |
+| 609 | Spin until 1 left | "Your next spin is today's LUCKY spin"; that spin gives Rare, Epic or Jackpot and a celebration card |
+| 610 | 11th spin / under 200 coins / below Level 5 | SPIN greyed with the reason |
+| 611 | Tap SPIN twice quickly | Only one spin is charged |
+

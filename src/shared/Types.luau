@@ -112,6 +112,8 @@ export type ProfileSnapshot = {
 	Missions: { DayKey: string, DayRewarded: number, Cleared: number },
 	-- Pet Arena (docs/PET_ARENA.md): trainers beaten and today's rewarded wins.
 	PetArena: { Cleared: number, DayWins: number, DayKey: string },
+	-- Lucky Capsule Machine (docs/CAPSULE.md): today's spins.
+	Capsule: { DayKey: string, Spins: number, TotalSpins: number },
 }
 
 export type OwnedPet = {

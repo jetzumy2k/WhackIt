@@ -145,6 +145,7 @@ function ProgressService.snapshot(
 			DayWins = data.PetArena.DayWins,
 			DayKey = data.PetArena.DayKey,
 		},
+		Capsule = table.clone(data.Capsule),
 	}
 end
 
