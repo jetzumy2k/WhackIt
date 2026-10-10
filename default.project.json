@@ -300,6 +300,38 @@
           }
         },
 
+        "PetArena": {
+          "$className": "Folder",
+
+          "Start": {
+            "$className": "RemoteEvent"
+          },
+
+          "Move": {
+            "$className": "RemoteEvent"
+          },
+
+          "Forfeit": {
+            "$className": "RemoteEvent"
+          },
+
+          "Challenge": {
+            "$className": "RemoteEvent"
+          },
+
+          "Answer": {
+            "$className": "RemoteEvent"
+          },
+
+          "State": {
+            "$className": "RemoteEvent"
+          },
+
+          "Result": {
+            "$className": "RemoteEvent"
+          }
+        },
+
         "Contest": {
           "$className": "Folder",
 

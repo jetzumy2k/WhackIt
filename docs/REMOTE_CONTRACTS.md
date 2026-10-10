@@ -175,6 +175,21 @@ Client -> server remotes: `RemoteLimits.Contest` (burst 4, 0.5/s); one contest r
 | `Contest.State` | server -> one client | `{ Available, Global, Week, Phase, Remaining, Test, Entered, EntryModeration, EntryItems, EntryFit, ThemeItemsUsed, CanEnter, EnterReason, CanVote, VoteReason, VotesLeft, Winners = { { UserId, Name, Score } }, WinnersWeek }` | after Info, Enter |
 | `Contest.Result` | server -> one client | `{ Week, Theme, Rank?, Coins, Xp, Item }` | once per entered week when its prize is paid |
 
+## PetArena: pet battles (docs/PET_ARENA.md, 2026-10-10)
+Client -> server remotes: `RemoteLimits.PetArena` (burst 5, 1/s). Pet ids must name one of the
+sender's own pets (`PetRules.isPetId` + saved `Pets`), else rejected. A player in a battle, a
+pickleball match or a team mission can't start or accept another.
+
+| Remote | Direction | Payload | Server checks / handling |
+|---|---|---|---|
+| `PetArena.Start` | client -> server | `trainerIndex` (1-5), `petId`; `maxArgs` 2 | `PetArenaRules.canFight` (beat the one before); builds both fighters from saved data / config; `State` Battle |
+| `PetArena.Move` | client -> server | `move` ("Boop", "Charge", "Guard", else rejected); `maxArgs` 1 | in a battle, once per round. CPU: the trainer's move (`cpuMove`) and the round at once. Player: the round when both chose, or at the 15 s deadline (missing = Boop). `State` Round with the events |
+| `PetArena.Forfeit` | client -> server | none | the other side wins (also on leaving) |
+| `PetArena.Challenge` | client -> server | `userId`, `petId`; `maxArgs` 2 | target here, not self, both free, no challenge already waiting for them; `State` Challenge to the target; expires after 30 s |
+| `PetArena.Answer` | client -> server | `fromUserId`, `accept: boolean`, `petId`; `maxArgs` 3 | the pending challenge from that player; still fresh and both free; starts a player battle |
+| `PetArena.State` | server -> one client | `{ Kind = "Battle" | "Round" | "Waiting", BattleId, You, Vs, Round, A, B, Events, Waiting, TurnLeft }` or `{ Kind = "Challenge", FromUserId, FromName, Species, Rarity, Seconds }` | fighter views carry name, species, rarity, Pep, max Pep, power, speed, crit %, charged |
+| `PetArena.Result` | server -> one client | `{ BattleId, Outcome, Vs, Trainer?, Coins, Xp, Supply, Rewarded, Cleared }` | rewards from `PetArenaRules.cpuWin` / `playerResult` (daily caps), paid by the server |
+
 ## `Shop.BuyHammer`: client -> server
 | | |
 |---|---|

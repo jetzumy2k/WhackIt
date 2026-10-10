@@ -880,3 +880,16 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 595 | Equip a new Mythical (Griffin, Pegasus, Kitsune, Ice Dragon, Celestial Lion) | A soft turning ring of light under it with two sparks circling; Pegasus wings beat as it walks; Kitsune has three tails |
 | 596 | Settings → Reduced motion, phone | Pets still look right; nothing heavy (no lights) |
 
+### Pet Arena (2026-10-10) — needs a pet (Admin → Rewards → eggs, hatch one)
+| # | Steps | Expected |
+|---|---|---|
+| 597 | Walk to the 🐾 PET ARENA sign at the Recreation Center entrance (west), or 🏢 Social → 🐾 Pet Arena | The Pet Arena window: your pets to pick, 🏆 Trainers, 🤝 Challenge, 📜 How it works |
+| 598 | Pick a pet | Its stats line (Pep, power, speed, luck) shows; rarer / buffed pets are stronger |
+| 599 | Trainers: only Intern Ivy is open; ⚔️ Battle! | The battle screen: two pets on a little stage, Pep bars, Boop / Charge / Guard and 🏳️ |
+| 600 | Boop, Charge, Guard a few times | Boops lunge and the target wobbles; Guard shows a bubble; a charged pet glows; the round text tells what happened |
+| 601 | Win | Card "YOUR PET WON!" with 80 coins and 240 XP (first win today ×2); Barista Ben unlocks |
+| 602 | Lose a battle (or 🏳️) | "YOUR PET GOT DIZZY"; no reward |
+| 603 | Beat Director Dee (or Admin data) | The first win of the day also gives an office supply |
+| 604 | Two players: Challenge | The other player gets a card with ACCEPT; the battle starts on both screens; moves wait for both; 15 s timeout boops |
+| 605 | Win 10 trainer battles in a day | The 11th says no reward today |
+

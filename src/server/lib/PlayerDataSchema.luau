@@ -24,6 +24,7 @@ local LevelRewardRules = require(ReplicatedStorage.Shared.LevelRewardRules)
 local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
 local MissionRules = require(ReplicatedStorage.Shared.MissionRules)
 local OfficeConfig = require(ReplicatedStorage.Config.OfficeConfig)
+local PetArenaRules = require(ReplicatedStorage.Shared.PetArenaRules)
 local PetConfig = require(ReplicatedStorage.Config.PetConfig)
 local PetRules = require(ReplicatedStorage.Shared.PetRules)
 local PickleballConfig = require(ReplicatedStorage.Config.PickleballConfig)
@@ -91,6 +92,8 @@ export type PlayerData = {
 	Showcase: ShowcaseRules.State, -- last publish, offices liked and hidden
 	-- v17 (docs/CONTESTS.md)
 	Contest: ContestRules.State, -- weeks entered, prizes paid, this week's votes
+	-- v18 (docs/PET_ARENA.md)
+	PetArena: PetArenaRules.Record, -- trainers beaten, today's rewarded battles
 }
 
 export type PendingGift = {
@@ -106,7 +109,7 @@ export type Migration = (data: RawData) -> ()
 
 local PlayerDataSchema = {}
 
-PlayerDataSchema.CURRENT_VERSION = 17
+PlayerDataSchema.CURRENT_VERSION = 18
 
 -- Upper bound for counters; far beyond legitimate play, small enough to stay
 -- an exact integer and to keep leaderboard values sane.
@@ -232,6 +235,10 @@ PlayerDataSchema.MIGRATIONS = table.freeze({
 		-- v16 -> v17: design contests. Nothing entered, voted or paid yet.
 		data.Contest = nil
 	end,
+	[18] = function(data: RawData)
+		-- v17 -> v18: the Pet Arena. No battles yet.
+		data.PetArena = nil
+	end,
 }) :: { [number]: Migration }
 
 -- Most recent purchase ids remembered for duplicate-receipt protection. Roblox
@@ -284,6 +291,7 @@ function PlayerDataSchema.template(): PlayerData
 		Missions = MissionRules.defaultRecord(),
 		Showcase = ShowcaseRules.defaultState(),
 		Contest = ContestRules.defaultState(),
+		PetArena = PetArenaRules.defaultRecord(),
 	}
 end
 
@@ -571,6 +579,7 @@ function PlayerDataSchema.sanitize(data: RawData): ()
 	data.Missions = MissionRules.sanitizeRecord(data.Missions)
 	data.Showcase = ShowcaseRules.sanitizeState(data.Showcase)
 	data.Contest = ContestRules.sanitizeState(data.Contest)
+	data.PetArena = PetArenaRules.sanitizeRecord(data.PetArena)
 	local matches: { string } = {}
 	local rawMatches = data.ProcessedMatches
 	if typeof(rawMatches) == "table" then

@@ -140,6 +140,11 @@ function ProgressService.snapshot(
 		Quests = QuestRules.copy(data.Quests),
 		DailyEvent = table.clone(data.DailyEvent),
 		Missions = table.clone(data.Missions),
+		PetArena = {
+			Cleared = data.PetArena.Cleared,
+			DayWins = data.PetArena.DayWins,
+			DayKey = data.PetArena.DayKey,
+		},
 	}
 end
 
