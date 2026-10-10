@@ -28,6 +28,12 @@ local DataConfig = table.freeze({
 	ShowcaseStoreName = "OfficeShowcase",
 	ShowcaseBoardPrefix = "Showcase_",
 
+	-- Design contests (ContestService): entries ("Entry_<week>_<UserId>") and
+	-- frozen results ("Results_<week>"), plus OrderedDataStores
+	-- <prefix>Entries_<week>, <prefix>Score_<week> and <prefix>Review_<week>.
+	ContestStoreName = "DesignContest",
+	ContestBoardPrefix = "Contest_",
+
 	-- Shown when a player is kicked to protect their data.
 	LoadFailedMessage = "We couldn't load your saved progress. Please rejoin in a moment.",
 	SessionEndedMessage = "Your progress was opened on another server. Please rejoin.",

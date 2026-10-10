@@ -35,7 +35,6 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 local Workspace = game:GetService("Workspace")
 
@@ -70,8 +69,26 @@ type CachedList = { Ids: { number }, At: number }
 type Counts = { Likes: number, Visits: number }
 type CopyRoom = {
 	Room: OfficeWingBuilder.Room,
-	OwnerId: number?, -- whose office it shows (nil = free)
+	Kind: string, -- "Showcase" or a kind from registerKind, e.g. "Contest"
+	Key: string?, -- what it shows, e.g. "Showcase:42" (nil = free)
+	OwnerId: number?, -- whose office it shows
+	Snapshot: Snapshot?,
 	EmptySince: number,
+}
+
+-- What another kind of copy (the design contest) plugs into the Showcase.
+export type KindHooks = {
+	-- Extra fields for Showcase.State { Kind = "Room" } in this kind's copy.
+	info: (player: Player, ownerId: number) -> { [string]: any },
+	-- 🚩 Report pressed in this kind's copy (reason already checked). May yield.
+	report: (player: Player, ownerId: number, reason: string) -> (),
+	-- Approve / Remove pressed by an admin in this kind's copy. May yield.
+	moderate: (admin: Player, action: string, ownerId: number) -> (),
+	-- Entries waiting for review, as summaries (shown in the Review tab). May yield.
+	review: () -> { { [string]: any } },
+	-- Showcase.Visit(userId, variant) for one of this kind's Variants. May yield.
+	visit: (player: Player, ownerId: number, variant: string) -> (),
+	Variants: { string },
 }
 
 local ShowcaseService = {}
@@ -95,6 +112,7 @@ local counted: { [string]: boolean } = {}
 -- The copy room each player stood in at the last guard tick.
 local standingIn: { [Player]: number } = {}
 local busy: { [Player]: boolean } = {}
+local kinds: { [string]: KindHooks } = {}
 
 local function toast(player: Player, text: string): ()
 	ToastRemote:FireClient(player, text)
@@ -270,6 +288,7 @@ local function template(key: string): Model?
 end
 
 local function render(copy: CopyRoom, snapshot: Snapshot): ()
+	copy.Snapshot = snapshot
 	local room = copy.Room
 	room.Furniture:ClearAllChildren()
 	for _, entry in snapshot.Layout do
@@ -288,12 +307,17 @@ local function render(copy: CopyRoom, snapshot: Snapshot): ()
 		if theme then theme.Color else OfficeWingBuilder.DEFAULT_WALL,
 		if theme and theme.Floor then theme.Floor else OfficeWingBuilder.DEFAULT_FLOOR
 	)
-	room.Nameplate.Text = "🌟 " .. snapshot.Name .. "'s Office"
+	room.Nameplate.Text = if copy.Kind == "Contest"
+		then "🏆 " .. snapshot.Name .. "'s Entry"
+		else "🌟 " .. snapshot.Name .. "'s Office"
 	room.Model:SetAttribute(ShowcaseService.OWNER_ATTRIBUTE, snapshot.UserId)
 end
 
 local function clearRoom(copy: CopyRoom): ()
 	copy.OwnerId = nil
+	copy.Key = nil
+	copy.Snapshot = nil
+	copy.Kind = "Showcase"
 	copy.Room.Furniture:ClearAllChildren()
 	copy.Room.Nameplate.Text = "🌟 Showcase"
 	copy.Room.Model:SetAttribute(ShowcaseService.OWNER_ATTRIBUTE, nil)
@@ -304,16 +328,18 @@ local function clearRoom(copy: CopyRoom): ()
 	)
 end
 
--- The room already showing this office, or a free one set up for it.
-local function roomFor(snapshot: Snapshot): number?
+-- The room already showing `key`, or a free one set up for it.
+local function roomFor(kind: string, key: string, snapshot: Snapshot): number?
 	for index, copy in rooms do
-		if copy.OwnerId == snapshot.UserId then
+		if copy.Key == key then
 			render(copy, snapshot) -- it may have changed since
 			return index
 		end
 	end
 	for index, copy in rooms do
-		if copy.OwnerId == nil then
+		if copy.Key == nil then
+			copy.Kind = kind
+			copy.Key = key
 			copy.OwnerId = snapshot.UserId
 			copy.EmptySince = os.clock()
 			render(copy, snapshot)
@@ -364,14 +390,28 @@ end
 local function roomState(player: Player, index: number?): { [string]: any }
 	local copy = if index then rooms[index] else nil
 	local ownerId = if copy then copy.OwnerId else nil
-	if ownerId == nil then
+	if copy == nil or ownerId == nil then
 		return { Kind = "Room" }
+	end
+	local hooks = kinds[copy.Kind]
+	if copy.Kind ~= "Showcase" and hooks then
+		local state = hooks.info(player, ownerId)
+		state.Kind = "Room"
+		state.Copy = copy.Kind
+		state.OwnerId = ownerId
+		state.Name = if copy.Snapshot then copy.Snapshot.Name else ""
+		state.Own = ownerId == player.UserId
+		state.Moderation = if copy.Snapshot and AdminService.isAdmin(player)
+			then copy.Snapshot.Moderation
+			else nil
+		return state
 	end
 	local cached = snapshots[ownerId]
 	local snapshot = if cached then cached.Snapshot else nil
 	local data = PlayerDataService.get(player)
 	return {
 		Kind = "Room",
+		Copy = "Showcase",
 		OwnerId = ownerId,
 		Name = if snapshot then snapshot.Name else "",
 		Likes = if snapshot then snapshot.Likes else 0,
@@ -568,7 +608,16 @@ local function onList(player: Player, rawTab: unknown): ()
 			if snapshot and show then
 				local summary = ShowcaseRules.summary(snapshot) :: { [string]: any }
 				summary.Liked = data ~= nil and table.find(data.Showcase.Liked, userId) ~= nil
+				summary.Kind = "Showcase"
 				table.insert(entries, summary)
+			end
+		end
+		if isReview then
+			for kind, hooks in kinds do
+				for _, summary in hooks.review() do
+					summary.Kind = kind
+					table.insert(entries, summary)
+				end
 			end
 		end
 		Remotes.List:FireClient(player, {
@@ -592,12 +641,28 @@ local function busyElsewhere(player: Player): string?
 	return nil
 end
 
-local function onVisit(player: Player, rawUserId: unknown): ()
+local function onVisit(player: Player, rawUserId: unknown, rawVariant: unknown): ()
 	local ownerId = readUserId(player, "Showcase.Visit", rawUserId)
-	if ownerId == nil or unavailable(player) then
+	if ownerId == nil then
 		return
 	end
 	local elsewhere = busyElsewhere(player)
+	if rawVariant ~= nil and rawVariant ~= "Showcase" then
+		for _, hooks in kinds do
+			if typeof(rawVariant) == "string" and table.find(hooks.Variants, rawVariant) then
+				if elsewhere then
+					return toast(player, elsewhere)
+				end
+				return exclusive(player, function()
+					hooks.visit(player, ownerId, rawVariant)
+				end)
+			end
+		end
+		return RemoteController.reject(player, "Showcase.Visit", "unknown variant")
+	end
+	if unavailable(player) then
+		return
+	end
 	if elsewhere then
 		return toast(player, elsewhere)
 	end
@@ -613,7 +678,7 @@ local function onVisit(player: Player, rawUserId: unknown): ()
 			forgetLists()
 			return toast(player, "That office isn't in the Showcase any more.")
 		end
-		local index = roomFor(snapshot)
+		local index = roomFor("Showcase", "Showcase:" .. ownerId, snapshot)
 		if index == nil then
 			return toast(player, "The Showcase is busy. Try again in a moment.")
 		end
@@ -644,6 +709,9 @@ local function onLike(player: Player, rawUserId: unknown): ()
 	if index == nil or rooms[index].OwnerId ~= ownerId then
 		return toast(player, "Visit an office to like it.")
 	end
+	if rooms[index].Kind ~= "Showcase" then
+		return toast(player, "Rate contest entries with the stars.")
+	end
 	if ownerId == player.UserId then
 		return toast(player, "That's your own office!")
 	end
@@ -666,7 +734,18 @@ local function onReport(player: Player, rawUserId: unknown, rawReason: unknown):
 	if not ShowcaseRules.isReason(rawReason) then
 		return RemoteController.reject(player, "Showcase.Report", "unknown reason")
 	end
-	if ownerId == player.UserId or unavailable(player) then
+	if ownerId == player.UserId then
+		return
+	end
+	local here = roomAt(player)
+	local copy = if here then rooms[here] else nil
+	local hooks = if copy and copy.OwnerId == ownerId then kinds[copy.Kind] else nil
+	if hooks then
+		return exclusive(player, function()
+			hooks.report(player, ownerId, rawReason :: string)
+		end)
+	end
+	if unavailable(player) then
 		return
 	end
 	local data = PlayerDataService.get(player)
@@ -675,8 +754,7 @@ local function onReport(player: Player, rawUserId: unknown, rawReason: unknown):
 	end
 	-- Hidden for the reporter at once, whatever the store says.
 	ShowcaseRules.remember(data.Showcase.Hidden, ownerId, ShowcaseConfig.MaxHidden)
-	local index = roomAt(player)
-	if index and rooms[index].OwnerId == ownerId then
+	if here and rooms[here].OwnerId == ownerId then
 		teleport(player, lobby())
 	end
 	toast(
@@ -709,13 +787,14 @@ local function onReport(player: Player, rawUserId: unknown, rawReason: unknown):
 	end)
 end
 
-local function evictViewers(ownerId: number): ()
+-- Sends everyone but the owner and admins out of the copy showing `key`.
+local function evictViewers(key: string): ()
 	for player, index in standingIn do
 		local copy = rooms[index]
 		if
 			copy
-			and copy.OwnerId == ownerId
-			and player.UserId ~= ownerId
+			and copy.Key == key
+			and player.UserId ~= copy.OwnerId
 			and not AdminService.isAdmin(player)
 		then
 			task.spawn(teleport, player, lobby())
@@ -735,6 +814,15 @@ local function onModerate(player: Player, rawAction: unknown, rawUserId: unknown
 		return
 	end
 	local action = rawAction :: string
+	local here = roomAt(player)
+	local copy = if here then rooms[here] else nil
+	local hooks = if copy and copy.OwnerId == ownerId then kinds[copy.Kind] else nil
+	if hooks then
+		return exclusive(player, function()
+			hooks.moderate(player, action, ownerId)
+			sendRoom(player, here)
+		end)
+	end
 	exclusive(player, function()
 		local current = store :: ShowcaseStore.Store
 		local ok, snapshot = false, nil
@@ -758,7 +846,7 @@ local function onModerate(player: Player, rawAction: unknown, rawUserId: unknown
 			if ok then
 				current.removeRank("Review", ownerId)
 				current.removeRank("Newest", ownerId)
-				evictViewers(ownerId)
+				evictViewers("Showcase:" .. ownerId)
 			end
 		else
 			local featured: { number } = {}
@@ -802,6 +890,60 @@ local function onModerate(player: Player, rawAction: unknown, rawUserId: unknown
 	end)
 end
 
+-- For other kinds of copies (ContestService) -----------------------------------------
+
+function ShowcaseService.registerKind(kind: string, hooks: KindHooks): ()
+	kinds[kind] = hooks
+end
+
+-- Why the player can't go to a copy now (a match or mission), or nil.
+function ShowcaseService.busyElsewhere(player: Player): string?
+	return busyElsewhere(player)
+end
+
+--[[
+	Shows `snapshot` in a copy room of `kind` (one room per `key`, shared by
+	everyone looking at it) and takes the player there. Yields. False if all
+	copy rooms are in use.
+]]
+function ShowcaseService.openCopy(
+	player: Player,
+	kind: string,
+	key: string,
+	snapshot: Snapshot
+): boolean
+	local index = roomFor(kind, key, snapshot)
+	if index == nil then
+		return false
+	end
+	teleport(player, arrival(index))
+	standingIn[player] = index
+	sendRoom(player, index)
+	return true
+end
+
+-- The kind, key and owner of the copy the player stands in, or nil.
+function ShowcaseService.copyAt(player: Player): (string?, string?, number?)
+	local index = roomAt(player)
+	local copy = if index then rooms[index] else nil
+	if copy == nil or copy.Key == nil then
+		return nil, nil, nil
+	end
+	return copy.Kind, copy.Key, copy.OwnerId
+end
+
+-- Sends the player out of any copy, to the lobby. Yields.
+function ShowcaseService.toLobby(player: Player): ()
+	teleport(player, lobby())
+end
+
+-- Re-sends the room state (e.g. after a contest vote).
+function ShowcaseService.refreshRoom(player: Player): ()
+	sendRoom(player, roomAt(player))
+end
+
+ShowcaseService.evictViewers = evictViewers
+
 -- Guard -------------------------------------------------------------------------------
 
 local function guardTick(): ()
@@ -837,20 +979,11 @@ end
 -- Lifecycle ---------------------------------------------------------------------------
 
 local function chooseStore(): ()
-	local real =
-		ShowcaseStore.dataStore(DataConfig.ShowcaseStoreName, DataConfig.ShowcaseBoardPrefix)
-	if RunService:IsStudio() then
-		local reachable = real ~= nil and (real :: ShowcaseStore.Store).get("Probe")
-		if not reachable then
-			warn("[Showcase] no DataStore access in Studio: using a store in this server only")
-			store = ShowcaseStore.memory()
-			return
-		end
-	end
-	store = real
-	if real == nil then
-		warn("[Showcase] showcase store unavailable")
-	end
+	store = ShowcaseStore.choose(
+		DataConfig.ShowcaseStoreName,
+		DataConfig.ShowcaseBoardPrefix,
+		"Showcase"
+	)
 end
 
 function ShowcaseService.init(): ()
@@ -908,7 +1041,7 @@ function ShowcaseService.start(): ()
 		prompt.Triggered:Connect(function(player: Player)
 			teleport(player, lobby())
 		end)
-		local copy: CopyRoom = { Room = room, OwnerId = nil, EmptySince = os.clock() }
+		local copy: CopyRoom = { Room = room, Kind = "Showcase", EmptySince = os.clock() }
 		clearRoom(copy)
 		rooms[index] = copy
 	end

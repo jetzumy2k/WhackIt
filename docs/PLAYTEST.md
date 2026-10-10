@@ -816,3 +816,21 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 551 | Take my office out of the Showcase | Gone from Newest; status "isn't shared yet" |
 | 552 | Published place, two servers | An office shared in server A shows in server B's Newest within about a minute and can be visited while its owner is offline |
 
+### Design contests (Phase 6b) — Studio with 2-3 players; use ⏩ Next phase (admins, Contest tab)
+| # | Steps | Expected |
+|---|---|---|
+| 553 | 🏢 Social | The Showcase section names this week's theme; buttons 🌟 Showcase, 🏆 Contest, 🏢 My showcase |
+| 554 | 🏆 Contest tab | Theme icon, name and text; phase with time left; the theme furniture with ✅ on items your office has; My entry, Vote, Last week's winners, rules |
+| 555 | Admin in Studio: ⏩ Next phase until "Entries are open" | Toast "contest clock moved"; Enter with my office is available (Lv 5, 5+ items) |
+| 556 | Enter with my office | Toast "You're in…"; My entry shows the item count and the theme bonus; Update is greyed for 5 min; 👀 See my entry opens "🏆 Name's Entry" |
+| 557 | Player 2 (and 3) enter too | Each sees their own entry status |
+| 558 | ⏩ Next phase → voting | "Voting is open"; Enter is greyed with "Entries are closed" |
+| 559 | Player 2: ⭐ Vote now | Taken to a random entry (never their own); a star bar above the Showcase bar: "Look around first..." then ⭐1-⭐5 work after 5 s |
+| 560 | Press ⭐4 | Toast "⭐⭐⭐⭐ Thanks for voting! n left today"; the bar shows "✅ Voted" and ⏭️ Next |
+| 561 | ⏭️ Next | Another entry, or "You've seen every entry for now" |
+| 562 | Report an entry | Sent to the lobby; never dealt to you again |
+| 563 | Admin: 🛡️ Review (after enough reports) | The entry listed as "🏆 … Entry"; Visit → Approve / Remove act on the entry; History has "Contest …" |
+| 564 | ⏩ Next phase → results | Every entrant gets a results card ("Thanks for entering" with 150 coins and 300 XP; with 3+ votes and a place, the place, prize furniture and the sunburst) |
+| 565 | Contest tab after results | Last week's winners list (if anyone was ranked) with Visit |
+| 566 | Rejoin after a prize | No second card or prize |
+

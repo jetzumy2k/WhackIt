@@ -62,6 +62,7 @@ local POT = Color3.fromRGB(190, 110, 70)
 local FABRIC = Color3.fromRGB(95, 110, 160)
 local PINK = Color3.fromRGB(240, 120, 170)
 local GOLD = Color3.fromRGB(230, 185, 70)
+local SILVER = Color3.fromRGB(196, 202, 214)
 local GREEN_LIGHT = Color3.fromRGB(110, 230, 140)
 
 local NEON = Enum.Material.Neon
@@ -818,6 +819,64 @@ local items: { Item } = {
 				GOLD,
 				{ Material = Enum.Material.Metal, Text = "CHAMPION" }
 			),
+		},
+	},
+	-- Design contest prizes (docs/CONTESTS.md) ---------------------------------
+	{
+		Key = "design_trophy",
+		Name = "Design Star Trophy",
+		Category = "Trophies",
+		Tier = "Special",
+		Size = V(2, 4, 2),
+		Parts = {
+			p("Base", V(1.8, 0.6, 1.8), V(0, 0.3, 0), DARK_WOOD),
+			p("Stem", V(0.4, 1.4, 0.4), V(0, 1.3, 0), GOLD, { Material = Enum.Material.Metal }),
+			p(
+				"Cup",
+				V(1, 1.6, 1.6),
+				V(0, 2.5, 0),
+				GOLD,
+				{ Material = Enum.Material.Metal, Shape = CYLINDER, Upright = true }
+			),
+			p(
+				"Star",
+				V(1, 1, 1),
+				V(0, 3.45, 0),
+				GOLD,
+				{ Material = Enum.Material.Metal, Shape = BALL }
+			),
+		},
+	},
+	{
+		Key = "design_plaque",
+		Name = "Top Design Plaque",
+		Category = "Trophies",
+		Tier = "Special",
+		Size = V(2, 4.2, 1.6),
+		Parts = {
+			p("Base", V(1.2, 0.2, 0.8), V(0, 0.1, 0.2), DARK_WOOD),
+			p("Stand", V(0.3, 3, 0.3), V(0, 1.5, 0.2), DARK_WOOD),
+			p(
+				"Plaque",
+				V(1.8, 1.2, 0.15),
+				V(0, 3.4, 0),
+				SILVER,
+				{ Material = Enum.Material.Metal, Text = "TOP DESIGN" }
+			),
+		},
+	},
+	{
+		Key = "design_ribbon",
+		Name = "Design Ribbon",
+		Category = "Trophies",
+		Tier = "Special",
+		Size = V(1.6, 3.4, 1.2),
+		Parts = {
+			p("Base", V(1.2, 0.2, 0.8), V(0, 0.1, 0), DARK_WOOD),
+			p("Stand", V(0.2, 2.2, 0.2), V(0, 1.2, 0), DARK_WOOD),
+			p("Rosette", V(0.2, 1.2, 1.2), V(0, 2.8, 0), BLUE, { Shape = CYLINDER }),
+			p("Tail", V(0.15, 0.8, 0.35), V(0, 1.9, -0.2), BLUE),
+			p("Tail", V(0.15, 0.8, 0.35), V(0, 1.9, 0.2), BLUE),
 		},
 	},
 }

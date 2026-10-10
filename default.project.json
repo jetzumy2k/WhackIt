@@ -300,6 +300,34 @@
           }
         },
 
+        "Contest": {
+          "$className": "Folder",
+
+          "Info": {
+            "$className": "RemoteEvent"
+          },
+
+          "Enter": {
+            "$className": "RemoteEvent"
+          },
+
+          "Ballot": {
+            "$className": "RemoteEvent"
+          },
+
+          "Vote": {
+            "$className": "RemoteEvent"
+          },
+
+          "State": {
+            "$className": "RemoteEvent"
+          },
+
+          "Result": {
+            "$className": "RemoteEvent"
+          }
+        },
+
         "Showcase": {
           "$className": "Folder",
 

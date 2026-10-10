@@ -67,6 +67,7 @@ local Responsive = require(script.Parent.Parent.Lib.Responsive)
 local ProgressController = require(script.Parent.ProgressController)
 local SettingsController = require(script.Parent.SettingsController)
 local ShowcaseController = require(script.Parent.ShowcaseController)
+local ContestController = require(script.Parent.ContestController)
 local ShopController = require(script.Parent.ShopController)
 local StoreController = require(script.Parent.StoreController)
 
@@ -816,18 +817,26 @@ function PlayerPanelController.start(): ()
 		PanelKit.text(
 			showcase.Body,
 			"Visit the best offices from every server and share your own. "
-				.. ShowcaseController.status(),
+				.. ShowcaseController.status()
+				.. "\n🏆 "
+				.. ContestController.headline(),
 			"Muted"
 		)
 		local showcaseRow = PanelKit.row(showcase.Body)
-		local gallery = PanelKit.button(showcaseRow, "🌟 Open the Showcase", ACCENT)
-		gallery.Size = UDim2.new(0.5, -4, 1, 0)
+		local gallery = PanelKit.button(showcaseRow, "🌟 Showcase", ACCENT)
+		gallery.Size = UDim2.new(1 / 3, -6, 1, 0)
 		gallery.Activated:Connect(function()
 			window:close()
-			ShowcaseController.open(nil)
+			ShowcaseController.open("Featured")
+		end)
+		local contest = PanelKit.button(showcaseRow, "🏆 Contest", Color3.fromRGB(240, 160, 60))
+		contest.Size = UDim2.new(1 / 3, -6, 1, 0)
+		contest.Activated:Connect(function()
+			window:close()
+			ShowcaseController.open("Contest")
 		end)
 		local share = PanelKit.button(showcaseRow, "🏢 My showcase", C.Good)
-		share.Size = UDim2.new(0.5, -4, 1, 0)
+		share.Size = UDim2.new(1 / 3, -6, 1, 0)
 		share.Activated:Connect(function()
 			window:close()
 			ShowcaseController.open("Mine")

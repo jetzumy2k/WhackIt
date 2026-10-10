@@ -153,12 +153,27 @@ most one showcase request in progress (each may wait on a DataStore); a second o
 | `Showcase.Publish` | client -> server | none | data loaded; `ShowcaseRules.canPublish` (Level ≥ 5, ≥ 5 placed items, 5 min since the last publish); layout and theme copied **from saved data**; one `UpdateAsync` (`ShowcaseRules.publish`: likes, visits and moderation kept, a removed office refused for 7 days, then to review); Newest board updated. Toast + `Showcase.State` Mine |
 | `Showcase.Unpublish` | client -> server | none | snapshot `Published = false`, off the Newest board. Toast + State |
 | `Showcase.List` | both | client: `tab` ("Featured", "Newest", "Top"; "Review" admins only, else rejected; "Mine" answers with `Showcase.State` Mine). Server: `{ Tab, Available, Global, Entries = { { UserId, Name, Items, Likes, Visits, Reports, Liked } } }` | pages and snapshots cached 60 s / 120 s; only visible offices the player hasn't hidden (Review: only offices in review) |
-| `Showcase.Visit` | client -> server | `userId` | not in a pickleball match or team mission; the snapshot is visible (or yours, or you're an admin); a copy room showing it or a free one (8), else "busy"; `noteTeleport` then the move. The first visit per office per session counts a visit and the quest/event activity `VisitOffice` |
+| `Showcase.Visit` | client -> server | `userId`, optional `variant` ("Contest" = this week's contest entry, "Winner" = last week's; else rejected; handled by `ContestService`) | not in a pickleball match or team mission; the snapshot is visible (or yours, or you're an admin); a copy room showing it or a free one (8), else "busy"; `noteTeleport` then the move. The first visit per office per session counts a visit and the quest/event activity `VisitOffice` |
 | `Showcase.Leave` | client -> server | none | in a copy room: back to the lobby (the door prompt does the same) |
 | `Showcase.Like` | client -> server | `userId` | you stand in that office's copy; not your own; not liked before (saved `Liked`, 300); batched +1 like (saved every 60 s, also "Top this week") |
 | `Showcase.Report` | client -> server | `userId`, `reason` (one of `ShowcaseConfig.ReportReasons`, else rejected) | not your own; hidden for you at once (saved `Hidden`, 100) and you're sent out of its copy; `ShowcaseRules.report` in one `UpdateAsync` (each reporter once); 3 reporters (6 after an approval) put it in review (hidden for everyone, Review board). Logged on the server |
 | `Showcase.Moderate` | client -> server | `action` ("Approve", "Remove", "Feature", "Unfeature"), `userId` | admins only (`AdminService.isAdmin`), else rejected. Approve: shown again, reports cleared, approved. Remove: taken down, off every board, viewers sent out. Feature/Unfeature: the Featured list (12, newest kept). Every action in the admin history (`HistoryService.recordAdmin`, action "Showcase") |
-| `Showcase.State` | server -> one client | `{ Kind = "Mine", Available, Global, Reached, Published, Moderation, Likes, Visits, CanPublish, Reason }` or `{ Kind = "Room", OwnerId?, Name, Likes, Visits, Liked, Own, Moderation? }` | Mine on join and after a publish; Room whenever the player enters or leaves a copy (Moderation only for admins) |
+| `Showcase.State` | server -> one client | `{ Kind = "Mine", Available, Global, Reached, Published, Moderation, Likes, Visits, CanPublish, Reason }` or `{ Kind = "Room", Copy = "Showcase", OwnerId?, Name, Likes, Visits, Liked, Own, Moderation? }`; in a contest entry `{ Kind = "Room", Copy = "Contest", OwnerId, Name, Own, Moderation?, CanRate, RateAfter, Voted, Voting, VotesLeft }` | Mine on join and after a publish; Room whenever the player enters or leaves a copy (Moderation only for admins) |
+
+Reports and admin Approve / Remove pressed inside a contest entry's copy go to `ContestService`
+(the copy's kind decides), with the same checks; Feature there only answers with a toast.
+
+## Contest: weekly design contests (docs/CONTESTS.md, 2026-10-10)
+Client -> server remotes: `RemoteLimits.Contest` (burst 4, 0.5/s); one contest request at a time per player.
+
+| Remote | Direction | Payload | Server checks / handling |
+|---|---|---|---|
+| `Contest.Info` | client -> server | optional `"TestNext"`; `maxArgs` 1 | none: answers with `Contest.State` (freezes last week's results first if they're due). `"TestNext"`: only in Studio and only for admins (else rejected): moves this server's contest clock to the next phase and checks prizes |
+| `Contest.Enter` | client -> server | none | `ContestRules.canEnter` (Monday-Friday UTC, Level ≥ 5, ≥ 5 items, 5 min since the last entry); layout and theme copied **from saved data**; one `UpdateAsync` (`ContestRules.enter`: votes and moderation kept, a removed entry refused); theme fit worked out by the server; Entries board updated. Toast + State |
+| `Contest.Ballot` | client -> server | none | not in a match or mission; `ContestRules.canVote` (Saturday-Sunday, Level ≥ 5, dealt entries left today); a random visible entry: not yours, not voted this week, not hidden (5 tries); opens its copy; uses one of today's 30; remembers the ballot (owner, week, time) |
+| `Contest.Vote` | client -> server | `stars` (whole 1-5, else rejected); `maxArgs` 1 | a ballot this week while voting; the player stands in **that** entry's copy; 5 s since it was dealt; once per entry per week (saved `Voted`). Vote added to the server's batch (saved every 60 s; score board once ranked) |
+| `Contest.State` | server -> one client | `{ Available, Global, Week, Phase, Remaining, Test, Entered, EntryModeration, EntryItems, EntryFit, ThemeItemsUsed, CanEnter, EnterReason, CanVote, VoteReason, VotesLeft, Winners = { { UserId, Name, Score } }, WinnersWeek }` | after Info, Enter |
+| `Contest.Result` | server -> one client | `{ Week, Theme, Rank?, Coins, Xp, Item }` | once per entered week when its prize is paid |
 
 ## `Shop.BuyHammer`: client -> server
 | | |

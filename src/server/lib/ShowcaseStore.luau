@@ -13,6 +13,10 @@
 ]]
 
 local DataStoreService = game:GetService("DataStoreService")
+local RunService = game:GetService("RunService")
+
+-- Most entries `top` reads (pages of 100).
+local MAX_TOP = 500
 
 export type Ranked = { UserId: number, Value: number }
 
@@ -157,8 +161,17 @@ function ShowcaseStore.dataStore(name: string, boardPrefix: string): Store?
 			if target == nil then
 				return false, {}
 			end
+			local wanted = math.clamp(size, 1, MAX_TOP)
 			local success, items = pcall(function(): { { key: string, value: number } }
-				return target:GetSortedAsync(false, math.clamp(size, 1, 100)):GetCurrentPage()
+				local pages = target:GetSortedAsync(false, math.min(wanted, 100))
+				local all = pages:GetCurrentPage()
+				while #all < wanted and not pages.IsFinished do
+					pages:AdvanceToNextPageAsync()
+					for _, item in pages:GetCurrentPage() do
+						table.insert(all, item)
+					end
+				end
+				return all
 			end)
 			if not success then
 				return false, {}
@@ -173,6 +186,31 @@ function ShowcaseStore.dataStore(name: string, boardPrefix: string): Store?
 			return true, entries
 		end,
 	}
+end
+
+--[[
+	The store a service should use: the real stores; in Studio, if they can't
+	be reached (API access off), a store in this server only. nil if the real
+	stores are unavailable in a live server. `label` names it in warnings.
+]]
+function ShowcaseStore.choose(name: string, boardPrefix: string, label: string): Store?
+	local real = ShowcaseStore.dataStore(name, boardPrefix)
+	if RunService:IsStudio() then
+		local reachable = real ~= nil and (real :: Store).get("Probe")
+		if not reachable then
+			warn(
+				string.format(
+					"[%s] no DataStore access in Studio: using a store in this server only",
+					label
+				)
+			)
+			return ShowcaseStore.memory()
+		end
+	end
+	if real == nil then
+		warn(string.format("[%s] store unavailable", label))
+	end
+	return real
 end
 
 return ShowcaseStore

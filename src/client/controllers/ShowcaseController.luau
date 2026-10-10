@@ -2,7 +2,7 @@
 --[[
 	The Office Showcase on the client (docs/SHOWCASE.md, Phase 6a).
 
-	  * Gallery window: ⭐ Featured, 🆕 Newest and ❤️ Top this week as cards
+	  * Gallery window: 🏆 Contest (ContestController.page), ⭐ Featured, 🆕 Newest and ❤️ Top this week as cards
 	    (avatar, name, furniture, likes, visits, Visit), 🌟 My showcase
 	    (share, update, preview, take back, the rules) and, for admins,
 	    🛡️ Review (offices hidden by reports).
@@ -19,6 +19,7 @@ local ShowcaseConfig =
 	require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("ShowcaseConfig"))
 
 local AdminController = require(script.Parent.AdminController)
+local ContestController = require(script.Parent.ContestController)
 local HudFormat = require(script.Parent.Parent.Lib.HudFormat)
 local PanelKit = require(script.Parent.Parent.Lib.PanelKit)
 local Responsive = require(script.Parent.Parent.Lib.Responsive)
@@ -41,6 +42,7 @@ export type Entry = {
 	Visits: number,
 	Reports: number,
 	Liked: boolean,
+	Kind: string, -- "Showcase" or "Contest" (Review tab)
 }
 
 type List = { Entries: { Entry }, Available: boolean, Global: boolean, At: number }
@@ -58,6 +60,12 @@ type Mine = {
 }
 
 type Room = {
+	Copy: string, -- "Showcase" or "Contest"
+	CanRate: boolean,
+	RateAfter: number,
+	Voted: boolean,
+	Voting: boolean,
+	VotesLeft: number,
 	OwnerId: number,
 	Name: string,
 	Likes: number,
@@ -111,6 +119,7 @@ local function parseEntries(raw: unknown): { Entry }
 					Visits = number(data.Visits),
 					Reports = number(data.Reports),
 					Liked = data.Liked == true,
+					Kind = if data.Kind == "Contest" then "Contest" else "Showcase",
 				})
 			end
 		end
@@ -156,6 +165,12 @@ local function onState(payload: unknown): ()
 	elseif data.Kind == "Room" then
 		if typeof(data.OwnerId) == "number" then
 			room = {
+				Copy = if data.Copy == "Contest" then "Contest" else "Showcase",
+				CanRate = data.CanRate == true,
+				RateAfter = number(data.RateAfter),
+				Voted = data.Voted == true,
+				Voting = data.Voting == true,
+				VotesLeft = number(data.VotesLeft),
 				OwnerId = data.OwnerId :: number,
 				Name = text(data.Name),
 				Likes = number(data.Likes),
@@ -192,8 +207,10 @@ function ShowcaseController.open(tab: string?): ()
 	end
 end
 
-function ShowcaseController.visit(userId: number): ()
-	remote("Visit"):FireServer(userId)
+-- `variant`: nil for a Showcase office, "Contest" (this week's entry) or
+-- "Winner" (last week's entry).
+function ShowcaseController.visit(userId: number, variant: string?): ()
+	remote("Visit"):FireServer(userId, variant)
 end
 
 -- Your showcase's status for the Social page, e.g. "Shared · ❤️ 3 · 👀 20".
@@ -229,8 +246,8 @@ local function buildGallery(parent: Instance): ()
 		DisplayOrder = 6,
 	}, parent)
 	local content = window.Content
-	local activeTab = "Featured"
-	local tabs: { PanelKit.Tab } = {}
+	local activeTab = "Contest"
+	local tabs: { PanelKit.Tab } = { { Id = "Contest", Label = "🏆 Contest" } }
 	for _, tab in ShowcaseConfig.Tabs do
 		table.insert(tabs, { Id = tab.Id, Label = tab.Label })
 	end
@@ -273,9 +290,15 @@ local function buildGallery(parent: Instance): ()
 			PanelKit.setBadge(item, "❤️ Liked", LIKE_COLOR)
 		end
 		item.Button.Text = if review then "🛡️ Visit to review" else "Visit"
+		if entry.Kind == "Contest" then
+			item.Title.Text = "🏆 " .. entry.Name .. "'s Entry"
+		end
 		item.Button.Activated:Connect(function()
 			window:close()
-			ShowcaseController.visit(entry.UserId)
+			ShowcaseController.visit(
+				entry.UserId,
+				if entry.Kind == "Contest" then "Contest" else nil
+			)
 		end)
 	end
 
@@ -399,7 +422,11 @@ local function buildGallery(parent: Instance): ()
 			return
 		end
 		window:clear()
-		if activeTab == "Mine" then
+		if activeTab == "Contest" then
+			ContestController.page(content, ShowcaseController.visit, function()
+				window:close()
+			end)
+		elseif activeTab == "Mine" then
 			ask("Mine")
 			minePage()
 		else
@@ -408,6 +435,11 @@ local function buildGallery(parent: Instance): ()
 		end
 	end
 	refreshGallery = render
+	ContestController.onChanged(function()
+		if activeTab == "Contest" then
+			render()
+		end
+	end)
 
 	window:setTabs(tabs, function(id: string)
 		activeTab = id
@@ -530,7 +562,7 @@ local function buildBar(gui: ScreenGui, report: (ownerId: number, name: string) 
 	end)
 
 	-- Admins: moderation right where they look at the office.
-	local admin = barFrame(gui, "ShowcaseModeration", 132)
+	local admin = barFrame(gui, "ShowcaseModeration", 194)
 	local status = Instance.new("TextLabel")
 	status.LayoutOrder = 0
 	status.BackgroundTransparency = 1
@@ -568,17 +600,30 @@ local function buildBar(gui: ScreenGui, report: (ownerId: number, name: string) 
 		local current = room
 		bar.Visible = current ~= nil
 		admin.Visible = current ~= nil and AdminController.isAdmin()
+		ContestController.setRoom(if current and current.Copy == "Contest"
+			then {
+				OwnerId = current.OwnerId,
+				Name = current.Name,
+				CanRate = current.CanRate,
+				RateAfter = current.RateAfter,
+				Voted = current.Voted,
+				Voting = current.Voting,
+				VotesLeft = current.VotesLeft,
+			}
+			else nil)
 		if current == nil then
 			return
 		end
-		title.Text = if current.Own
-			then "🌟 Your showcase"
+		local contest = current.Copy == "Contest"
+		title.Text = if contest
+			then (if current.Own then "🏆 Your entry" else "🏆 " .. current.Name .. "'s entry")
+			elseif current.Own then "🌟 Your showcase"
 			else string.format(
 				"🌟 %s's office · ❤️ %s",
 				current.Name,
 				HudFormat.thousands(current.Likes)
 			)
-		like.Visible = not current.Own
+		like.Visible = not current.Own and not contest
 		flag.Visible = not current.Own
 		like.Text = if current.Liked then "❤️ Liked" else "❤️ Like"
 		PanelKit.setDisabled(like, current.Liked)

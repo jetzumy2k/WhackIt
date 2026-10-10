@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BagRules = require(ReplicatedStorage.Shared.BagRules)
 local BossConfig = require(ReplicatedStorage.Config.BossConfig)
+local ContestRules = require(ReplicatedStorage.Shared.ContestRules)
 local DailyEventRules = require(ReplicatedStorage.Shared.DailyEventRules)
 local FurnitureRules = require(ReplicatedStorage.Shared.FurnitureRules)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
@@ -88,6 +89,8 @@ export type PlayerData = {
 	Missions: MissionRules.Record, -- today's rewarded team missions, missions cleared
 	-- v16 (docs/SHOWCASE.md)
 	Showcase: ShowcaseRules.State, -- last publish, offices liked and hidden
+	-- v17 (docs/CONTESTS.md)
+	Contest: ContestRules.State, -- weeks entered, prizes paid, this week's votes
 }
 
 export type PendingGift = {
@@ -103,7 +106,7 @@ export type Migration = (data: RawData) -> ()
 
 local PlayerDataSchema = {}
 
-PlayerDataSchema.CURRENT_VERSION = 16
+PlayerDataSchema.CURRENT_VERSION = 17
 
 -- Upper bound for counters; far beyond legitimate play, small enough to stay
 -- an exact integer and to keep leaderboard values sane.
@@ -225,6 +228,10 @@ PlayerDataSchema.MIGRATIONS = table.freeze({
 		-- v15 -> v16: the Office Showcase. Nothing published, liked or hidden yet.
 		data.Showcase = nil
 	end,
+	[17] = function(data: RawData)
+		-- v16 -> v17: design contests. Nothing entered, voted or paid yet.
+		data.Contest = nil
+	end,
 }) :: { [number]: Migration }
 
 -- Most recent purchase ids remembered for duplicate-receipt protection. Roblox
@@ -276,6 +283,7 @@ function PlayerDataSchema.template(): PlayerData
 		DailyEvent = DailyEventRules.default(),
 		Missions = MissionRules.defaultRecord(),
 		Showcase = ShowcaseRules.defaultState(),
+		Contest = ContestRules.defaultState(),
 	}
 end
 
@@ -562,6 +570,7 @@ function PlayerDataSchema.sanitize(data: RawData): ()
 	data.DailyEvent = DailyEventRules.sanitize(data.DailyEvent)
 	data.Missions = MissionRules.sanitizeRecord(data.Missions)
 	data.Showcase = ShowcaseRules.sanitizeState(data.Showcase)
+	data.Contest = ContestRules.sanitizeState(data.Contest)
 	local matches: { string } = {}
 	local rawMatches = data.ProcessedMatches
 	if typeof(rawMatches) == "table" then
