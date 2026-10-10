@@ -58,6 +58,7 @@ local AudioController = require(script.Parent.AudioController)
 local BagController = require(script.Parent.BagController)
 local EventController = require(script.Parent.EventController)
 local PetController = require(script.Parent.PetController)
+local MissionController = require(script.Parent.MissionController)
 local PickleballController = require(script.Parent.PickleballController)
 local LeaderboardController = require(script.Parent.LeaderboardController)
 local OfficeController = require(script.Parent.OfficeController)
@@ -790,6 +791,26 @@ function PlayerPanelController.start(): ()
 			PickleballController.open()
 		end)
 
+		local missions = PanelKit.section(content, "🤝 Team Missions", false, true)
+		local openTeams = #MissionController.teams()
+		PanelKit.text(
+			missions.Body,
+			if openTeams > 0
+				then string.format(
+					"%d open team(s) right now. Team up with 2-4 players and clear a chain of bosses together.",
+					openTeams
+				)
+				else "Team up with 2-4 players and clear a chain of bosses before the clock runs out.",
+			"Muted"
+		)
+		local missionRow = PanelKit.row(missions.Body)
+		local missionButton = PanelKit.button(missionRow, "🤝 Team Missions", C.Primary)
+		missionButton.Size = UDim2.new(0.5, -4, 1, 0)
+		missionButton.Activated:Connect(function()
+			window:close()
+			MissionController.open()
+		end)
+
 		local list = PanelKit.section(content, "Offices in this server", false, true)
 		local others: { OfficeController.Office } = {}
 		for _, office in OfficeController.offices() do
@@ -889,6 +910,7 @@ function PlayerPanelController.start(): ()
 				"Senior offices: up the stairs (Level 10+).",
 				"Outside: the Garden, the Coffee Corner and the Stress-Relief Zone.",
 				"Pickleball: the Recreation Center behind the office (🏢 Social → Pickleball).",
+				"Team missions: 🏢 Social → Team Missions (2-4 players).",
 			}
 		do
 			PanelKit.text(where.Body, line)
@@ -1006,6 +1028,11 @@ function PlayerPanelController.start(): ()
 		end
 	end)
 	PickleballController.Changed:Connect(function()
+		if activeTab == "Social" and window:isOpen() then
+			render()
+		end
+	end)
+	MissionController.Changed:Connect(function()
 		if activeTab == "Social" and window:isOpen() then
 			render()
 		end

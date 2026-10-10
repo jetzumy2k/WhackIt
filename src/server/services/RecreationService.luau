@@ -38,6 +38,7 @@ local CourtBuilder = require(ServerScriptService.Lib.CourtBuilder)
 local FurnitureConfig = require(ReplicatedStorage.Config.FurnitureConfig)
 local FurnitureRules = require(ReplicatedStorage.Shared.FurnitureRules)
 local HammerService = require(script.Parent.HammerService)
+local MissionService = require(script.Parent.MissionService)
 local MovementGuardService = require(script.Parent.MovementGuardService)
 local PickleballConfig = require(ReplicatedStorage.Config.PickleballConfig)
 local PickleballRules = require(ReplicatedStorage.Shared.PickleballRules)
@@ -151,7 +152,8 @@ local function recordOf(player: Player): PickleballRules.Record?
 end
 
 local function isBusy(player: Player): boolean
-	return challengeOf[player] ~= nil or matchOf[player] ~= nil
+	-- A mission team or run counts too (docs/MISSIONS.md).
+	return challengeOf[player] ~= nil or matchOf[player] ~= nil or MissionService.isBusy(player)
 end
 
 -- Whether the player still has rewarded matches today (and so pays a fee).
@@ -306,7 +308,10 @@ local function onChallenge(player: Player, rawMode: unknown): ()
 		return
 	end
 	if isBusy(player) then
-		return toast(player, "You're already in a pickleball challenge or match.")
+		return toast(
+			player,
+			"You're already in a pickleball challenge or match, or a team mission."
+		)
 	end
 	local last = lastChallengeAt[player]
 	local cooldown = PickleballConfig.Challenge.Cooldown
@@ -363,7 +368,10 @@ local function onAccept(player: Player, rawId: unknown, rawTeam: unknown): ()
 		return toast(player, "That's your own challenge.")
 	end
 	if isBusy(player) then
-		return toast(player, "You're already in a pickleball challenge or match.")
+		return toast(
+			player,
+			"You're already in a pickleball challenge or match, or a team mission."
+		)
 	end
 	if challenge.Full then
 		return toast(player, "That match is full.")

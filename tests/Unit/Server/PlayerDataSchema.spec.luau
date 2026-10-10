@@ -929,4 +929,30 @@ return function()
 			expect(state.Tiers).to.equal(2)
 		end)
 	end)
+
+	describe("PlayerDataSchema v15 (team missions)", function()
+		local MissionRules = require(ReplicatedStorage.Shared.MissionRules)
+
+		it("starts existing players with no missions, touching nothing else", function()
+			local data = validData()
+			data.SchemaVersion = 14
+			data.Missions = { DayKey = "2026-10-10", DayRewarded = 3, Cleared = 9 } -- can't exist before v15
+			expect((PlayerDataSchema.prepare(data))).to.equal(true)
+			local record = data.Missions :: MissionRules.Record
+			expect(record.Cleared).to.equal(0)
+			expect(record.DayKey).to.equal("")
+			expect(data.Coins).to.equal(250)
+			expect(data.SchemaVersion).to.equal(PlayerDataSchema.CURRENT_VERSION)
+		end)
+
+		it("keeps a saved mission record", function()
+			local data = validData()
+			data.Missions = { DayKey = "2026-10-10", DayRewarded = 2, Cleared = 5 }
+			PlayerDataSchema.prepare(data)
+			PlayerDataSchema.prepare(data)
+			local record = data.Missions :: MissionRules.Record
+			expect(record.DayRewarded).to.equal(2)
+			expect(record.Cleared).to.equal(5)
+		end)
+	end)
 end

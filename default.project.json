@@ -260,6 +260,38 @@
           }
         },
 
+        "Mission": {
+          "$className": "Folder",
+
+          "Open": {
+            "$className": "RemoteEvent"
+          },
+
+          "Join": {
+            "$className": "RemoteEvent"
+          },
+
+          "Leave": {
+            "$className": "RemoteEvent"
+          },
+
+          "Begin": {
+            "$className": "RemoteEvent"
+          },
+
+          "Teams": {
+            "$className": "RemoteEvent"
+          },
+
+          "State": {
+            "$className": "RemoteEvent"
+          },
+
+          "Result": {
+            "$className": "RemoteEvent"
+          }
+        },
+
         "Quests": {
           "$className": "Folder",
 

@@ -16,6 +16,10 @@
 	setEventBosses(), as a separate set: syncing one set never touches the
 	other, and neither ever touches an office boss. An event boss that is
 	removed (its event ended) disappears at once, even mid-fight.
+	Team mission bosses (MissionService, docs/MISSIONS.md) are a third set
+	(setMissionBosses): they never respawn, only their team may hit them
+	(Allowed), and MissionService hears of every hit and defeat (onHit,
+	onMissionBossDefeated).
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -35,6 +39,8 @@ export type LiveBoss = {
 	Model: Model,
 	Body: BasePart,
 	Spawn: ArenaConfig.BossSpawn,
+	-- Only these players may hit it (mission bosses); nil = everyone.
+	Allowed: { [number]: boolean }?,
 }
 
 -- A custom boss to keep spawned. Signature changes when anything about it
@@ -47,6 +53,8 @@ export type CustomSpawn = {
 	-- A "Once" boss already beaten (here or in another server): never spawned
 	-- again. A life already in progress here may still be finished.
 	Spent: boolean,
+	-- Mission bosses: the team (UserIds) allowed to hit it.
+	Allowed: { [number]: boolean }?,
 }
 
 local BossService = {}
@@ -59,6 +67,10 @@ local customSpawns: { [string]: CustomSpawn } = {}
 -- Event boss id -> what should be spawned for it right now (EventService).
 local eventSpawns: { [string]: CustomSpawn } = {}
 local onceDefeatedCallbacks: { (bossId: string) -> () } = {}
+-- Mission boss id -> what should be spawned for it right now (MissionService).
+local missionSpawns: { [string]: CustomSpawn } = {}
+local missionDefeatedCallbacks: { (bossId: string) -> () } = {}
+local hitCallbacks: { (live: LiveBoss, userId: number) -> () } = {}
 
 local function newInstanceId(): string
 	nextInstanceNumber += 1
@@ -98,13 +110,18 @@ local function buildModel(
 	if state.Definition.Event then
 		model:SetAttribute(Attributes.EventBoss, true)
 	end
+	if state.Definition.Mission then
+		model:SetAttribute(Attributes.MissionBoss, true)
+	end
 
 	return model, body
 end
 
 -- The definition for a spawn: an office boss, or a custom boss still wanted.
 local function definitionFor(spawn: ArenaConfig.BossSpawn): BossConfig.BossDefinition?
-	local custom = customSpawns[spawn.BossId] or eventSpawns[spawn.BossId]
+	local custom = customSpawns[spawn.BossId]
+		or eventSpawns[spawn.BossId]
+		or missionSpawns[spawn.BossId]
 	if custom then
 		return if custom.Spawn == spawn and not custom.Spent then custom.Definition else nil
 	end
@@ -120,7 +137,14 @@ local function spawnBoss(spawn: ArenaConfig.BossSpawn): ()
 
 	local state = BossState.new(definition, newInstanceId())
 	local model, body = buildModel(state, spawn)
-	liveBosses[state.InstanceId] = { State = state, Model = model, Body = body, Spawn = spawn }
+	local mission = missionSpawns[spawn.BossId]
+	liveBosses[state.InstanceId] = {
+		State = state,
+		Model = model,
+		Body = body,
+		Spawn = spawn,
+		Allowed = if mission then mission.Allowed else nil,
+	}
 	model.Parent = bossesFolder
 end
 
@@ -187,6 +211,24 @@ function BossService.onOnceBossDefeated(callback: (bossId: string) -> ()): ()
 	table.insert(onceDefeatedCallbacks, callback)
 end
 
+-- The mission bosses that should exist right now, across every mission in
+-- this server (MissionService). Ids must not clash with other sets
+-- (MissionRules ids start with "custom_mission_"). Each must have Respawns false.
+function BossService.setMissionBosses(wanted: { CustomSpawn }): ()
+	syncSpawns(missionSpawns, wanted)
+end
+
+-- Called with the boss id when a mission boss is defeated.
+function BossService.onMissionBossDefeated(callback: (bossId: string) -> ()): ()
+	table.insert(missionDefeatedCallbacks, callback)
+end
+
+-- Called after every hit any boss takes (MissionService counts hits). Must
+-- not yield.
+function BossService.onHit(callback: (live: LiveBoss, userId: number) -> ()): ()
+	table.insert(hitCallbacks, callback)
+end
+
 -- Event bosses are left out with `withoutEvents` (EventService places them
 -- around everything else).
 function BossService.spawnPositions(withoutEvents: boolean?): { Vector3 }
@@ -227,9 +269,22 @@ end
 
 -- Must be called without yielding between getLive and here (see BossState).
 function BossService.applyHit(live: LiveBoss, userId: number, damage: number): BossState.HitResult?
+	-- A mission boss is only for its team.
+	local allowed = live.Allowed
+	if allowed and not allowed[userId] then
+		return nil
+	end
 	local result = BossState.applyDamage(live.State, userId, damage)
 	if result == nil then
 		return nil
+	end
+	for _, callback in hitCallbacks do
+		local ok, message = pcall(function()
+			callback(live, userId)
+		end)
+		if not ok then
+			warn("[Boss] a hit listener failed: " .. tostring(message))
+		end
 	end
 
 	live.Model:SetAttribute(Attributes.Health, result.Health)
@@ -241,6 +296,13 @@ function BossService.applyHit(live: LiveBoss, userId: number, damage: number): B
 			-- Set before the respawn timer runs, so this life is the last one here.
 			custom.Spent = true
 			for _, callback in onceDefeatedCallbacks do
+				task.spawn(callback, bossId)
+			end
+		end
+		local mission = missionSpawns[bossId]
+		if mission and mission.Spawn == live.Spawn then
+			mission.Spent = true -- mission bosses never come back
+			for _, callback in missionDefeatedCallbacks do
 				task.spawn(callback, bossId)
 			end
 		end

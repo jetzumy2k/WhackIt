@@ -296,6 +296,10 @@ local function onGo(player: Player, rawTarget: unknown): ()
 	if inPickleballMatch(player) then
 		return toast(player, "Finish your pickleball match first.")
 	end
+	local mission = player:GetAttribute(Attributes.InMission)
+	if typeof(mission) == "string" and mission ~= "" then
+		return toast(player, "Finish your team mission first.")
+	end
 	local target = player
 	if rawTarget ~= nil then
 		local userId = Validate.integer(rawTarget, 1, MAX_USER_ID)

@@ -177,6 +177,20 @@ on the Executive Floor without access.
 | `Level.SetCosmetic` | client -> server | `kind: "Trail" \| "Glow" \| "Office", id: string` (`""` = default); `maxArgs` 2, `RemoteLimits.Settings` | `LevelRewardRules.parseChoice`: known kind and `""` or a known id (else rejected); the player's level unlocks it (else ignored, a UI race). Saves `Cosmetics`, sets `TrailStyle` / `GlowStyle` (re-equips the hammer for a new trail), repaints the office for a theme (`OfficeService.applyTheme`); `Profile.Sync` |
 | `Level.LevelUp` | server -> one client | `{ FromLevel, ToLevel, Coins }` | sent when XP reaches levels never rewarded before and their coins are paid (`SessionService.addXp`); display only (the level-up card) |
 
+## Mission: team missions (docs/MISSIONS.md, 2026-10-10)
+| Remote | Direction | Payload | Server checks / handling |
+|---|---|---|---|
+| `Mission.Open` | client -> server | `missionId: string`; `maxArgs` 1, `RemoteLimits.Mission` (burst 4, 0.5/s) | `Validate.id` and a known mission (else rejected); data loaded; not in a team, a mission or a pickleball match; 30 s since the player's last team. Opens a team for 120 s; `Mission.Teams` to everyone |
+| `Mission.Join` | client -> server | `teamId: string`; `maxArgs` 1, `RemoteLimits.Mission` | `Validate.id` (else rejected); the team is open and not full; the sender isn't busy. The place is checked and taken without yielding; a full team (4) starts at once |
+| `Mission.Leave` | client -> server | none; `maxArgs` 0, `RemoteLimits.Mission` | leaves the run (back to the lobby, nothing more from it) or the team (the next member leads; an empty team closes) |
+| `Mission.Begin` | client -> server | none; `maxArgs` 0, `RemoteLimits.Mission` | only the leader, with at least 2 players and a free room (else a toast). Teleports the team (`noteTeleport`), spawns the waves |
+| `Mission.Teams` | server -> all clients | `{ Teams = { { Id, MissionId, LeaderUserId, LeaderName, Members = { { UserId, Name } }, ExpiresAt } }, FreeRooms }` | on every change and on join; display only (cards, window) |
+| `Mission.State` | server -> team members | `{ RunId, MissionId, Phase, Wave, Waves, BossesLeft, BossesTotal, EndsAt, Members = { { UserId, Name, Hits } } }` | on start, each wave and defeat, the result, and hit counts at most every 2 s; display only |
+| `Mission.Result` | server -> one member | `{ MissionId, Cleared, Reason, Hits, Counted, Rewarded, Coins, Xp, Supply, Egg }` | once per run per player still in it; the reward was already paid by the server |
+
+Hits come from `BossService.onHit` (the server's accepted hits), never from a client. Mission bosses
+refuse hits from anyone outside the team (`BossService.applyHit`, `LiveBoss.Allowed`).
+
 ## DailyEvent (docs/DAILY_EVENTS.md, 2026-10-10)
 | Remote | Direction | Payload | Server checks / handling |
 |---|---|---|---|

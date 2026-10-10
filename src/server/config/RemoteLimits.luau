@@ -49,6 +49,12 @@ local RemoteLimits = table.freeze({
 		RefillPerSecond = 0.5,
 	}),
 
+	-- Team missions: open, join, leave, begin. Rare actions.
+	Mission = table.freeze({
+		Capacity = 4,
+		RefillPerSecond = 0.5,
+	}),
+
 	-- Quest claims and rerolls: a few taps in a row are fine.
 	Quests = table.freeze({
 		Capacity = 6,
