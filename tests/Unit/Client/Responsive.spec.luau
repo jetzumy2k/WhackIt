@@ -56,13 +56,29 @@ return function()
 				end
 				local layout = Responsive.dockLayout(screen.Expect, screen.Size, true)
 				expect(layout.ButtonSize.Y >= 40).to.equal(true)
-				-- Four buttons stacked from the top must end above the jump button.
+				-- A full column (Rows buttons) must end above the jump button.
 				local top = layout.Position.Y.Offset
-				local bottom = top + 4 * layout.ButtonSize.Y + 3 * layout.Gap
+				local rows = layout.Rows
+				expect(rows >= 1).to.equal(true)
+				local bottom = top + rows * layout.ButtonSize.Y + (rows - 1) * layout.Gap
 				local jumpTop = jumpButton(screen.Size)
 				-- The top inset (up to 58 px) pushes ScreenGui content down.
 				expect(bottom + 58 < jumpTop.Y).to.equal(true)
+				-- All seven HUD buttons fit in the right third of the screen.
+				local columns = math.ceil(7 / rows)
+				local width = columns * layout.ButtonSize.X + (columns - 1) * layout.Gap
+				expect(width <= screen.Size.X / 3).to.equal(true)
 			end
+		end)
+	end)
+
+	describe("Responsive.dockLayout on a small phone", function()
+		it("splits the column so it ends above the jump button (713 x 313)", function()
+			local viewport = Vector2.new(713, 313)
+			local layout = Responsive.dockLayout("Phone", viewport, true)
+			expect(layout.Rows).to.equal(3)
+			local bottom = layout.Position.Y.Offset + 3 * layout.ButtonSize.Y + 2 * layout.Gap
+			expect(bottom + Responsive.TOP_INSET < Responsive.jumpTop(viewport)).to.equal(true)
 		end)
 	end)
 

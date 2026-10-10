@@ -33,6 +33,8 @@ local XP_COLOR = Color3.fromRGB(110, 150, 255)
 local TEXT_COLOR = Color3.fromRGB(255, 255, 255)
 -- The Stress Meter in the top bar strip (pixels tall).
 local TOP_METER_HEIGHT = 34
+-- How big the top HUD is drawn on phones.
+local PHONE_HUD_SCALE = 0.72
 local TOAST_COLOR = Color3.fromRGB(255, 230, 80)
 local TOAST_SECONDS = 2.5
 local SAVED_SECONDS = 2
@@ -159,13 +161,19 @@ local function buildHud(): (ScreenGui, Frame)
 	meterLimit.MaxSize = Vector2.new(380, TOP_METER_HEIGHT)
 	meterLimit.Parent = meter
 	-- Centred in the top bar's height (it is taller on newer Roblox UIs).
+	-- Phones: the whole top HUD (meter, stat and boost chips) is drawn smaller
+	-- (owner phone screenshots 2026-10-10: it took a quarter of the screen).
+	local hudScale = 1
+	local meterScale = Instance.new("UIScale")
+	meterScale.Parent = meter
 	-- The stat and boost chips follow right under the meter (set further down).
 	local placeChips: (meterBottom: number) -> () = function() end
 	local function placeMeter(): ()
 		local inset = GuiService:GetGuiInset().Y
-		local height = if inset >= TOP_METER_HEIGHT + 4 then inset else TOP_METER_HEIGHT + 12
+		local tall = TOP_METER_HEIGHT * hudScale
+		local height = if inset >= tall + 4 then inset else tall + 12
 		meter.Position = UDim2.new(0.5, 0, 0, height / 2)
-		placeChips(height / 2 + TOP_METER_HEIGHT / 2)
+		placeChips(height / 2 + tall / 2)
 	end
 	placeMeter()
 	task.delay(2, placeMeter) -- the inset is sometimes reported late
@@ -365,12 +373,23 @@ local function buildHud(): (ScreenGui, Frame)
 	boosts.AutomaticSize = Enum.AutomaticSize.X
 	boosts.BackgroundTransparency = 1
 	boosts.Parent = topGui
-	-- 6 px under the meter, boosts 6 px under the stat chips (30 tall).
+	local statsScale = Instance.new("UIScale")
+	statsScale.Parent = stats
+	local boostsScale = Instance.new("UIScale")
+	boostsScale.Parent = boosts
+	-- Just under the meter, boosts just under the stat chips (30 tall).
 	placeChips = function(meterBottom: number)
-		stats.Position = UDim2.new(0.5, 0, 0, meterBottom + 6)
-		boosts.Position = UDim2.new(0.5, 0, 0, meterBottom + 6 + 30 + 6)
+		local gap = 6 * hudScale
+		stats.Position = UDim2.new(0.5, 0, 0, meterBottom + gap)
+		boosts.Position = UDim2.new(0.5, 0, 0, meterBottom + gap + 30 * hudScale + gap)
 	end
-	placeMeter()
+	Responsive.onChanged(function()
+		hudScale = if Responsive.formFactor() == "Phone" then PHONE_HUD_SCALE else 1
+		meterScale.Scale = hudScale
+		statsScale.Scale = hudScale
+		boostsScale.Scale = hudScale
+		placeMeter()
+	end)
 	local boostsLayout = Instance.new("UIListLayout")
 	boostsLayout.FillDirection = Enum.FillDirection.Horizontal
 	boostsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center

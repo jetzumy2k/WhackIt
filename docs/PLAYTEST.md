@@ -857,3 +857,13 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 580 | Finish a quest (e.g. hit bosses) | A "📋 QUEST DONE!" card with the quest and a **CLAIM** button that opens the right Quests tab; the Quests badge pops |
 | 581 | Rejoin with quests ready | One "📋 QUESTS TO CLAIM" reminder with CLAIM, not a card per quest |
 
+### Phone layout fixes (owner phone screenshots 2026-10-10) — on a phone or Studio's phone emulator
+| # | Steps | Expected |
+|---|---|---|
+| 582 | Look at the right side | The HUD buttons (Bag, Store, Hammers, Social, Quests, Admin) are small tiles in 2-3 columns that end above the jump button; none hidden or under it |
+| 583 | Look at the top | Stress Meter, stat chips and boost chips are smaller and close together; most of the screen is free |
+| 584 | Menu button | Shows 👤 (it was an empty circle) |
+| 585 | Play a pickleball match | Score card small at the top under the chips; Soft / 🏓 / Hard to the left of the HUD tiles and above Sprint, not on top of anything; Forfeit on the left under Menu / Music |
+| 586 | Start a team mission | Mission card small at the top under the chips; Leave mission on the left under Menu / Music |
+| 587 | Desktop: a team mission | The mission card sits under the stat chips, not over them |
+
