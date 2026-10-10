@@ -229,11 +229,11 @@ script (fake swings, swings out of reach, racing accepts, leaving mid-match).
   for quests and events (services report there instead of to `QuestService`). `scripts/check.ps1`
   passes; playtest (`docs/PLAYTEST.md` 447-455) reported working by the owner (2026-10-10). Tiers pay automatically
   (no claim button).
-- **5b Team missions: 🟡 implemented 2026-10-10 on branch `feat/phase5b-team-missions`** (docs/MISSIONS.md,
+- **5b Team missions: ✅ complete 2026-10-10 on branch `feat/phase5b-team-missions`** (docs/MISSIONS.md,
   schema v15, D11). 2 missions × 3 waves in 3 teleport-only rooms; mission bosses through `BossService`
   (team-only hits, no respawn, `onHit` / `onMissionBossDefeated`); contribution by hits, not damage;
   reward 400 coins + 1,000 XP + a supply + 20 % Common Egg, 3 rewarded a day. `scripts/check.ps1`
-  passes; Studio specs and playtest (`docs/PLAYTEST.md` 456-471) not run yet. Not done: non-combat
+  passes; Studio specs **747 passed, 0 failed**; playtest (`docs/PLAYTEST.md` 456-471) reported working by the owner (2026-10-10). Not done: non-combat
   co-op activities (coffee, paperwork), which belong with Phase 2c.
 - **5 Events and co-op:** new `EventRules` types; co-op contribution counted per action.
 - **3 Tower:** new floors stacked above the existing building, behind the existing Level/unlock rules.
