@@ -82,6 +82,12 @@ local RemoteLimits = table.freeze({
 		RefillPerSecond = 1,
 	}),
 
+	-- Lucky Capsule spins: the reveal takes a moment anyway.
+	Capsule = table.freeze({
+		Capacity = 2,
+		RefillPerSecond = 0.5,
+	}),
+
 	-- Quest claims and rerolls: a few taps in a row are fine.
 	Quests = table.freeze({
 		Capacity = 6,

@@ -300,6 +300,18 @@
           }
         },
 
+        "Capsule": {
+          "$className": "Folder",
+
+          "Spin": {
+            "$className": "RemoteEvent"
+          },
+
+          "Result": {
+            "$className": "RemoteEvent"
+          }
+        },
+
         "PetArena": {
           "$className": "Folder",
 

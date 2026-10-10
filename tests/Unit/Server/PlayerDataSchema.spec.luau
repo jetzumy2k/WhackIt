@@ -1035,4 +1035,29 @@ return function()
 			expect(record.DayWins).to.equal(3)
 		end)
 	end)
+	describe("PlayerDataSchema v19 (lucky capsule)", function()
+		local CapsuleRules = require(ReplicatedStorage.Shared.CapsuleRules)
+
+		it("starts existing players with no spins, touching nothing else", function()
+			local data = validData()
+			data.SchemaVersion = 18
+			data.Capsule = { DayKey = "D1", Spins = 5, TotalSpins = 50 } -- can't exist before v19
+			expect((PlayerDataSchema.prepare(data))).to.equal(true)
+			local state = data.Capsule :: CapsuleRules.State
+			expect(state.Spins).to.equal(0)
+			expect(state.TotalSpins).to.equal(0)
+			expect(data.Coins).to.equal(250)
+			expect(data.SchemaVersion).to.equal(PlayerDataSchema.CURRENT_VERSION)
+		end)
+
+		it("keeps saved spins", function()
+			local data = validData()
+			data.Capsule = { DayKey = "2026-10-10", Spins = 4, TotalSpins = 30 }
+			PlayerDataSchema.prepare(data)
+			PlayerDataSchema.prepare(data)
+			local state = data.Capsule :: CapsuleRules.State
+			expect(state.Spins).to.equal(4)
+			expect(state.TotalSpins).to.equal(30)
+		end)
+	end)
 end

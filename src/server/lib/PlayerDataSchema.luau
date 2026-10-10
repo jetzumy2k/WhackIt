@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BagRules = require(ReplicatedStorage.Shared.BagRules)
 local BossConfig = require(ReplicatedStorage.Config.BossConfig)
+local CapsuleRules = require(ReplicatedStorage.Shared.CapsuleRules)
 local ContestRules = require(ReplicatedStorage.Shared.ContestRules)
 local DailyEventRules = require(ReplicatedStorage.Shared.DailyEventRules)
 local FurnitureRules = require(ReplicatedStorage.Shared.FurnitureRules)
@@ -94,6 +95,8 @@ export type PlayerData = {
 	Contest: ContestRules.State, -- weeks entered, prizes paid, this week's votes
 	-- v18 (docs/PET_ARENA.md)
 	PetArena: PetArenaRules.Record, -- trainers beaten, today's rewarded battles
+	-- v19 (docs/CAPSULE.md)
+	Capsule: CapsuleRules.State, -- today's Lucky Capsule spins
 }
 
 export type PendingGift = {
@@ -109,7 +112,7 @@ export type Migration = (data: RawData) -> ()
 
 local PlayerDataSchema = {}
 
-PlayerDataSchema.CURRENT_VERSION = 18
+PlayerDataSchema.CURRENT_VERSION = 19
 
 -- Upper bound for counters; far beyond legitimate play, small enough to stay
 -- an exact integer and to keep leaderboard values sane.
@@ -239,6 +242,10 @@ PlayerDataSchema.MIGRATIONS = table.freeze({
 		-- v17 -> v18: the Pet Arena. No battles yet.
 		data.PetArena = nil
 	end,
+	[19] = function(data: RawData)
+		-- v18 -> v19: the Lucky Capsule Machine. No spins yet.
+		data.Capsule = nil
+	end,
 }) :: { [number]: Migration }
 
 -- Most recent purchase ids remembered for duplicate-receipt protection. Roblox
@@ -292,6 +299,7 @@ function PlayerDataSchema.template(): PlayerData
 		Showcase = ShowcaseRules.defaultState(),
 		Contest = ContestRules.defaultState(),
 		PetArena = PetArenaRules.defaultRecord(),
+		Capsule = CapsuleRules.defaultState(),
 	}
 end
 
@@ -580,6 +588,7 @@ function PlayerDataSchema.sanitize(data: RawData): ()
 	data.Showcase = ShowcaseRules.sanitizeState(data.Showcase)
 	data.Contest = ContestRules.sanitizeState(data.Contest)
 	data.PetArena = PetArenaRules.sanitizeRecord(data.PetArena)
+	data.Capsule = CapsuleRules.sanitizeState(data.Capsule)
 	local matches: { string } = {}
 	local rawMatches = data.ProcessedMatches
 	if typeof(rawMatches) == "table" then
