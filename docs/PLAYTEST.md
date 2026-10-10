@@ -761,3 +761,13 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 512 | Settings → Reduced motion on, defeat a boss | No confetti |
 | 513 | Senior, Principal, CEO and an event/mission boss | Same faces on every boss (with crowns where they had them) |
 | 514 | Performance: stand in the lobby with many bosses in view (View → Stats) | No big frame drop compared with before |
+
+### New HUD (visual overhaul V4a) — screenshots please (desktop and the phone emulator)
+| # | Steps | Expected |
+|---|---|---|
+| 515 | Join | Top centre: a dark rounded Stress Meter with a mood face, a coloured fill and the number; under it chips ⭐ Lv, 🏆 score, 🪙 coins, 🧘 Zen bonus |
+| 516 | Hit a boss until stress drops | The face changes (😫 → 😟 → 🙂 → 😌 → 🧘 at Zen) and the fill eases from red through amber to green |
+| 517 | Defeat a boss | The coins chip counts up and a "+N" floats down from it; with Reduced motion on it changes at once (no float movement) |
+| 518 | Use a boost / reach Zen | Boost chips (✨ XP, 💥 DMG, 🎯 CRIT DMG, 🧘 ZEN) with time left appear under the stats and disappear when they run out |
+| 519 | Bottom of the screen | The XP bar: a round level badge, a blue-violet fill, "1,234 / 5,000 XP to Lv n" (👑 MAX LEVEL at 100) |
+| 520 | The buttons (right column, Menu, Music) | Dark cards with a coloured round icon disc, a white label and a coloured outline; they squish slightly when pressed; on a phone the compact layout still fits clear of the jump button |

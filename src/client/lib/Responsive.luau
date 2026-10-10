@@ -18,8 +18,11 @@
 ]]
 
 local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
+
+local UiTokens = require(script.Parent.UiTokens)
 
 export type FormFactor = "Phone" | "Tablet" | "Desktop"
 
@@ -252,7 +255,10 @@ end
 -- Icon buttons ----------------------------------------------------------------
 
 -- A compact button showing an icon and a short label (the label doubles as
--- its tooltip on phones, where it's a tiny caption under the icon).
+-- its tooltip on phones, where it's a tiny caption under the icon). Since
+-- the visual overhaul (V4a) it's a dark card like the panels, with `color`
+-- as a round icon disc, and it squishes a little when pressed (not with
+-- Reduced motion).
 function Responsive.iconButton(
 	parent: Instance,
 	name: string,
@@ -263,38 +269,80 @@ function Responsive.iconButton(
 	local button = Instance.new("TextButton")
 	button.Name = name
 	button.Text = ""
-	button.BackgroundColor3 = color
+	button.BackgroundColor3 = UiTokens.Color.Window
+	button.BackgroundTransparency = 0.1
 	button.AutoButtonColor = true
 	button.Parent = parent
-	Instance.new("UICorner").Parent = button
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, UiTokens.Radius.Card)
+	corner.Parent = button
 	local stroke = Instance.new("UIStroke")
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	stroke.Color = Color3.new(1, 1, 1)
-	stroke.Transparency = 0.75
+	stroke.Color = color
+	stroke.Transparency = 0.35
+	stroke.Thickness = 1.5
 	stroke.Parent = button
+	local disc = Instance.new("Frame")
+	disc.Name = "Disc"
+	disc.BackgroundColor3 = color
+	disc.BorderSizePixel = 0
+	disc.Parent = button
+	local discCorner = Instance.new("UICorner")
+	discCorner.CornerRadius = UDim.new(1, 0)
+	discCorner.Parent = disc
+	local square = Instance.new("UIAspectRatioConstraint")
+	square.AspectRatio = 1
+	square.DominantAxis = Enum.DominantAxis.Height
+	square.Parent = disc
 	local iconLabel = Instance.new("TextLabel")
 	iconLabel.Name = "Icon"
 	iconLabel.BackgroundTransparency = 1
 	iconLabel.Text = icon
 	iconLabel.TextColor3 = Color3.new(1, 1, 1)
 	iconLabel.Font = Enum.Font.FredokaOne
+	iconLabel.ZIndex = 2
 	iconLabel.Parent = button
 	local caption = Instance.new("TextLabel")
 	caption.Name = "Caption"
 	caption.BackgroundTransparency = 1
 	caption.Text = label
-	caption.TextColor3 = Color3.new(1, 1, 1)
-	caption.Font = Enum.Font.FredokaOne
+	caption.TextColor3 = UiTokens.Color.Text
+	caption.Font = UiTokens.Font.Bold
 	caption.Parent = button
+	local scale = Instance.new("UIScale")
+	scale.Parent = button
+	local function squish(to: number): ()
+		TweenService:Create(
+			scale,
+			UiTokens.motion(
+				TweenInfo.new(
+					UiTokens.Motion.Hover,
+					Enum.EasingStyle.Quad,
+					Enum.EasingDirection.Out
+				)
+			),
+			{ Scale = to }
+		):Play()
+	end
+	button.MouseButton1Down:Connect(function()
+		squish(0.94)
+	end)
+	button.MouseButton1Up:Connect(function()
+		squish(1)
+	end)
+	button.MouseLeave:Connect(function()
+		squish(1)
+	end)
 	Responsive.styleIconButton(button, Responsive.formFactor() == "Phone", 20)
 	return button
 end
 
--- Lays out an icon button: `compact` = icon over a tiny caption (phones),
--- otherwise icon on the left and the label beside it.
+-- Lays out an icon button: `compact` = the disc and icon over a tiny caption
+-- (phones), otherwise the disc on the left and the label beside it.
 function Responsive.styleIconButton(button: GuiButton, compact: boolean, maxText: number): ()
 	local icon = button:FindFirstChild("Icon")
 	local caption = button:FindFirstChild("Caption")
+	local disc = button:FindFirstChild("Disc")
 	if
 		icon == nil
 		or caption == nil
@@ -304,20 +352,30 @@ function Responsive.styleIconButton(button: GuiButton, compact: boolean, maxText
 		return
 	end
 	if compact then
-		icon.Position = UDim2.fromScale(0, 0.04)
-		icon.Size = UDim2.fromScale(1, 0.6)
+		icon.Position = UDim2.fromScale(0, 0.06)
+		icon.Size = UDim2.fromScale(1, 0.56)
 		caption.Position = UDim2.fromScale(0.04, 0.64)
 		caption.Size = UDim2.fromScale(0.92, 0.32)
 		caption.TextXAlignment = Enum.TextXAlignment.Center
-		Responsive.capText(icon, 26, 14)
+		if disc and disc:IsA("Frame") then
+			disc.AnchorPoint = Vector2.new(0.5, 0)
+			disc.Position = UDim2.fromScale(0.5, 0.06)
+			disc.Size = UDim2.fromScale(0.56, 0.56)
+		end
+		Responsive.capText(icon, 24, 14)
 		Responsive.capText(caption, 12, 9)
 	else
-		icon.Position = UDim2.fromScale(0.04, 0.1)
-		icon.Size = UDim2.fromScale(0.3, 0.8)
+		icon.Position = UDim2.fromScale(0.05, 0.14)
+		icon.Size = UDim2.fromScale(0.26, 0.72)
 		caption.Position = UDim2.fromScale(0.36, 0.15)
 		caption.Size = UDim2.fromScale(0.6, 0.7)
 		caption.TextXAlignment = Enum.TextXAlignment.Left
-		Responsive.capText(icon, 24, 14)
+		if disc and disc:IsA("Frame") then
+			disc.AnchorPoint = Vector2.new(0, 0.5)
+			disc.Position = UDim2.fromScale(0.05, 0.5)
+			disc.Size = UDim2.fromScale(0.72, 0.72)
+		end
+		Responsive.capText(icon, 22, 14)
 		Responsive.capText(caption, maxText)
 	end
 end
