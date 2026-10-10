@@ -74,7 +74,7 @@ works but nothing is kept between Play sessions.
 |---|---|---|
 | 33 | Spawn at 100 stress | Your character has a flustered face: worried brows (not angry), a little "o" mouth and a sweat drop |
 | 34 | Hit bosses until stress ≤ 75, ≤ 50, ≤ 25 | Face changes: worried with a small wobbly mouth → small smile → bigger smile |
-| 35 | Bring stress to 0 | "ZEN ACHIEVED! +100 coins Zen Level 1" card; happy closed-eyes face with blush; hammer glows and sparkles; HUD shows `Zen Lv 1`, coins +100 |
+| 35 | Bring stress to 0 | "ZEN ACHIEVED! +100 coins Zen bonus now +5% boss coins" card; happy closed-eyes face with blush; hammer glows and sparkles; HUD shows `Zen +5%`, coins +100 |
 | 36 | Keep hitting at 0 | Stays Zen, hammer keeps glowing; no second Zen reward |
 | 37 | Stop hitting for 20 s | Stress rises by 5 at 20 s, then every 5 s; the glow stops as soon as stress is above 0; the face changes with the bands |
 | 38 | Let stress rise to only ~20, then bring it back to 0 | No Zen reward this time (not re-armed); let it reach 50+ and back to 0 → Zen pays again |
@@ -636,3 +636,11 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 427 | Studio API access on, after 425: wait 2-3 minutes, stop, Play again | The board shows the players from the stored season board ("This server only" gone) |
 | 428 | Output | No errors from RecreationRankService; with API access off at most one `[RecRank]` warning per kind |
 | 429 | Season prizes (needs a season to end: a published test place, or in Studio with API access on set `PickleballConfig.Season.Seconds` to 600 and `SeasonBoard.FreezeDelay` to 30 and play 5 quick matches) | About a minute after the freeze the top players get a "🏆 SEASON RESULTS" card, the coins and the item in office storage; rejoining never pays it twice. Put the values back afterwards |
+
+### Zen bonus labels (2026-10-10)
+| # | Steps | Expected |
+|---|---|---|
+| 430 | Join; look at the top bar | `Lv n   Score …   Coins …   Zen +x%` (no "Zen Lv") |
+| 431 | Reach Zen with a second client watching | Your card: "Zen bonus now +x% boss coins"; the other client's toast: "<name> reached Zen!" with no level number |
+| 432 | Menu → Profile | Tile "Zen bonus (boss coins)" shows "+x% (n/10)"; the line under the tiles says each Zen adds +5 % up to +50 %, that stress must climb back to 50 before the next Zen counts, and that your level comes from XP |
+| 433 | A player with 10+ Zens | Top bar `Zen +50% (max)`, Profile "+50% (10/10)", card "Zen bonus +50% boss coins (max)" |
