@@ -122,3 +122,7 @@ Visual work becomes its own track, done before Phase 6, each part with a Studio 
   wins (level-up, quest, event tier, mission cleared, pickleball win, season prize); the victory / Zen
   card has an icon disc, a gold title line and a pop-in. Reduced motion respected. Owner approved V4b
   without phone testing (2026-10-10).
+- **Merged (2026-10-10):** PRs #21-#25 (tower, campus, V3 bosses, V4a-V4c GUI) merged into master after
+  784/784 specs passed in Studio. The one failure on the way: rooftop bulbs of exactly 0.3 studs are stored
+  as float32 0.30000001 and broke the thin-Neon rule; made 0.28. Still open: walking bosses, uploaded
+  meshes through the asset table, a phone-view check.
