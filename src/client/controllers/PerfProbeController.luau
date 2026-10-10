@@ -92,8 +92,8 @@ local function buildButton(onSwitch: () -> ()): ()
 	gui.ResetOnSpawn = false
 	gui.DisplayOrder = 20
 	local button = Instance.new("TextButton")
-	button.AnchorPoint = Vector2.new(0.5, 0)
-	button.Position = UDim2.new(0.5, 0, 0, 4)
+	button.AnchorPoint = Vector2.new(0, 0.5)
+	button.Position = UDim2.new(0, 8, 0.5, 0)
 	button.Size = UDim2.fromOffset(190, 26)
 	button.BackgroundColor3 = Color3.fromRGB(40, 44, 63)
 	button.TextColor3 = Color3.fromRGB(240, 242, 248)

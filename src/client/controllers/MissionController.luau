@@ -402,12 +402,24 @@ local function buildHud(): (ScreenGui, () -> ())
 		end)
 	end)
 
+	-- Under the top HUD's stat and boost chips; on phones smaller, with Leave
+	-- on the left under Menu and Music (owner phone screenshots 2026-10-10).
+	local barScale = Instance.new("UIScale")
+	barScale.Parent = bar
 	Responsive.onChanged(function()
 		local phone = Responsive.formFactor() == "Phone"
-		bar.Position = UDim2.new(0.5, 0, 0, if phone then 8 else 12)
-		bar.Size = UDim2.fromScale(if phone then 0.55 else 0.4, 0)
-		leave.Position = UDim2.new(1, -16, 0, if phone then 64 else 120)
-		leave.Size = UDim2.fromOffset(150, 40)
+		barScale.Scale = if phone then 0.8 else 1
+		bar.Position = UDim2.new(0.5, 0, 0, if phone then Responsive.PHONE_CARD_TOP else 62)
+		bar.Size = UDim2.fromScale(if phone then 0.45 else 0.4, 0)
+		if phone then
+			leave.AnchorPoint = Vector2.new(0, 0)
+			leave.Position = UDim2.fromOffset(12, Responsive.PHONE_LEFT_BUTTON_TOP)
+			leave.Size = UDim2.fromOffset(120, 34)
+		else
+			leave.AnchorPoint = Vector2.new(1, 0)
+			leave.Position = UDim2.new(1, -16, 0, 120)
+			leave.Size = UDim2.fromOffset(150, 40)
+		end
 	end)
 
 	local function refresh(): ()

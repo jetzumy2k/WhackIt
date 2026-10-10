@@ -136,11 +136,11 @@ local function refreshCard(card: Card): ()
 		button.Text = string.format("🔒 Reach Lv %d", hammer.MinLevel)
 		PanelKit.setDisabled(button, true)
 	elseif coins >= card.Price then
-		button.Text = string.format("Buy · 🪙 %d", card.Price)
+		button.Text = string.format("Buy · 💰 %d", card.Price)
 		PanelKit.setColor(button, C.Good)
 		PanelKit.setDisabled(button, false)
 	else
-		button.Text = string.format("Need 🪙 %d", card.Price)
+		button.Text = string.format("Need 💰 %d", card.Price)
 		PanelKit.setDisabled(button, true)
 	end
 end

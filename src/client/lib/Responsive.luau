@@ -11,8 +11,10 @@
 	  * fitPopup(): sizes a popup panel to the screen: most of a phone screen,
 	    the panel's normal share on bigger ones.
 	  * dockButton(): the shared column of HUD buttons (Hammers, Store, Bag,
-	    Admin). Desktop: bottom-right, as before. Touch screens: top-right,
-	    clear of Roblox's jump button and thumbstick.
+	    Admin, Social, Quests). Desktop: one column bottom-right, as before.
+	    Touch screens: top-right, in as many columns as it takes to end above
+	    Roblox's jump button (owner phone screenshots 2026-10-10: one column
+	    ran under the jump button and off the screen).
 
 	Display only: nothing here touches game state.
 ]]
@@ -33,6 +35,8 @@ export type DockLayout = {
 	ButtonSize: Vector2,
 	Gap: number,
 	MaxTextSize: number,
+	-- Buttons per column before the next column starts (to the left).
+	Rows: number,
 }
 
 local Responsive = {}
@@ -49,6 +53,16 @@ Responsive.PHONE_POPUP_SCALE = Vector2.new(0.96, 0.9)
 -- dock on touch screens in portrait.
 local PORTRAIT_DOCK_TOP = 112
 local DOCK_EDGE = 12
+-- Roblox's top bar (newest UI); ScreenGuis start below it.
+Responsive.TOP_INSET = 58
+
+-- Where Roblox's touch jump button starts from the top (approximate, from the
+-- touch controls' layout): 70 px on phones, 120 px on bigger screens.
+function Responsive.jumpTop(viewport: Vector2): number
+	local small = math.min(viewport.X, viewport.Y) <= Responsive.PHONE_SHORT_SIDE
+	local size = if small then 70 else 120
+	return viewport.Y - (if small then size + 20 else size * 1.75)
+end
 
 function Responsive.classify(viewport: Vector2, touch: boolean): FormFactor
 	local shortSide = math.min(viewport.X, viewport.Y)
@@ -67,7 +81,7 @@ function Responsive.dockLayout(
 	-- Phones: compact icon tiles (icon over a tiny caption); bigger screens:
 	-- icon + label.
 	local buttonSize = if formFactor == "Phone"
-		then Vector2.new(54, 46)
+		then Vector2.new(52, 42)
 		elseif formFactor == "Tablet" then Vector2.new(130, 46)
 		else Vector2.new(140, 48)
 	local gap = if formFactor == "Phone" then 6 else 8
@@ -81,12 +95,16 @@ function Responsive.dockLayout(
 			ButtonSize = buttonSize,
 			Gap = gap,
 			MaxTextSize = maxText,
+			Rows = 20,
 		}
 	end
 	-- Touch: the jump button owns the bottom-right corner, so stack from the
 	-- top. In portrait the HUD lines under the Stress Meter reach the right
 	-- edge, so start below them.
 	local top = if viewport.Y > viewport.X then PORTRAIT_DOCK_TOP else DOCK_EDGE
+	-- As many rows as fit between the top and the jump button.
+	local room = Responsive.jumpTop(viewport) - 8 - Responsive.TOP_INSET - top
+	local rows = math.max(1, math.floor((room + gap) / (buttonSize.Y + gap)))
 	return {
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, -DOCK_EDGE, 0, top),
@@ -94,6 +112,7 @@ function Responsive.dockLayout(
 		ButtonSize = buttonSize,
 		Gap = gap,
 		MaxTextSize = maxText,
+		Rows = rows,
 	}
 end
 
@@ -202,7 +221,7 @@ end
 -- Dock ------------------------------------------------------------------------
 
 local dockFrame: Frame? = nil
-local dockLayout: UIListLayout? = nil
+local dockLayout: UIGridLayout? = nil
 local dockButtons: { TextButton } = {}
 
 local function applyDock(): ()
@@ -216,7 +235,9 @@ local function applyDock(): ()
 	frame.AnchorPoint = spec.AnchorPoint
 	frame.Position = spec.Position
 	layout.VerticalAlignment = spec.VerticalAlignment
-	layout.Padding = UDim.new(0, spec.Gap)
+	layout.CellSize = UDim2.fromOffset(spec.ButtonSize.X, spec.ButtonSize.Y)
+	layout.CellPadding = UDim2.fromOffset(spec.Gap, spec.Gap)
+	layout.FillDirectionMaxCells = spec.Rows
 	local compact = spec.ButtonSize.X < 80
 	for _, button in dockButtons do
 		button.Size = UDim2.fromOffset(spec.ButtonSize.X, spec.ButtonSize.Y)
@@ -240,8 +261,11 @@ local function dock(): Frame
 	frame.AutomaticSize = Enum.AutomaticSize.XY
 	frame.Size = UDim2.new()
 	frame.Parent = gui
-	local layout = Instance.new("UIListLayout")
+	-- Top to bottom, then the next column to the left.
+	local layout = Instance.new("UIGridLayout")
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.FillDirection = Enum.FillDirection.Vertical
+	layout.StartCorner = Enum.StartCorner.TopRight
 	layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
 	layout.Parent = frame
 
@@ -387,6 +411,28 @@ function Responsive.setButtonLabel(button: GuiButton, label: string): ()
 		caption.Text = label
 	end
 end
+
+-- How wide the HUD button dock is right now (its visible buttons in their
+-- columns), so other touch buttons can stand to the left of it.
+function Responsive.dockWidth(): number
+	local viewport = Responsive.viewport()
+	local touch = Responsive.hasTouch()
+	local spec = Responsive.dockLayout(Responsive.classify(viewport, touch), viewport, touch)
+	local visible = 0
+	for _, button in dockButtons do
+		if button.Visible then
+			visible += 1
+		end
+	end
+	local columns = math.max(1, math.ceil(visible / spec.Rows))
+	return columns * spec.ButtonSize.X + (columns - 1) * spec.Gap + DOCK_EDGE
+end
+
+-- Where phone HUD cards (match score, team mission) go: under the top HUD's
+-- stat and boost chips, in ScreenGui (inset) coordinates.
+Responsive.PHONE_CARD_TOP = 36
+-- Where the Forfeit / Leave buttons go on phones: on the left, under Menu and Music.
+Responsive.PHONE_LEFT_BUTTON_TOP = 60
 
 -- A button in the shared HUD column. `order` sorts top to bottom; hide it
 -- with .Visible and the column closes the gap.

@@ -19,6 +19,7 @@
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local QuestConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("QuestConfig"))
 local QuestRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("QuestRules"))
@@ -31,6 +32,7 @@ local AnnouncementController = require(script.Parent.AnnouncementController)
 local PanelKit = require(script.Parent.Parent.Lib.PanelKit)
 local ProgressController = require(script.Parent.ProgressController)
 local Responsive = require(script.Parent.Parent.Lib.Responsive)
+local UiTokens = require(script.Parent.Parent.Lib.UiTokens)
 
 local QuestController = {}
 
@@ -430,10 +432,78 @@ local function buildButton(): ()
 	local round = Instance.new("UICorner")
 	round.CornerRadius = UDim.new(1, 0)
 	round.Parent = badge
+	-- Quests already announced as ready (owner feedback 2026-10-10: the badge
+	-- alone was easy to miss). Nil until the first snapshot, so quests that
+	-- were ready when you joined get one reminder instead of a card each.
+	local announced: { [string]: boolean }? = nil
+	local function announceReady(): ()
+		local snapshot = ProgressController.get()
+		if snapshot == nil then
+			return
+		end
+		local ready = QuestRules.claimableList(snapshot.Quests)
+		local known = announced
+		if known == nil then
+			local first: { [string]: boolean } = {}
+			announced = first
+			for _, entry in ready do
+				first[entry.Key] = true
+			end
+			if #ready > 0 then
+				AnnouncementController.show({
+					Title = "📋 QUESTS TO CLAIM",
+					Body = string.format("%d finished quest(s) are waiting for you.", #ready),
+					Accent = ACCENT,
+					Seconds = 7,
+					ActionLabel = "CLAIM",
+					OnAction = function()
+						QuestController.open(
+							if ready[1].Kind == "Bonus" then "Daily" else ready[1].Kind
+						)
+					end,
+				})
+			end
+			return
+		end
+		for _, entry in ready do
+			if not known[entry.Key] then
+				known[entry.Key] = true
+				AnnouncementController.show({
+					Title = "📋 QUEST DONE!",
+					Body = entry.Text,
+					Detail = "Your reward is ready in Quests.",
+					Accent = ACCENT,
+					Seconds = 7,
+					ActionLabel = "CLAIM",
+					OnAction = function()
+						QuestController.open(if entry.Kind == "Bonus" then "Daily" else entry.Kind)
+					end,
+				})
+			end
+		end
+	end
+	local pulse: Tween? = nil
+	local lastCount = 0
 	local function refresh(): ()
 		local count = QuestController.claimable()
 		badge.Visible = count > 0
 		badge.Text = if count > 9 then "9+" else tostring(count)
+		if count > lastCount and not UiTokens.reducedMotion() then
+			-- A short pop so the badge catches the eye.
+			if pulse then
+				pulse:Cancel()
+			end
+			badge.Size = UDim2.fromOffset(34, 34)
+			local tween = TweenService:Create(
+				badge,
+				TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+				{ Size = UDim2.fromOffset(22, 22) }
+			)
+			pulse = tween
+			tween:Play()
+		end
+		lastCount = count
+		announceReady()
 	end
 	ProgressController.Changed:Connect(refresh)
 	refresh()

@@ -191,4 +191,30 @@ return function()
 			expect(filled.Daily[1].Progress).to.equal(0)
 		end)
 	end)
+	describe("QuestRules.claimableList", function()
+		it("lists each finished, unclaimed quest once, matching claimableCount", function()
+			local state = QuestRules.default()
+			state.DayKey = "2026-10-10"
+			local daily = QuestConfig.Daily[1]
+			state.Daily = {
+				{ Id = daily.Id, Progress = daily.Target, Claimed = false },
+				{ Id = daily.Id, Progress = 0, Claimed = false },
+			}
+			local ready = QuestRules.claimableList(state)
+			expect(#ready).to.equal(QuestRules.claimableCount(state))
+			local found = false
+			for _, entry in ready do
+				if entry.Kind == "Daily" then
+					found = true
+					expect(entry.Key).to.equal("Daily:2026-10-10:" .. daily.Id)
+					expect(entry.Text).to.equal(daily.Text)
+				end
+			end
+			expect(found).to.equal(true)
+			state.Daily[1].Claimed = true
+			for _, entry in QuestRules.claimableList(state) do
+				expect(entry.Kind).never.to.equal("Daily")
+			end
+		end)
+	end)
 end

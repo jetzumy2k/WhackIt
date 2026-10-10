@@ -306,6 +306,50 @@ function QuestRules.claimableCount(state: State): number
 	return count
 end
 
+export type Ready = {
+	Key: string, -- the same for one quest until it is claimed or reset
+	Kind: string, -- "Daily", "Weekly", "Tutorial" or "Bonus"
+	Text: string,
+}
+
+-- What claimableCount counts, one entry each (newly finished quests are
+-- announced once by key, Controllers/QuestController).
+function QuestRules.claimableList(state: State): { Ready }
+	local ready: { Ready } = {}
+	type Group = { Kind: string, Slots: { Slot }, Period: string }
+	local groups: { Group } = {
+		{ Kind = "Daily", Slots = state.Daily, Period = state.DayKey },
+		{ Kind = "Weekly", Slots = state.Weekly, Period = state.WeekKey },
+	}
+	for _, group in groups do
+		for _, slot in group.Slots do
+			if not slot.Claimed and QuestRules.isComplete(slot) then
+				local quest = QuestRules.questOf(slot)
+				table.insert(ready, {
+					Key = group.Kind .. ":" .. group.Period .. ":" .. slot.Id,
+					Kind = group.Kind,
+					Text = if quest then quest.Text else slot.Id,
+				})
+			end
+		end
+	end
+	local tutorial = QuestRules.tutorialQuest(state)
+	if tutorial and state.TutorialProgress >= tutorial.Target then
+		table.insert(ready, {
+			Key = "Tutorial:" .. state.TutorialStep,
+			Kind = "Tutorial",
+			Text = tutorial.Text,
+		})
+	end
+	if QuestRules.canClaimBonus(state) then
+		table.insert(
+			ready,
+			{ Key = "Bonus:" .. state.DayKey, Kind = "Bonus", Text = "All of today's quests" }
+		)
+	end
+	return ready
+end
+
 -- Saved state ------------------------------------------------------------------------
 
 -- A copy that shares no tables with `state` (for the client snapshot).

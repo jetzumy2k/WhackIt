@@ -106,4 +106,20 @@ return function()
 			expect(roll).to.equal(0)
 		end)
 	end)
+	describe("BossMotion grounding", function()
+		it("never lifts or sinks an idle boss (its feet stay on the floor)", function()
+			for _, personality in BossPersonalityConfig.Types do
+				for step = 0, 100 do
+					expect(BossMotion.idle(personality, step * 0.07, 0.4).Lift).to.equal(0)
+				end
+			end
+		end)
+
+		it("only lifts, never sinks, when walking", function()
+			for step = 0, 100 do
+				local lift = BossMotion.walkCycle(step * 0.13, 1)
+				expect(lift >= 0).to.equal(true)
+			end
+		end)
+	end)
 end

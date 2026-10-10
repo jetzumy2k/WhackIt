@@ -5,6 +5,7 @@
 	leaderstats or server messages; nothing here changes game state.
 ]]
 
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterGui = game:GetService("StarterGui")
@@ -30,6 +31,10 @@ local PANEL_COLOR = Color3.fromRGB(30, 30, 40)
 local HEALTH_COLOR = Color3.fromRGB(90, 210, 110)
 local XP_COLOR = Color3.fromRGB(110, 150, 255)
 local TEXT_COLOR = Color3.fromRGB(255, 255, 255)
+-- The Stress Meter in the top bar strip (pixels tall).
+local TOP_METER_HEIGHT = 34
+-- How big the top HUD is drawn on phones.
+local PHONE_HUD_SCALE = 0.72
 local TOAST_COLOR = Color3.fromRGB(255, 230, 80)
 local TOAST_SECONDS = 2.5
 local SAVED_SECONDS = 2
@@ -139,14 +144,39 @@ local function buildHud(): (ScreenGui, Frame)
 	end
 
 	-- Stress Meter: mood face, a track with a colour-shifting fill, the value.
-	local meter = pill("StressMeter", gui)
-	meter.AnchorPoint = Vector2.new(0.5, 0)
-	meter.Position = UDim2.new(0.5, 0, 0, 10)
-	meter.Size = UDim2.new(0.34, 0, 0, 40)
+	-- It sits in Roblox's top bar strip, between the menu buttons (owner
+	-- feedback 2026-10-10: under the bar it covered too much of the view), so
+	-- it has its own ScreenGui that ignores the top bar inset.
+	local topGui = Instance.new("ScreenGui")
+	topGui.Name = "HudTop"
+	topGui.ResetOnSpawn = false
+	topGui.IgnoreGuiInset = true
+	topGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	topGui.Parent = localPlayer:WaitForChild("PlayerGui")
+	local meter = pill("StressMeter", topGui)
+	meter.AnchorPoint = Vector2.new(0.5, 0.5)
+	meter.Size = UDim2.new(0.3, 0, 0, TOP_METER_HEIGHT)
 	local meterLimit = Instance.new("UISizeConstraint")
-	meterLimit.MinSize = Vector2.new(240, 36)
-	meterLimit.MaxSize = Vector2.new(460, 40)
+	meterLimit.MinSize = Vector2.new(200, 28)
+	meterLimit.MaxSize = Vector2.new(380, TOP_METER_HEIGHT)
 	meterLimit.Parent = meter
+	-- Centred in the top bar's height (it is taller on newer Roblox UIs).
+	-- Phones: the whole top HUD (meter, stat and boost chips) is drawn smaller
+	-- (owner phone screenshots 2026-10-10: it took a quarter of the screen).
+	local hudScale = 1
+	local meterScale = Instance.new("UIScale")
+	meterScale.Parent = meter
+	-- The stat and boost chips follow right under the meter (set further down).
+	local placeChips: (meterBottom: number) -> () = function() end
+	local function placeMeter(): ()
+		local inset = GuiService:GetGuiInset().Y
+		local tall = TOP_METER_HEIGHT * hudScale
+		local height = if inset >= tall + 4 then inset else tall + 12
+		meter.Position = UDim2.new(0.5, 0, 0, height / 2)
+		placeChips(height / 2 + tall / 2)
+	end
+	placeMeter()
+	task.delay(2, placeMeter) -- the inset is sometimes reported late
 	local mood = text("Mood", meter, 24, UiTokens.Font.Title)
 	mood.Size = UDim2.new(0, 36, 1, 0)
 	mood.Position = UDim2.fromOffset(4, 0)
@@ -203,11 +233,11 @@ local function buildHud(): (ScreenGui, Frame)
 	local stats = Instance.new("Frame")
 	stats.Name = "Stats"
 	stats.AnchorPoint = Vector2.new(0.5, 0)
-	stats.Position = UDim2.new(0.5, 0, 0, 56)
+	stats.Position = UDim2.new(0.5, 0, 0, 52)
 	stats.Size = UDim2.fromOffset(0, 30)
 	stats.AutomaticSize = Enum.AutomaticSize.X
 	stats.BackgroundTransparency = 1
-	stats.Parent = gui
+	stats.Parent = topGui
 	local statsLayout = Instance.new("UIListLayout")
 	statsLayout.FillDirection = Enum.FillDirection.Horizontal
 	statsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -240,7 +270,7 @@ local function buildHud(): (ScreenGui, Frame)
 	end
 	local levelValue = chip(stats, "LevelChip", "⭐", 1)
 	local scoreValue = chip(stats, "ScoreChip", "🏆", 2)
-	local coinsValue = chip(stats, "CoinsChip", "🪙", 3)
+	local coinsValue = chip(stats, "CoinsChip", "💰", 3)
 	local zenValue = chip(stats, "ZenChip", "🧘", 4)
 	coinsValue.TextColor3 = Color3.fromRGB(255, 220, 120)
 
@@ -338,11 +368,28 @@ local function buildHud(): (ScreenGui, Frame)
 	local boosts = Instance.new("Frame")
 	boosts.Name = "Boosts"
 	boosts.AnchorPoint = Vector2.new(0.5, 0)
-	boosts.Position = UDim2.new(0.5, 0, 0, 92)
+	boosts.Position = UDim2.new(0.5, 0, 0, 88)
 	boosts.Size = UDim2.fromOffset(0, 26)
 	boosts.AutomaticSize = Enum.AutomaticSize.X
 	boosts.BackgroundTransparency = 1
-	boosts.Parent = gui
+	boosts.Parent = topGui
+	local statsScale = Instance.new("UIScale")
+	statsScale.Parent = stats
+	local boostsScale = Instance.new("UIScale")
+	boostsScale.Parent = boosts
+	-- Just under the meter, boosts just under the stat chips (30 tall).
+	placeChips = function(meterBottom: number)
+		local gap = 6 * hudScale
+		stats.Position = UDim2.new(0.5, 0, 0, meterBottom + gap)
+		boosts.Position = UDim2.new(0.5, 0, 0, meterBottom + gap + 30 * hudScale + gap)
+	end
+	Responsive.onChanged(function()
+		hudScale = if Responsive.formFactor() == "Phone" then PHONE_HUD_SCALE else 1
+		meterScale.Scale = hudScale
+		statsScale.Scale = hudScale
+		boostsScale.Scale = hudScale
+		placeMeter()
+	end)
 	local boostsLayout = Instance.new("UIListLayout")
 	boostsLayout.FillDirection = Enum.FillDirection.Horizontal
 	boostsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center

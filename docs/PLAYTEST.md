@@ -846,3 +846,24 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 573 | Phone emulator: open Quests, Bag, Store, Showcase, Player Panel | Each window fills most of the screen, scrolls, closes |
 | 574 | Performance: Test tab → Clients and Servers → 4 players, Start. With each client stand ~30 s in the lobby, ~30 s at a boss while hitting, ~30 s on the campus (Recreation Center), ~30 s in an office. Then stop | Output shows `[Perf] server …` and `[Perf] client …` lines every 15 s; tell me when done, I read them from the log files |
 
+### Owner UI feedback round (2026-10-10)
+| # | Steps | Expected |
+|---|---|---|
+| 575 | Use a boost from the Bag while one of the same kind is running (Admin → Rewards can give two) | A question: the boost you have (+%, time left) and the combined result (+% for the total time); **Use it** applies, **Cancel** keeps the item |
+| 576 | Use a boost of a kind that isn't running | It starts at once, no question |
+| 577 | Look at bosses in their offices, on other floors and an event/admin boss outside | Feet on the floor or carpet; they don't sink or float while idle; hops on hit and walk steps still lift a little |
+| 578 | A big boss (the CEO) when hit and when defeated | Stays standing on the floor; the defeat shrinks it into the floor, not in mid-air |
+| 579 | Look at the top of the screen | The Stress Meter is in Roblox's top bar strip, between the menu buttons; the stat chips and boost chips sit just under it; more of the view is free |
+| 580 | Finish a quest (e.g. hit bosses) | A "📋 QUEST DONE!" card with the quest and a **CLAIM** button that opens the right Quests tab; the Quests badge pops |
+| 581 | Rejoin with quests ready | One "📋 QUESTS TO CLAIM" reminder with CLAIM, not a card per quest |
+
+### Phone layout fixes (owner phone screenshots 2026-10-10) — on a phone or Studio's phone emulator
+| # | Steps | Expected |
+|---|---|---|
+| 582 | Look at the right side | The HUD buttons (Bag, Store, Hammers, Social, Quests, Admin) are small tiles in 2-3 columns that end above the jump button; none hidden or under it |
+| 583 | Look at the top | Stress Meter, stat chips and boost chips are smaller and close together; most of the screen is free |
+| 584 | Menu button | Shows 👤 (it was an empty circle) |
+| 585 | Play a pickleball match | Score card small at the top under the chips; Soft / 🏓 / Hard to the left of the HUD tiles and above Sprint, not on top of anything; Forfeit on the left under Menu / Music |
+| 586 | Start a team mission | Mission card small at the top under the chips; Leave mission on the left under Menu / Music |
+| 587 | Desktop: a team mission | The mission card sits under the stat chips, not over them |
+

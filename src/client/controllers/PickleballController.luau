@@ -789,29 +789,55 @@ local function buildHud(): (ScreenGui, () -> ())
 		end)
 	end)
 
-	Responsive.onChanged(function()
+	-- Phones (owner screenshots 2026-10-10): the score card goes small at the
+	-- top under the HUD chips, the shot buttons left of the HUD buttons and
+	-- above Sprint, Forfeit on the left under Menu and Music.
+	local barScale = Instance.new("UIScale")
+	barScale.Parent = bar
+	local function place(): ()
 		local phone = Responsive.formFactor() == "Phone"
 		local touch = Responsive.hasTouch()
-		bar.Position = UDim2.new(0.5, 0, 1, if touch then -12 else -16)
-		bar.Size = UDim2.fromScale(if phone then 0.5 else 0.42, 0)
+		barScale.Scale = if phone then 0.8 else 1
+		if phone then
+			bar.AnchorPoint = Vector2.new(0.5, 0)
+			bar.Position = UDim2.new(0.5, 0, 0, Responsive.PHONE_CARD_TOP)
+			bar.Size = UDim2.fromScale(0.45, 0)
+		else
+			bar.AnchorPoint = Vector2.new(0.5, 1)
+			bar.Position = UDim2.new(0.5, 0, 1, if touch then -12 else -16)
+			bar.Size = UDim2.fromScale(0.42, 0)
+		end
 		buttons.Visible = touch
-		buttons.Position = UDim2.new(1, -16, 1, -150)
-		local size = if phone then 64 else 76
+		local size = if phone then 56 else 76
+		buttons.Position = if phone
+			then UDim2.new(1, -(Responsive.dockWidth() + 12), 1, -64)
+			else UDim2.new(1, -16, 1, -150)
 		buttons.Size = UDim2.fromOffset(size * 3 + 16, size)
 		for index, button in { soft, normal, hard } do
 			button.Size = UDim2.fromOffset(size, size)
 			button.Position = UDim2.fromOffset((index - 1) * (size + 8), 0)
 		end
-		forfeit.Position = UDim2.new(1, -16, 0, if phone then 64 else 120)
-		forfeit.Size = UDim2.fromOffset(150, 40)
+		if phone then
+			forfeit.AnchorPoint = Vector2.new(0, 0)
+			forfeit.Position = UDim2.fromOffset(12, Responsive.PHONE_LEFT_BUTTON_TOP)
+			forfeit.Size = UDim2.fromOffset(120, 34)
+		else
+			forfeit.AnchorPoint = Vector2.new(1, 0)
+			forfeit.Position = UDim2.new(1, -16, 0, 120)
+			forfeit.Size = UDim2.fromOffset(150, 40)
+		end
 		hintLine.Visible = not touch
-	end)
+	end
+	Responsive.onChanged(place)
 
 	local function refresh(): ()
 		local current = match
 		if current == nil or not playing() then
 			gui.Enabled = false
 			return
+		end
+		if not gui.Enabled then
+			place() -- the HUD buttons may have changed since
 		end
 		gui.Enabled = true
 		local mine = teamOfMine(current.Teams) or 1

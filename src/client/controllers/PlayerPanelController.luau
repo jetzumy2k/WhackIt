@@ -141,7 +141,7 @@ function PlayerPanelController.start(): ()
 
 	-- HUD button, top-left (under the Music button when there is music).
 	-- Top-left: the main navigation button (Music sits beside it, AudioController).
-	local open = Responsive.iconButton(window.Gui, "OpenMenu", "☰", "Menu", ACCENT)
+	local open = Responsive.iconButton(window.Gui, "OpenMenu", "👤", "Menu", ACCENT)
 	open.Position = UDim2.fromOffset(16, 16)
 	Responsive.onChanged(function()
 		local phone = Responsive.formFactor() == "Phone"
