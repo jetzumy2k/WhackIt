@@ -222,7 +222,9 @@ local StoreConfig = table.freeze({
 	-- bonuses rolled once when it's opened (uniform, whole percents). Shown to
 	-- players as odds before they buy, as Roblox requires for paid random items.
 	Mystery = table.freeze({
-		BaseDamage = 35,
+		-- Raised from 35 with the legendary hammers (2026-10-10, owner decision)
+		-- so the paid hammer stays the strongest; saved ones upgrade on load.
+		BaseDamage = 62,
 		BonusDamageMinPercent = 15,
 		BonusDamageMaxPercent = 25,
 		CritDamageMinPercent = 5,

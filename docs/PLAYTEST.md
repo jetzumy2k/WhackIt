@@ -867,3 +867,16 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 586 | Start a team mission | Mission card small at the top under the chips; Leave mission on the left under Menu / Music |
 | 587 | Desktop: a team mission | The mission card sits under the stat chips, not over them |
 
+### Legendary hammers and new pets (2026-10-10) — Admin → Set level / Rewards help
+| # | Steps | Expected |
+|---|---|---|
+| 588 | 🔨 Hammers at Lv 40 | Ten new cards after the Stress Crusher (35-60 damage, 12,000-100,000 coins), each "🔒 Reach Lv 45-95" |
+| 589 | Admin → Set level 95, give coins, buy and equip each legendary hammer | Each has its own look (see docs/GAMEPLAY_RULES.md), glow, particles and swing trail |
+| 590 | Hit a boss with a legendary hammer | The sparkle burst and ring take the hammer's own colours (e.g. blue and yellow for the Thunder Gavel), a slightly bigger burst; other players see your colours too |
+| 591 | Open a Mystery Hammer, or rejoin with one | "62 damage, +N% damage, +M% crit damage"; an old one shows 62 too |
+| 592 | Store → Eggs tab | Odds list every species of each egg (10 Common, 9 Rare, 8 Mythical) adding up to 100 % |
+| 593 | Admin → Spawn eggs / give eggs, hatch several | New pets appear in 🐾 Pets with their buffs |
+| 594 | Equip each new pet and walk around | Hamster cheeks, frog hops, bee/firefly flutter (firefly tail glows), hedgehog spikes, fox brush tail, panda patches, owl tufts, tiger stripes, deer antlers |
+| 595 | Equip a new Mythical (Griffin, Pegasus, Kitsune, Ice Dragon, Celestial Lion) | A soft turning ring of light under it with two sparks circling; Pegasus wings beat as it walks; Kitsune has three tails |
+| 596 | Settings → Reduced motion, phone | Pets still look right; nothing heavy (no lights) |
+

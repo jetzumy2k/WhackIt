@@ -49,8 +49,28 @@ local TURN_RATE = 5 -- radians per second
 local RUN_TURN_RATE = 7
 local CATCH_UP = 2.4 -- extra speed per stud behind
 local SIT_AFTER = 6 -- seconds standing before a sitter may sit
-local SITTERS: { [string]: boolean } =
-	{ dog = true, cat = true, monkey = true, bear = true, unicorn = true }
+local SITTERS: { [string]: boolean } = {
+	dog = true,
+	cat = true,
+	monkey = true,
+	bear = true,
+	unicorn = true,
+	-- 2026-10-10
+	hamster = true,
+	fox = true,
+	panda = true,
+	tiger = true,
+	kitsune = true,
+	celestial_lion = true,
+}
+-- Wing beats per second for walkers with wings (pegasus), at rest.
+local WALKER_FLAP_RATE = 0.8
+
+-- Insects (butterfly, bee, firefly) drift and flutter instead of gliding.
+local function isInsect(species: string): boolean
+	local info = PetConfig.ById[species]
+	return info ~= nil and info.Look.Insect == true
+end
 
 export type Input = {
 	OwnerPosition: Vector3, -- the owner's root
@@ -152,7 +172,7 @@ end
 function PetMotion.slot(state: State, input: Input): Vector3
 	local facing = CFrame.Angles(0, input.OwnerYaw, 0)
 	local offset = Vector3.new(state.Follow.X, 0, state.Follow.Y)
-	if state.Species == "butterfly" then
+	if isInsect(state.Species) then
 		-- A light, wandering drift around its spot.
 		offset += Vector3.new(math.sin(input.Time * 0.8) * 0.8, 0, math.cos(input.Time * 0.6) * 0.5)
 	end
@@ -162,7 +182,7 @@ end
 
 local function flyY(state: State, input: Input): number
 	local bob = math.sin(input.Time * 1.6) * 0.22 * state.Scale
-	if state.Species == "butterfly" then
+	if isInsect(state.Species) then
 		bob += math.cos(input.Time * 2.3) * 0.25
 	end
 	return input.GroundY + state.FlyHeight + bob
@@ -194,7 +214,7 @@ local function pickIdle(state: State): string
 	local options = { "LookAround", "LookAtOwner" }
 	if state.Movement == "Hopping" then
 		table.insert(options, "Hop")
-	elseif state.Species == "butterfly" then
+	elseif isInsect(state.Species) then
 		table.insert(options, "Flutter")
 	elseif state.Movement == "Flying" then
 		table.insert(options, "Flap")
@@ -340,6 +360,8 @@ function PetMotion.step(state: State, input: Input): (CFrame, PetVisual.PoseStat
 			* (1 + state.Excite)
 		state.Flap += beats * 2 * math.pi * dt
 	else
+		-- Walkers with wings beat them slowly (faster when happy).
+		state.Flap += WALKER_FLAP_RATE * (1 + state.Excite) * 2 * math.pi * dt
 		if state.Movement == "Hopping" and moving then
 			lift += math.max(0, math.sin(state.Phase)) * 0.55 * state.Scale
 			leanTarget = math.cos(state.Phase) * 0.2

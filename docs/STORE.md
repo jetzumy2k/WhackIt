@@ -51,13 +51,16 @@ fallbacks and suggestions.
 
   | Stat | Value | Odds |
   |---|---|---|
-  | Base damage | **35** (fixed) | always |
+  | Base damage | **62** (fixed; 35 until 2026-10-10) | always |
   | Bonus damage | +15 % to +25 % (whole numbers) | each value 1 in 11 ≈ 9.1 % |
   | Crit damage | +5 % to +10 % (whole numbers) | each value 1 in 6 ≈ 16.7 % |
 
-  Hit damage is 35 × (1 + bonus damage + any Damage boost) × the boss's damage multiplier; crits
+  Hit damage is 62 × (1 + bonus damage + any Damage boost) × the boss's damage multiplier; crits
   add the crit damage bonus to the base +50 % (docs/GAMEPLAY_RULES.md "Hit damage"). For example,
-  a +20 % hammer hits the Deadline Boss for 42.
+  a +20 % hammer hits the Deadline Boss for 74.
+  **Raised from 35 to 62 on 2026-10-10** (owner decision) with the ten legendary coin hammers (up to
+  60), so the paid hammer stays the strongest. Every hammer already opened gets the new base the next
+  time its owner joins (`HammerRules.clampRoll` sets the fixed base); its rolled bonuses are kept.
   **Hammers opened before 2026-10-08** (they rolled 20–35 damage) move to the 35 base, keep their
   crit roll and get +15 % bonus damage (PlayerDataSchema v7), so none gets weaker.
 

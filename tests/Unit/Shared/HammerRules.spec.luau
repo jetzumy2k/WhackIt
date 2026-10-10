@@ -20,29 +20,34 @@ return function()
 	end)
 
 	describe("HammerRules.rollMystery", function()
-		it("always has 35 base damage and whole bonuses in range, reaching every value", function()
-			local random = Random.new(42)
-			local seenBonus: { [number]: boolean } = {}
-			local seenCrit: { [number]: boolean } = {}
-			for _ = 1, 2000 do
-				local roll = HammerRules.rollMystery(random)
-				expect(roll.Damage).to.equal(35)
-				expect(roll.BonusDamagePercent >= 15 and roll.BonusDamagePercent <= 25).to.equal(
-					true
-				)
-				expect(roll.BonusDamagePercent % 1).to.equal(0)
-				expect(roll.CritDamagePercent >= 5 and roll.CritDamagePercent <= 10).to.equal(true)
-				expect(roll.CritDamagePercent % 1).to.equal(0)
-				seenBonus[roll.BonusDamagePercent] = true
-				seenCrit[roll.CritDamagePercent] = true
+		it(
+			"always has the fixed base damage and whole bonuses in range, reaching every value",
+			function()
+				local random = Random.new(42)
+				local seenBonus: { [number]: boolean } = {}
+				local seenCrit: { [number]: boolean } = {}
+				for _ = 1, 2000 do
+					local roll = HammerRules.rollMystery(random)
+					expect(roll.Damage).to.equal(mystery.BaseDamage)
+					expect(roll.BonusDamagePercent >= 15 and roll.BonusDamagePercent <= 25).to.equal(
+						true
+					)
+					expect(roll.BonusDamagePercent % 1).to.equal(0)
+					expect(roll.CritDamagePercent >= 5 and roll.CritDamagePercent <= 10).to.equal(
+						true
+					)
+					expect(roll.CritDamagePercent % 1).to.equal(0)
+					seenBonus[roll.BonusDamagePercent] = true
+					seenCrit[roll.CritDamagePercent] = true
+				end
+				for value = mystery.BonusDamageMinPercent, mystery.BonusDamageMaxPercent do
+					expect(seenBonus[value]).to.equal(true)
+				end
+				for value = mystery.CritDamageMinPercent, mystery.CritDamageMaxPercent do
+					expect(seenCrit[value]).to.equal(true)
+				end
 			end
-			for value = mystery.BonusDamageMinPercent, mystery.BonusDamageMaxPercent do
-				expect(seenBonus[value]).to.equal(true)
-			end
-			for value = mystery.CritDamageMinPercent, mystery.CritDamageMaxPercent do
-				expect(seenCrit[value]).to.equal(true)
-			end
-		end)
+		)
 	end)
 
 	describe("HammerRules.clampRoll", function()
@@ -59,11 +64,11 @@ return function()
 
 		it("keeps a valid roll exactly as it was (no reroll)", function()
 			local roll = HammerRules.clampRoll({
-				Damage = 35,
+				Damage = mystery.BaseDamage,
 				BonusDamagePercent = 20,
 				CritDamagePercent = 7,
 			})
-			expect(roll.Damage).to.equal(35)
+			expect(roll.Damage).to.equal(mystery.BaseDamage)
 			expect(roll.BonusDamagePercent).to.equal(20)
 			expect(roll.CritDamagePercent).to.equal(7)
 		end)
@@ -99,23 +104,28 @@ return function()
 			expect((stats :: HammerRules.HammerStats).CritDamage).to.equal(0.08)
 		end)
 
-		it("hits for 35 x (1 + bonus), and the crit bonus only on crits", function()
+		it("hits for base x (1 + bonus), and the crit bonus only on crits", function()
 			local id = HammerRules.mysteryId(1)
-			local hammer = HammerRules.resolve(
-				id,
-				{ [id] = { Damage = 35, BonusDamagePercent = 20, CritDamagePercent = 10 } }
-			) :: HammerRules.HammerStats
+			local hammer = HammerRules.resolve(id, {
+				[id] = {
+					Damage = mystery.BaseDamage,
+					BonusDamagePercent = 20,
+					CritDamagePercent = 10,
+				},
+			}) :: HammerRules.HammerStats
 			local stats = CombatRules.baseStats(hammer.Damage)
 			stats.DamageBonus += hammer.DamageBonus
 			stats.CritDamage += hammer.CritDamage
 			local boss = BossConfig.ById.deadline_boss -- takes damage x1
 			local normal, normalCrit = CombatRules.hitDamage(stats, boss, 0.99)
 			expect(normalCrit).to.equal(false)
-			expect(normal).to.equal(42) -- 35 x 1.2
+			expect(normal).to.equal(math.floor(mystery.BaseDamage * 1.2 + 0.5)) -- base x 1.2
 			local crit, isCrit = CombatRules.hitDamage(stats, boss, 0)
 			expect(isCrit).to.equal(true)
-			-- 42 x (1 + base crit + 10 %)
-			expect(crit).to.equal(math.floor(42 * (1 + GameConfig.BaseCritDamage + 0.1) + 0.5))
+			-- base x 1.2 x (1 + base crit + 10 %), rounded once
+			expect(crit).to.equal(
+				math.floor(mystery.BaseDamage * 1.2 * (1 + GameConfig.BaseCritDamage + 0.1) + 0.5)
+			)
 		end)
 
 		it("returns nil for unknown or unowned hammers", function()

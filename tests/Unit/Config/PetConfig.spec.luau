@@ -179,4 +179,24 @@ return function()
 			end
 		)
 	end)
+	describe("PetConfig roster (2026-10-10)", function()
+		it("has at least eight species of every rarity, each in its egg", function()
+			local counts: { [string]: number } = {}
+			for _, species in PetConfig.Species do
+				counts[species.Rarity] = (counts[species.Rarity] or 0) + 1
+				expect(PetConfig.EggOdds[species.Rarity][species.Id]).never.to.equal(nil)
+			end
+			expect(counts.Common >= 8).to.equal(true)
+			expect(counts.Rare >= 8).to.equal(true)
+			expect(counts.Mythical >= 8).to.equal(true)
+		end)
+
+		it("gives an aura only to Mythical pets", function()
+			for _, species in PetConfig.Species do
+				if species.Look.Aura then
+					expect(species.Rarity).to.equal("Mythical")
+				end
+			end
+		end)
+	end)
 end

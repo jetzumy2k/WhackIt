@@ -26,6 +26,9 @@ export type Hit = {
 	Own: boolean, -- landed by this player
 	Crit: boolean,
 	Defeated: boolean, -- the defeating hit
+	-- The hitter's hammer's own burst colours (HammerStyleConfig Impact,
+	-- legendary hammers); nil = the default gold sparkles.
+	Colors: { Color: Color3, Accent: Color3 }?,
 }
 
 HitEffects.RIG_NAME = "HitFx"
@@ -43,6 +46,8 @@ local SPARKLES_OTHER = 3
 local SPARKLES_CRIT_BONUS = 4
 local SPARKLES_DEFEAT = 14
 local MOTES_OWN = 2
+-- Extra sparkles when the hammer has its own impact colours.
+local IMPACT_BONUS = 4
 local MOTES_DEFEAT = 8
 
 local SPARKLE_COLORS = {
@@ -220,10 +225,21 @@ function HitEffects.play(body: BasePart, visual: Model?, hit: Hit): ()
 
 	local rig = rigFor(body)
 	local sparkles, motes = HitEffects.counts(hit)
-	rig.Sparkles.Color = if hit.Crit then SPARKLE_COLORS.crit else SPARKLE_COLORS.normal
-	rig.Sparkles:Emit(sparkles)
+	local colors = hit.Colors
+	if colors then
+		-- A legendary hammer: its own colours, and a bigger burst.
+		rig.Sparkles.Color = ColorSequence.new(colors.Color, colors.Accent)
+		rig.Sparkles:Emit(sparkles + IMPACT_BONUS)
+		rig.RingStroke.Color = colors.Color
+	else
+		rig.Sparkles.Color = if hit.Crit then SPARKLE_COLORS.crit else SPARKLE_COLORS.normal
+		rig.Sparkles:Emit(sparkles)
+		rig.RingStroke.Color = RING_COLOR
+	end
 	if motes > 0 then
-		rig.Motes.Color = MOTE_COLORS[random:NextInteger(1, #MOTE_COLORS)]
+		rig.Motes.Color = if colors
+			then ColorSequence.new(colors.Accent)
+			else MOTE_COLORS[random:NextInteger(1, #MOTE_COLORS)]
 		rig.Motes:Emit(motes)
 	end
 
