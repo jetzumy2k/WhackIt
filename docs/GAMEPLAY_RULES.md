@@ -146,6 +146,14 @@ invisible hitbox; each client draws a cartoon monster over it (`Shared/BossVisua
 `src/config/BossVisualConfig.luau`) and animates it locally: idle bob, turning to face the player,
 a lean-back hop on each confirmed hit, and a spin-and-shrink on defeat.
 
+**Faces and arms (visual overhaul V3, 2026-10-10, `Shared/BossFace`):** every boss has a friendly,
+expressive face instead of fixed angry brows and teeth. It smiles and blinks now and then; when you
+walk up its brows lift and its mouth makes an "O"; on a hit it squeezes its eyes shut, blushes and
+flails its arms, then goes dizzy (wobbly mouth, rolling pupils); on defeat it closes its eyes with a
+relieved smile, arms up, and a confetti burst pops (no confetti with Reduced motion). Its pupils follow
+you when you're near, and its arms swing gently at rest. Faces animate only within 140 studs of the
+camera. Bosses still never attack.
+
 Every player is handed their hammer Tool on spawn (`HammerService`, built by `Lib/HammerTool`).
 While held, the hammer rests on the shoulder (`SwingPose.REST`). Clicking, tapping or pressing R2
 plays one swing: the arm lifts with the hammer cocked back, then arm and wrist snap forward so the

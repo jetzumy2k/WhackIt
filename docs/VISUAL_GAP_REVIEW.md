@@ -94,3 +94,15 @@ Visual work becomes its own track, done before Phase 6, each part with a Studio 
   and Senior corridors; per-floor corridor carpet colours (blue slate, plum, bronze, CEO red); wood
   slat wall in the Break Room, acoustic panels in the Meeting Room. Owner confirmed the campus round
   (pavilion, café, skyline) and a match under the pavilion roof (2026-10-10).
+- **V3 boss creatures** (branch `feat/v3-boss-creatures`, on top of #21): `Shared/BossFace` (expressions,
+  blinks, pupils, arm swing; unit-tested) and a rebuilt face in `Shared/BossVisual` (eyes with shine,
+  closed-eye arcs, liftable brows, smile / "O" / wobbly mouths, blush; no angry brows or teeth),
+  animated in `Controllers/BossVisualController` (expression per state, pupils follow you, arm swing and
+  flail, confetti burst on defeat unless Reduced motion; only within 140 studs). Walking bosses and
+  meshes are not done.
+- **V3 redo** (owner: "very ugly", screenshots): the first V3 face used blocks and balls, so the brows and
+  smile read as black bars (a "mustache" on the CEO), the eyes bulged like googly balls and the long
+  stick arms looked spidery. Rebuilt as a rounded mascot from ellipsoids (built-in sphere meshes, no
+  uploaded assets): an egg-shaped body with a belly, oval eyes set into the face with oval pupils and a
+  shine, "^" closed eyes, thin rounded brows, an open "D" smile with a tongue, short stubby arms, oval
+  feet, a smaller crown, the sign held by the hand. Expressions and animation unchanged.

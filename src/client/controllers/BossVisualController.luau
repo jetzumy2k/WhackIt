@@ -15,7 +15,14 @@
 	  * the lean-back hop on each hit plus a dizzy wobble, a "boing" (at most
 	    every HitSoundCooldown, however many players hit) and, now and then on
 	    your own hits, a short line ("Ouch!", "Okay, okay!");
-	  * a spin-and-shrink on defeat.
+	  * a spin-and-shrink on defeat, with a confetti burst (skipped with
+	    Reduced motion);
+	  * a face that changes with what's happening (Shared/BossFace, V3):
+	    smiling and blinking, brows up and an "O" when it notices you,
+	    eyes squeezed shut and blushing on a hit, a wobbly mouth and rolling
+	    pupils while dizzy, a relieved smile on defeat; pupils follow you
+	    when you're near; arms swing, flail and lift. Only for bosses within
+	    FACE_DISTANCE of the camera.
 
 	Each boss has at most two Sounds (hit, notice), created on first use under
 	its body and reused, so they go away with the boss. Lines go into the boss's
@@ -29,6 +36,7 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Attributes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Attributes"))
+local BossFace = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BossFace"))
 local BossMotion = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BossMotion"))
 local BossPersonalityConfig =
 	require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("BossPersonalityConfig"))
@@ -37,6 +45,7 @@ local BossVisualConfig =
 	require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("BossVisualConfig"))
 local GameplayController = require(script.Parent.GameplayController)
 local ProgressController = require(script.Parent.ProgressController)
+local SettingsController = require(script.Parent.SettingsController)
 local UIController = require(script.Parent.UIController)
 
 local BossVisualController = {}
@@ -57,6 +66,35 @@ local LOCKED_GREY = Color3.fromRGB(150, 150, 155)
 local LOCKED_TINT = 0.8
 
 local PERSONALITY = BossPersonalityConfig
+-- Faces and arms animate only for bosses this close to the camera.
+local FACE_DISTANCE = 140
+local CONFETTI_COUNT = 18
+local CONFETTI_SECONDS = 1.3
+local CONFETTI_COLORS = {
+	Color3.fromRGB(255, 205, 60),
+	Color3.fromRGB(255, 120, 150),
+	Color3.fromRGB(110, 200, 255),
+	Color3.fromRGB(140, 230, 120),
+	Color3.fromRGB(200, 140, 255),
+}
+local FACE_ROLES = {
+	Eye = true,
+	Pupil = true,
+	Shine = true,
+	EyeClosed = true,
+	Brow = true,
+	Blush = true,
+	MouthSmile = true,
+	MouthO = true,
+	MouthWavy = true,
+	Arm = true,
+	Hand = true,
+}
+
+-- One animated face or arm part: where it rests (model space at scale 1).
+type RigPart = { Part: BasePart, Local: CFrame, Role: string, Side: number }
+
+type Confetti = { Part: BasePart, Velocity: Vector3, Spin: Vector3, BornAt: number }
 
 type Entry = {
 	Body: BasePart,
@@ -81,10 +119,14 @@ type Entry = {
 	LastHitSoundAt: number,
 	LastHitLineAt: number,
 	Sounds: { [string]: Sound },
+	-- V3 face
+	Rig: { RigPart },
+	FaceKey: string, -- the shown expression + eyes state (changes only on a switch)
 }
 
 local localPlayer = Players.LocalPlayer
 local entries: { [Model]: Entry } = {}
+local confetti: { Confetti } = {}
 local random = Random.new()
 
 local function lerpAngle(from: number, to: number, alpha: number): number
@@ -162,6 +204,7 @@ local function onHealthDrop(entry: Entry, now: number): ()
 	end
 end
 
+local burst: (entry: Entry) -> ()
 local attach: (boss: Model) -> ()
 function attach(boss: Model): ()
 	if entries[boss] then
@@ -193,6 +236,19 @@ function attach(boss: Model): ()
 	end
 
 	local visual = BossVisual.build(look)
+	-- The face and arm parts' rest poses, read before any scaling or moving.
+	local rig: { RigPart } = {}
+	for _, descendant in visual:GetDescendants() do
+		if descendant:IsA("BasePart") and FACE_ROLES[descendant.Name] then
+			local side = descendant:GetAttribute(BossVisual.SIDE_ATTRIBUTE)
+			table.insert(rig, {
+				Part = descendant,
+				Local = descendant.CFrame,
+				Role = descendant.Name,
+				Side = if typeof(side) == "number" then side else 0,
+			})
+		end
+	end
 	if look.Scale ~= 1 then
 		visual:ScaleTo(look.Scale)
 	end
@@ -228,6 +284,8 @@ function attach(boss: Model): ()
 		LastHitSoundAt = -math.huge,
 		LastHitLineAt = -math.huge,
 		Sounds = {},
+		Rig = rig,
+		FaceKey = "",
 	}
 	entries[boss] = entry
 	refreshLock(entry)
@@ -243,6 +301,7 @@ function attach(boss: Model): ()
 		if boss:GetAttribute(Attributes.Defeated) == true and entry.DefeatedAt == nil then
 			entry.DefeatedAt = os.clock()
 			playSound(entry, "Hit", entry.Personality.Pitch * DEFEAT_PITCH)
+			burst(entry)
 		end
 	end)
 	boss.AncestryChanged:Connect(function(_, parent: Instance?)
@@ -291,12 +350,159 @@ local function watchPlayer(boss: Model, entry: Entry, now: number): Vector3?
 	return nil
 end
 
+-- A cartoon confetti burst where a boss was defeated (client-only parts,
+-- gone after CONFETTI_SECONDS). Skipped far away or with Reduced motion.
+function burst(entry: Entry): ()
+	if SettingsController.get("ReducedMotion") or cameraDistance(entry) > FACE_DISTANCE then
+		return
+	end
+	local origin = entry.Body.Position + Vector3.new(0, 2, 0)
+	local now = os.clock()
+	for index = 1, CONFETTI_COUNT do
+		local p = Instance.new("Part")
+		p.Name = "BossConfetti"
+		p.Anchored = true
+		p.CanCollide = false
+		p.CanQuery = false
+		p.CanTouch = false
+		p.CastShadow = false
+		p.Size = Vector3.new(0.5, 0.5, 0.12)
+		p.Color = CONFETTI_COLORS[(index - 1) % #CONFETTI_COLORS + 1]
+		p.Material = Enum.Material.SmoothPlastic
+		p.CFrame = CFrame.new(origin)
+		p.Parent = Workspace
+		local angle = random:NextNumber(0, math.pi * 2)
+		local speed = random:NextNumber(8, 16)
+		local piece: Confetti = {
+			Part = p,
+			Velocity = Vector3.new(
+				math.cos(angle) * speed,
+				random:NextNumber(14, 24),
+				math.sin(angle) * speed
+			),
+			Spin = Vector3.new(
+				random:NextNumber(-8, 8),
+				random:NextNumber(-8, 8),
+				random:NextNumber(-8, 8)
+			),
+			BornAt = now,
+		}
+		table.insert(confetti, piece)
+	end
+end
+
+local function stepConfetti(now: number, dt: number): ()
+	for index = #confetti, 1, -1 do
+		local piece = confetti[index]
+		local age = now - piece.BornAt
+		if age >= CONFETTI_SECONDS then
+			piece.Part:Destroy()
+			table.remove(confetti, index)
+		else
+			piece.Velocity -= Vector3.new(0, 40 * dt, 0)
+			piece.Part.CFrame = (piece.Part.CFrame + piece.Velocity * dt)
+				* CFrame.Angles(piece.Spin.X * dt, piece.Spin.Y * dt, piece.Spin.Z * dt)
+			piece.Part.Transparency = math.clamp((age / CONFETTI_SECONDS - 0.6) / 0.4, 0, 1)
+		end
+	end
+end
+
+-- Shows only the parts of the current expression (on a change only).
+local function showExpression(
+	entry: Entry,
+	expression: BossFace.Expression,
+	eyesClosed: boolean
+): ()
+	local key = expression.Name .. (if eyesClosed then "|closed" else "|open")
+	if key == entry.FaceKey then
+		return
+	end
+	entry.FaceKey = key
+	for _, rigPart in entry.Rig do
+		local role = rigPart.Role
+		local visible: boolean? = nil
+		if role == "Eye" or role == "Pupil" or role == "Shine" then
+			visible = not eyesClosed
+		elseif role == "EyeClosed" then
+			visible = eyesClosed
+		elseif role == "MouthSmile" then
+			visible = expression.Mouth == "Smile"
+		elseif role == "MouthO" then
+			visible = expression.Mouth == "O"
+		elseif role == "MouthWavy" then
+			visible = expression.Mouth == "Wavy"
+		end
+		if visible ~= nil then
+			rigPart.Part.Transparency = if visible then 0 else 1
+		elseif role == "Blush" then
+			rigPart.Part.Transparency = if expression.Blush then 0.35 else 1
+		end
+	end
+end
+
+-- Places the face and arm parts for this frame (after the body has moved).
+local function animateFace(entry: Entry, now: number, target: Vector3?): ()
+	local hitAt = entry.HitAt
+	local hitProgress: number? = nil
+	local dizzyProgress: number? = nil
+	if hitAt then
+		hitProgress = (now - hitAt) / HIT_SECONDS
+		dizzyProgress = (now - hitAt) / (HIT_SECONDS + BossMotion.WOBBLE_SECONDS)
+	end
+	local expression = BossFace.expressionFor({
+		Defeated = entry.DefeatedAt ~= nil,
+		HitProgress = hitProgress,
+		DizzyProgress = dizzyProgress,
+		Surprised = entry.SurpriseAt ~= nil,
+	})
+	local eyesClosed = expression.EyesClosed or BossFace.blinking(now, entry.Phase)
+	showExpression(entry, expression, eyesClosed)
+
+	local pivot = entry.Visual:GetPivot()
+	local scale = entry.Visual:GetScale()
+	local lookLocal = if target
+		then pivot:PointToObjectSpace(target) - Vector3.new(0, 1.3 * scale, 0)
+		else nil
+	local pupil = BossFace.pupilOffset(
+		lookLocal,
+		if expression.Name == "Dizzy" then dizzyProgress else nil,
+		now
+	)
+	local shoulder = BossVisual.SHOULDER
+	for _, rigPart in entry.Rig do
+		local rest = rigPart.Local
+		local position = rest.Position
+		local rotation = rest.Rotation
+		local role = rigPart.Role
+		if role == "Pupil" or role == "Shine" then
+			position += Vector3.new(pupil.X, pupil.Y, 0)
+		elseif role == "Brow" then
+			position += Vector3.new(0, expression.BrowLift, 0)
+			rotation = rotation * CFrame.Angles(0, 0, -rigPart.Side * expression.BrowTilt)
+		elseif role == "Arm" or role == "Hand" then
+			local side = rigPart.Side
+			local joint = Vector3.new(side * shoulder.X, shoulder.Y, shoulder.Z)
+			local angle = side * BossFace.armAngle(expression, now, entry.Phase, side)
+			local turned = CFrame.new(joint)
+				* CFrame.Angles(0, 0, angle)
+				* CFrame.new(-joint)
+				* rest
+			position, rotation = turned.Position, turned.Rotation
+		elseif role ~= "EyeClosed" and role ~= "Eye" then
+			continue -- mouths and blush stay at rest
+		end
+		rigPart.Part.CFrame = pivot * (CFrame.new(position * scale) * rotation)
+	end
+end
+
 local function animate(boss: Model, entry: Entry, now: number, dt: number): ()
 	local origin = entry.Body.Position
 	local personality = entry.Personality
 
+	local faceTarget: Vector3? = nil
 	if entry.DefeatedAt == nil then
 		local target = watchPlayer(boss, entry, now)
+		faceTarget = target
 		if target then
 			entry.Yaw = lerpAngle(
 				entry.Yaw,
@@ -371,6 +577,9 @@ local function animate(boss: Model, entry: Entry, now: number, dt: number): ()
 		entry.Visual:ScaleTo(scale * entry.BaseScale)
 		entry.Scale = scale
 	end
+	if cameraDistance(entry) <= FACE_DISTANCE then
+		animateFace(entry, now, faceTarget)
+	end
 end
 
 -- A confirmed hit (FeedbackController): your own hits sometimes get a line.
@@ -413,6 +622,9 @@ function BossVisualController.start(): ()
 
 	RunService.RenderStepped:Connect(function(dt: number)
 		local now = os.clock()
+		if #confetti > 0 then
+			stepConfetti(now, dt)
+		end
 		for boss, entry in entries do
 			-- Streamed out or destroyed: stop animating it.
 			if entry.Body.Parent == nil then
