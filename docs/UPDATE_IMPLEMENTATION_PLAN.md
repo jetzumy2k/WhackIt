@@ -210,9 +210,9 @@ from `BallFlight`, paddle swing animation (SwingAnimator-style joint offsets), a
 script (fake swings, swings out of reach, racing accepts, leaving mid-match).
 
 ## 6. Later phases (planned in detail when reached)
-- **2b Quests: 🟡 implemented 2026-10-10 on branch `feat/phase2b-quests`** (docs/QUESTS.md, schema v13,
+- **2b Quests: ✅ complete 2026-10-10 on branch `feat/phase2b-quests`** (docs/QUESTS.md, schema v13,
   D7-D9). `scripts/check.ps1` passes; Studio specs **718 passed, 0 failed** (2026-10-10, after fixing one
-  spec that set progress 1 on a 1-step quest); playtest (`docs/PLAYTEST.md` 434-446) not run yet.
+  spec that set progress 1 on a 1-step quest); playtest (`docs/PLAYTEST.md` 430-446) reported working by the owner (2026-10-10).
   Deviations: no `Career` points (career = level titles), finished but unclaimed quests are paid at the
   reset instead of being lost, the tutorial has no pickleball or visiting step (both need other players).
   Original plan:
