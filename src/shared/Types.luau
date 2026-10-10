@@ -110,6 +110,8 @@ export type ProfileSnapshot = {
 	DailyEvent: { DayKey: string, Points: number, Tiers: number },
 	-- Team missions (docs/MISSIONS.md, Shared/MissionRules.Record).
 	Missions: { DayKey: string, DayRewarded: number, Cleared: number },
+	-- Pet Arena (docs/PET_ARENA.md): trainers beaten and today's rewarded wins.
+	PetArena: { Cleared: number, DayWins: number, DayKey: string },
 }
 
 export type OwnedPet = {

@@ -1009,4 +1009,30 @@ return function()
 			expect(state.VotesToday).to.equal(4)
 		end)
 	end)
+	describe("PlayerDataSchema v18 (pet arena)", function()
+		local PetArenaRules = require(ReplicatedStorage.Shared.PetArenaRules)
+
+		it("starts existing players with no battles, touching nothing else", function()
+			local data = validData()
+			data.SchemaVersion = 17
+			data.PetArena = { Cleared = 5, TotalWins = 40 } -- can't exist before v18
+			expect((PlayerDataSchema.prepare(data))).to.equal(true)
+			local record = data.PetArena :: PetArenaRules.Record
+			expect(record.Cleared).to.equal(0)
+			expect(record.TotalWins).to.equal(0)
+			expect(data.Coins).to.equal(250)
+			expect(data.SchemaVersion).to.equal(PlayerDataSchema.CURRENT_VERSION)
+		end)
+
+		it("keeps a saved arena record", function()
+			local data = validData()
+			data.PetArena = { DayKey = "2026-10-10", DayWins = 3, Cleared = 2, TotalWins = 7 }
+			PlayerDataSchema.prepare(data)
+			PlayerDataSchema.prepare(data)
+			local record = data.PetArena :: PetArenaRules.Record
+			expect(record.Cleared).to.equal(2)
+			expect(record.TotalWins).to.equal(7)
+			expect(record.DayWins).to.equal(3)
+		end)
+	end)
 end

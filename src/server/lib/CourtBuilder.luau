@@ -333,6 +333,61 @@ local function signpost(parent: Instance): ProximityPrompt
 	return prompt
 end
 
+-- The Pet Arena kiosk (docs/PET_ARENA.md): a round battle pad with a sign,
+-- west of the entrance path. Its prompt opens the Pet Arena window
+-- (Controllers/PetArenaController); battles themselves are on screen.
+CourtBuilder.ARENA_PROMPT_NAME = "PetArenaPrompt"
+CourtBuilder.ARENA_POSITION = Vector3.new(-34, 0, 121)
+local ARENA_RING = Color3.fromRGB(255, 150, 90)
+
+local function arenaKiosk(parent: Instance): ()
+	local model = Instance.new("Model")
+	model.Name = "PetArena"
+	local base = CourtBuilder.ARENA_POSITION + Vector3.new(0, CENTER.SurfaceY, 0)
+	local pad = part(
+		model,
+		"ArenaPad",
+		Vector3.new(0.4, 12, 12),
+		base + Vector3.new(0, 0.2, 0),
+		Color3.fromRGB(110, 190, 120)
+	)
+	pad.Shape = Enum.PartType.Cylinder
+	pad.Orientation = Vector3.new(0, 0, 90)
+	local rim = part(
+		model,
+		"ArenaRim",
+		Vector3.new(0.3, 12.6, 12.6),
+		base + Vector3.new(0, 0.1, 0),
+		ARENA_RING
+	)
+	rim.Shape = Enum.PartType.Cylinder
+	rim.Orientation = Vector3.new(0, 0, 90)
+	local panel =
+		part(model, "Sign", Vector3.new(9, 3.4, 0.6), base + Vector3.new(0, 6.5, 6.5), BOARD)
+	label(panel, Enum.NormalId.Back, "🐾 PET ARENA\nBoop · Charge · Guard", BOARD_TEXT)
+	label(panel, Enum.NormalId.Front, "🐾 PET ARENA", BOARD_TEXT)
+	for _, x in { -4, 4 } do
+		part(
+			model,
+			"SignLeg",
+			Vector3.new(0.5, 5, 0.5),
+			base + Vector3.new(x, 2.5, 6.5),
+			POST,
+			Enum.Material.Metal
+		)
+	end
+	local stand =
+		part(model, "PromptStand", Vector3.new(3, 3, 1), base + Vector3.new(0, 1.5, 4.5), BOARD)
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = CourtBuilder.ARENA_PROMPT_NAME
+	prompt.ObjectText = "Pet Arena"
+	prompt.ActionText = "Battle"
+	prompt.MaxActivationDistance = 12
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = stand
+	model.Parent = parent
+end
+
 -- The pavilion over the courts (visual overhaul V2): a high roof on steel
 -- columns (lobs fly up to ~40 studs, so the roof is above them), a lit
 -- fascia sign facing the HQ, three-tier stands down both sides, a mural
@@ -470,6 +525,7 @@ function CourtBuilder.build(parent: Instance): Center
 	end
 	local prompt = signpost(folder)
 	pavilion(folder)
+	arenaKiosk(folder)
 	folder.Parent = parent
 	return { Folder = folder, Courts = courts, Prompt = prompt }
 end

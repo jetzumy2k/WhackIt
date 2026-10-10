@@ -75,6 +75,13 @@ local RemoteLimits = table.freeze({
 		RefillPerSecond = 0.5,
 	}),
 
+	-- Pet Arena: starting battles, moves, challenges. One move a round, so
+	-- a little burst is plenty.
+	PetArena = table.freeze({
+		Capacity = 5,
+		RefillPerSecond = 1,
+	}),
+
 	-- Quest claims and rerolls: a few taps in a row are fine.
 	Quests = table.freeze({
 		Capacity = 6,
