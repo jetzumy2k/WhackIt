@@ -48,7 +48,7 @@ local CANOPY_COLOR = Color3.fromRGB(100, 103, 112) -- muted (OfficeBuilder eye-c
 local SIGN_TEXT_COLOR = Color3.fromRGB(255, 205, 110)
 local WOOD = Color3.fromRGB(150, 105, 70)
 local DARK = Color3.fromRGB(40, 42, 50)
-local LIGHT_COLOR = Color3.fromRGB(255, 205, 150)
+local LIGHT_COLOR = Color3.fromRGB(255, 236, 214)
 
 local function part(
 	parent: Instance,
@@ -112,11 +112,23 @@ local function signText(
 end
 
 local function pendantLight(parent: Instance, position: Vector3): ()
+	-- A flat round shade (the cylinder's axis turned upright: 1 tall, 2.4
+	-- across) hanging on a thin cord.
 	local shade = decor(
-		part(parent, "PendantShade", Vector3.new(2.4, 1, 2.4), position, DARK, Enum.Material.Metal)
+		part(parent, "PendantShade", Vector3.new(1, 2.4, 2.4), position, DARK, Enum.Material.Metal)
 	)
 	shade.Shape = Enum.PartType.Cylinder
 	shade.Orientation = Vector3.new(0, 0, 90)
+	decor(
+		part(
+			parent,
+			"PendantCord",
+			Vector3.new(0.1, 1.5, 0.1),
+			position + Vector3.new(0, 1.25, 0),
+			DARK,
+			Enum.Material.Metal
+		)
+	)
 	local light = Instance.new("PointLight")
 	light.Color = LIGHT_COLOR
 	light.Range = 18
@@ -505,7 +517,7 @@ local function buildBreakRoom(parent: Instance): ()
 		Vector3.new(12, 0.1, 8),
 		Vector3.new(-45, 0.12, 25),
 		Color3.fromRGB(150, 90, 70),
-		Enum.Material.Fabric
+		Enum.Material.Carpet
 	)
 	plant(room, Vector3.new(-40, 0, 4))
 	plant(room, Vector3.new(-82, 0, 4))
@@ -519,7 +531,7 @@ local function buildMeetingRoom(parent: Instance): ()
 		LOBBY_HALF,
 		HALF,
 		Color3.fromRGB(70, 80, 105),
-		Enum.Material.Fabric
+		Enum.Material.Carpet
 	)
 	local center = Vector3.new(61, 0, 18)
 	part(

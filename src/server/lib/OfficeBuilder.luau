@@ -33,8 +33,8 @@ local LEAF = Color3.fromRGB(70, 160, 80)
 local POT = Color3.fromRGB(190, 110, 70)
 local PAPER = Color3.fromRGB(196, 192, 182)
 local GLASS = Color3.fromRGB(170, 210, 235)
-local LIGHT_COLOR = Color3.fromRGB(255, 205, 150) -- warm amber
-local LIGHT_PANEL_COLOR = Color3.fromRGB(150, 130, 110)
+local LIGHT_COLOR = Color3.fromRGB(255, 236, 214) -- warm white (amber read olive under Future lighting)
+local LIGHT_PANEL_COLOR = Color3.fromRGB(196, 196, 192) -- a pale diffuser, not an orange slab
 local LIGHT_BRIGHTNESS = 0.7
 local LED_GROUND = Color3.fromRGB(60, 190, 210) -- cool cyan accent strip
 local LED_UPPER = Color3.fromRGB(150, 90, 220) -- purple accent strip
@@ -113,7 +113,8 @@ end
 local function ledStrip(parent: Instance, length: number, position: Vector3, color: Color3): ()
 	local strip =
 		part(parent, "LedStrip", Vector3.new(length, 0.2, 0.2), position, color, Enum.Material.Neon)
-	strip.Transparency = 0.35
+	-- Future lighting makes Neon far brighter: keep strips faint.
+	strip.Transparency = 0.7
 	strip.CastShadow = false
 	strip.CanCollide = false
 	strip.CanQuery = false
@@ -285,7 +286,7 @@ local function buildOffice(parent: Instance, entry: ArenaConfig.Office): ()
 		Vector3.new(size.X, 0.1, size.Z),
 		center + Vector3.new(0, 0.05, 0),
 		entry.CarpetColor:Lerp(Color3.new(0, 0, 0), CARPET_DEEPEN),
-		Enum.Material.Fabric
+		Enum.Material.Carpet
 	)
 	walls(room, center)
 	ceilingLight(room, center + Vector3.new(0, size.Y - 0.3, 0), 24)
@@ -385,7 +386,7 @@ local function buildCommonAreas(parent: Instance): ()
 		Vector3.new(half * 2, 0.1, corridorDepth),
 		Vector3.new(0, 0.05, corridorZ),
 		CORRIDOR_CARPET,
-		Enum.Material.Fabric
+		Enum.Material.Carpet
 	)
 	part(
 		area,
@@ -400,7 +401,7 @@ local function buildCommonAreas(parent: Instance): ()
 		Vector3.new(half * 2, 0.1, corridorDepth),
 		Vector3.new(0, upperY + 0.05, corridorZ),
 		CORRIDOR_CARPET,
-		Enum.Material.Fabric
+		Enum.Material.Carpet
 	)
 	part(
 		area,
@@ -568,9 +569,14 @@ local function buildCommonAreas(parent: Instance): ()
 		"WelcomeSign",
 		Vector3.new(30, 4, 0.5),
 		Vector3.new(0, 11, 1),
-		Color3.fromRGB(255, 120, 60)
+		Color3.fromRGB(35, 38, 48)
 	)
-	sign(welcome, Enum.NormalId.Back, "WHACK IT OUT!  Stress Relief Dept.", Color3.new(1, 1, 1))
+	sign(
+		welcome,
+		Enum.NormalId.Back,
+		"WHACK IT OUT!  Stress Relief Dept.",
+		Color3.fromRGB(255, 170, 80)
+	)
 	-- On the front wall above the foot of the stairs, facing into the lobby (-Z).
 	local upstairs = part(
 		area,
@@ -656,7 +662,7 @@ local function buildExecutiveFloor(parent: Instance): ()
 		Vector3.new(half * 2, 0.1, depth),
 		Vector3.new(0, floor + 0.05, midZ),
 		Color3.fromRGB(80, 40, 50),
-		Enum.Material.Fabric
+		Enum.Material.Carpet
 	)
 	part(
 		suite,
@@ -813,7 +819,7 @@ local function buildDepartmentFloor(parent: Instance): ()
 		Vector3.new(half * 2, 0.1, corridorDepth),
 		Vector3.new(0, floor + 0.05, corridorZ),
 		CORRIDOR_CARPET,
-		Enum.Material.Fabric
+		Enum.Material.Carpet
 	)
 	part(
 		area,

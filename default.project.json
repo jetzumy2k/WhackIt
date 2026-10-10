@@ -482,7 +482,7 @@
         "$properties": {
           "Density": 0.28,
           "Offset": 0.2,
-          "Color": [0.78, 0.82, 0.9],
+          "Color": [0.8, 0.85, 0.95],
           "Decay": [0.42, 0.46, 0.6],
           "Glare": 0.1,
           "Haze": 0.8
@@ -494,7 +494,7 @@
         "$properties": {
           "Intensity": 0.35,
           "Size": 24,
-          "Threshold": 1.4
+          "Threshold": 2
         }
       },
 
@@ -503,8 +503,8 @@
         "$properties": {
           "Brightness": 0.02,
           "Contrast": 0.06,
-          "Saturation": 0.08,
-          "TintColor": [1, 0.98, 0.95]
+          "Saturation": 0.04,
+          "TintColor": [1, 1, 1]
         }
       },
 
