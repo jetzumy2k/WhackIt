@@ -1,12 +1,14 @@
 --!strict
 --[[
-	Hammer shop UI: a "Hammers" button opens a panel listing every hammer with
-	a small 3D preview (Shared/HammerModel, built once per row, no effects), its
-	damage and price, and a Buy / Equip / Equipped button. Display only:
-	clicking sends the hammer id; the server checks coins and ownership and
-	answers with a fresh Profile.Sync, which redraws the panel.
+	Hammer shop UI: a "Hammers" button opens a panel (since the visual
+	overhaul V4b a PanelKit window with item cards in a grid) showing every
+	hammer with a 3D preview (Shared/HammerModel, built once per card, no
+	effects), its damage, a badge (Equipped, Owned, SALE) and a Buy / Equip /
+	Equipped button. Display only: clicking sends the hammer id; the server
+	checks coins and ownership and answers with a fresh Profile.Sync, which
+	refreshes the cards in place.
 
-	During a Hammer Shop sale (docs/EVENTS.md) rows show the sale price, and
+	During a Hammer Shop sale (docs/EVENTS.md) cards show the sale price, and
 	Buy also sends the price shown: the server charges its own price and
 	refuses if that is higher than what the player saw.
 ]]
@@ -19,82 +21,46 @@ local StoreConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChil
 local EventRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("EventRules"))
 local HammerModel = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("HammerModel"))
 local EventController = require(script.Parent.EventController)
+local PanelKit = require(script.Parent.Parent.Lib.PanelKit)
 local ProgressController = require(script.Parent.ProgressController)
-local GamepadNav = require(script.Parent.Parent.Lib.GamepadNav)
 local Responsive = require(script.Parent.Parent.Lib.Responsive)
 
 local ShopController = {}
 
-local PANEL_COLOR = Color3.fromRGB(30, 30, 40)
-local ROW_COLOR = Color3.fromRGB(48, 48, 62)
-local TEXT_COLOR = Color3.fromRGB(255, 255, 255)
-local BUY_COLOR = Color3.fromRGB(80, 190, 90)
+local C = PanelKit.Colors
 local EQUIP_COLOR = Color3.fromRGB(70, 140, 230)
-local DISABLED_COLOR = Color3.fromRGB(90, 90, 100)
-local ROW_HEIGHT = 64
-local PREVIEW_SIZE = 56
-local PREVIEW_COLOR = Color3.fromRGB(36, 36, 48)
+local SALE_COLOR = Color3.fromRGB(230, 90, 90)
+local MYSTERY_COLOR = Color3.fromRGB(255, 120, 170)
+local CARD_WIDTH = 170
+local CARD_HEIGHT = 236
 -- Shown tilted, head up, so every hammer reads at a glance.
 local PREVIEW_TILT = CFrame.Angles(math.rad(40), 0, 0)
 local PREVIEW_FOV = 40
-local MIN_TOUCH_SIZE = 44 -- recommended minimum tap target
 
 local localPlayer = Players.LocalPlayer
 -- Set once the panel exists (start); lets other controllers open it.
 local openPanel: (() -> ())? = nil
 
-type Row = {
+type Card = {
 	Hammer: HammerConfig.HammerDefinition,
 	IsMystery: boolean, -- a Robux Mystery Hammer (always owned, rolled stats)
 	BonusPercent: number,
 	CritPercent: number,
 	Price: number, -- the price shown on the Buy button (sale included)
-	Status: TextLabel,
-	Button: TextButton,
+	View: PanelKit.ItemCard,
 }
 
-local function corner(parent: Instance): ()
-	Instance.new("UICorner").Parent = parent
-end
-
-local function label(name: string, parent: Instance): TextLabel
-	local text = Instance.new("TextLabel")
-	text.Name = name
-	text.BackgroundTransparency = 1
-	text.TextColor3 = TEXT_COLOR
-	text.Font = Enum.Font.FredokaOne
-	text.TextScaled = true
-	text.TextXAlignment = Enum.TextXAlignment.Left
-	text.Parent = parent
-	Responsive.capText(text, 22)
-	return text
-end
-
-local function button(name: string, parent: Instance): TextButton
-	local clickable = Instance.new("TextButton")
-	clickable.Name = name
-	clickable.TextColor3 = TEXT_COLOR
-	clickable.Font = Enum.Font.FredokaOne
-	clickable.TextScaled = true
-	clickable.AutoButtonColor = true
-	clickable.Parent = parent
-	corner(clickable)
-	Responsive.capText(clickable, 20)
-	return clickable
-end
-
--- A still 3D view of the hammer (static: built once, no camera updates).
-local function buildPreview(hammer: HammerConfig.HammerDefinition, parent: Instance): ViewportFrame
+-- A still 3D view of the hammer filling the card's picture (static: built
+-- once, no camera updates).
+local function buildPreview(hammer: HammerConfig.HammerDefinition, parent: Frame): ViewportFrame
 	local viewport = Instance.new("ViewportFrame")
 	viewport.Name = "Preview"
-	viewport.BackgroundColor3 = PREVIEW_COLOR
-	viewport.Position = UDim2.fromOffset(6, (ROW_HEIGHT - PREVIEW_SIZE) / 2)
-	viewport.Size = UDim2.fromOffset(PREVIEW_SIZE, PREVIEW_SIZE)
+	viewport.BackgroundTransparency = 1
+	viewport.Size = UDim2.fromScale(1, 1)
 	viewport.Ambient = Color3.fromRGB(170, 170, 180)
 	viewport.LightColor = Color3.fromRGB(255, 250, 240)
 	viewport.LightDirection = Vector3.new(-1, -1, -0.6)
 	viewport.Parent = parent
-	corner(viewport)
 
 	local model = Instance.new("Model")
 	model.Name = "Hammer"
@@ -114,90 +80,68 @@ local function buildPreview(hammer: HammerConfig.HammerDefinition, parent: Insta
 	return viewport
 end
 
-local function buildRow(hammer: HammerConfig.HammerDefinition, order: number, list: Instance): Row
-	local row = Instance.new("Frame")
-	row.Name = hammer.Id
-	row.LayoutOrder = order
-	row.Size = UDim2.new(1, 0, 0, ROW_HEIGHT)
-	row.BackgroundColor3 = ROW_COLOR
-	row.Parent = list
-	corner(row)
-
-	buildPreview(hammer, row)
-	local textLeft = PREVIEW_SIZE + 14
-
-	local name = label("Name", row)
-	name.Position = UDim2.fromOffset(textLeft, 6)
-	name.Size = UDim2.new(0.55, -textLeft, 0, 28)
-	name.Text = hammer.DisplayName
-
-	local status = label("Status", row)
-	status.Position = UDim2.fromOffset(textLeft, 34)
-	status.Size = UDim2.new(0.55, -textLeft, 0, 24)
-	status.TextTransparency = 0.25
-	status.TextWrapped = true
-	Responsive.capText(status, 16)
-
-	local action = button("Action", row)
-	action.AnchorPoint = Vector2.new(1, 0.5)
-	action.Position = UDim2.new(1, -10, 0.5, 0)
-	action.Size = UDim2.new(0.35, 0, 0, MIN_TOUCH_SIZE)
-
+local function buildCard(hammer: HammerConfig.HammerDefinition, grid: Frame, accent: Color3): Card
+	local view = PanelKit.itemCard(grid, hammer.DisplayName, "", nil, accent)
+	view.Frame.Name = hammer.Id
+	buildPreview(hammer, view.Picture)
 	return {
 		Hammer = hammer,
 		IsMystery = false,
 		BonusPercent = 0,
 		CritPercent = 0,
 		Price = hammer.Price,
-		Status = status,
-		Button = action,
+		View = view,
 	}
 end
 
-local function refreshRow(row: Row): ()
+local function refreshCard(card: Card): ()
 	local snapshot = ProgressController.get()
-	local hammer = row.Hammer
-	local owned = row.IsMystery or ProgressController.ownsHammer(hammer.Id)
+	local hammer = card.Hammer
+	local view = card.View
+	local owned = card.IsMystery or ProgressController.ownsHammer(hammer.Id)
 	local equipped = snapshot ~= nil and snapshot.EquippedHammerId == hammer.Id
 	local coins = if snapshot then snapshot.Coins else 0
 
-	row.Status.Text = if row.IsMystery
+	view.Detail.Text = if card.IsMystery
 		then string.format(
-			"Damage %d   +%d%% damage   +%d%% crit damage",
+			"Damage %d · +%d%% damage · +%d%% crit damage",
 			hammer.Damage,
-			row.BonusPercent,
-			row.CritPercent
+			card.BonusPercent,
+			card.CritPercent
 		)
-		else string.format("Damage %d   %s", hammer.Damage, hammer.Description)
+		else string.format("Damage %d · %s", hammer.Damage, hammer.Description)
+	local button = view.Button
 	if equipped then
-		row.Button.Text = "Equipped"
-		row.Button.BackgroundColor3 = DISABLED_COLOR
-		row.Button.Active = false
+		button.Text = "Equipped"
+		PanelKit.setDisabled(button, true)
+		PanelKit.setBadge(view, "✓ Equipped", C.Good)
+		return
 	elseif owned then
-		row.Button.Text = "Equip"
-		row.Button.BackgroundColor3 = EQUIP_COLOR
-		row.Button.Active = true
-	end
-	if equipped or owned then
+		button.Text = "Equip"
+		PanelKit.setColor(button, EQUIP_COLOR)
+		PanelKit.setDisabled(button, false)
+		PanelKit.setBadge(view, "Owned", EQUIP_COLOR)
 		return
 	end
 	local percent = EventController.discountPercent(hammer.Id)
-	row.Price = EventRules.discountedPrice(hammer.Price, percent)
-	local sale = if percent > 0 then string.format(" (-%d%%)", percent) else ""
+	card.Price = EventRules.discountedPrice(hammer.Price, percent)
+	PanelKit.setBadge(
+		view,
+		if percent > 0 then string.format("SALE -%d%%", percent) else "",
+		SALE_COLOR
+	)
 	local level = if snapshot then snapshot.Level else 1
 	if hammer.MinLevel and level < hammer.MinLevel then
 		-- The server checks the level too (ProgressionRules.checkPurchase).
-		row.Button.Text = string.format("🔒 Lv %d", hammer.MinLevel)
-		row.Button.BackgroundColor3 = DISABLED_COLOR
-		row.Button.Active = false
-	elseif coins >= row.Price then
-		row.Button.Text = string.format("Buy %d%s", row.Price, sale)
-		row.Button.BackgroundColor3 = BUY_COLOR
-		row.Button.Active = true
+		button.Text = string.format("🔒 Reach Lv %d", hammer.MinLevel)
+		PanelKit.setDisabled(button, true)
+	elseif coins >= card.Price then
+		button.Text = string.format("Buy · 🪙 %d", card.Price)
+		PanelKit.setColor(button, C.Good)
+		PanelKit.setDisabled(button, false)
 	else
-		row.Button.Text = string.format("Need %d%s", row.Price, sale)
-		row.Button.BackgroundColor3 = DISABLED_COLOR
-		row.Button.Active = false
+		button.Text = string.format("Need 🪙 %d", card.Price)
+		PanelKit.setDisabled(button, true)
 	end
 end
 
@@ -210,85 +154,47 @@ function ShopController.start(): ()
 		"Shop remotes must be RemoteEvents"
 	)
 
-	local gui = Instance.new("ScreenGui")
-	gui.Name = "Shop"
-	gui.ResetOnSpawn = false
-	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
 	-- HUD button in the shared column (Lib/Responsive), lowest of the four.
 	local open = Responsive.dockButton("OpenShop", "🔨", "Hammers", EQUIP_COLOR, 4)
 
-	local panel = Instance.new("Frame")
-	panel.Name = "Panel"
-	panel.AnchorPoint = Vector2.new(0.5, 0.5)
-	panel.Position = UDim2.fromScale(0.5, 0.5)
-	panel.Size = UDim2.fromScale(0.6, 0.65)
-	panel.BackgroundColor3 = PANEL_COLOR
-	panel.Visible = false
-	panel.Parent = gui
-	corner(panel)
-	local sizeLimit = Instance.new("UISizeConstraint")
-	sizeLimit.MinSize = Vector2.new(300, 260)
-	sizeLimit.MaxSize = Vector2.new(560, 480)
-	sizeLimit.Parent = panel
-	Responsive.fitPopup(panel, sizeLimit, Vector2.new(0.6, 0.65))
+	local window = PanelKit.window({
+		Name = "Shop",
+		Title = "🔨 Hammers",
+		Subtitle = "Better hammers hit harder and relieve stress a little faster.",
+		Accent = EQUIP_COLOR,
+		DisplayOrder = 5,
+	}, localPlayer:WaitForChild("PlayerGui"))
+	-- Built once (the 3D previews too) and refreshed in place.
+	local grid = PanelKit.grid(window.Content, CARD_WIDTH, CARD_HEIGHT)
 
-	local title = label("Title", panel)
-	title.Position = UDim2.fromOffset(16, 10)
-	title.Size = UDim2.new(1, -90, 0, 34)
-	title.Text = "Hammers"
-	Responsive.capText(title, 30)
-
-	local close = button("Close", panel)
-	close.Text = "X"
-	close.BackgroundColor3 = DISABLED_COLOR
-	close.AnchorPoint = Vector2.new(1, 0)
-	close.Position = UDim2.new(1, -10, 0, 8)
-	close.Size = UDim2.fromOffset(MIN_TOUCH_SIZE, MIN_TOUCH_SIZE)
-
-	local list = Instance.new("ScrollingFrame")
-	list.Name = "List"
-	list.BackgroundTransparency = 1
-	list.BorderSizePixel = 0
-	list.Position = UDim2.fromOffset(10, 60)
-	list.Size = UDim2.new(1, -20, 1, -70)
-	list.AutomaticCanvasSize = Enum.AutomaticSize.Y
-	list.CanvasSize = UDim2.new()
-	list.ScrollBarThickness = 6
-	list.Parent = panel
-	local layout = Instance.new("UIListLayout")
-	layout.Padding = UDim.new(0, 8)
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Parent = list
-
-	local rows: { Row } = {}
-	for order, hammer in HammerConfig.List do
-		local row = buildRow(hammer, order, list)
-		table.insert(rows, row)
-		row.Button.Activated:Connect(function()
-			if not row.Button.Active then
+	local cards: { Card } = {}
+	for _, hammer in HammerConfig.List do
+		local card = buildCard(hammer, grid, EQUIP_COLOR)
+		table.insert(cards, card)
+		card.View.Button.Activated:Connect(function()
+			if not card.View.Button.Active then
 				return
 			end
 			if ProgressController.ownsHammer(hammer.Id) then
 				equipRemote:FireServer(hammer.Id)
 			else
-				buyRemote:FireServer(hammer.Id, row.Price)
+				buyRemote:FireServer(hammer.Id, card.Price)
 			end
 		end)
 	end
 
 	-- Mystery Hammers appear as they are bought, each with its rolled stats.
-	local mysteryRows: { [string]: boolean } = {}
-	local function addMysteryRows(): ()
+	local mysteryCards: { [string]: boolean } = {}
+	local function addMysteryCards(): ()
 		local snapshot = ProgressController.get()
 		if snapshot == nil then
 			return
 		end
 		for _, owned in snapshot.MysteryHammers do
-			if mysteryRows[owned.Id] then
+			if mysteryCards[owned.Id] then
 				continue
 			end
-			mysteryRows[owned.Id] = true
+			mysteryCards[owned.Id] = true
 			local look: HammerConfig.HammerDefinition = {
 				Id = owned.Id,
 				DisplayName = StoreConfig.Mystery.DisplayName,
@@ -299,13 +205,13 @@ function ShopController.start(): ()
 				HandleColor = StoreConfig.Mystery.HandleColor,
 				Style = StoreConfig.Mystery.Style,
 			}
-			local row = buildRow(look, 100 + #rows, list)
-			row.IsMystery = true
-			row.BonusPercent = owned.BonusDamagePercent
-			row.CritPercent = owned.CritDamagePercent
-			table.insert(rows, row)
-			row.Button.Activated:Connect(function()
-				if row.Button.Active then
+			local card = buildCard(look, grid, MYSTERY_COLOR)
+			card.IsMystery = true
+			card.BonusPercent = owned.BonusDamagePercent
+			card.CritPercent = owned.CritDamagePercent
+			table.insert(cards, card)
+			card.View.Button.Activated:Connect(function()
+				if card.View.Button.Active then
 					equipRemote:FireServer(owned.Id)
 				end
 			end)
@@ -313,9 +219,9 @@ function ShopController.start(): ()
 	end
 
 	local function refresh(): ()
-		addMysteryRows()
-		for _, row in rows do
-			refreshRow(row)
+		addMysteryCards()
+		for _, card in cards do
+			refreshCard(card)
 		end
 	end
 	ProgressController.Changed:Connect(refresh)
@@ -323,19 +229,13 @@ function ShopController.start(): ()
 	refresh()
 
 	open.Activated:Connect(function()
-		panel.Visible = not panel.Visible
+		window:toggle()
 	end)
 	openPanel = function()
-		panel.Visible = true
+		if not window:isOpen() then
+			window:open()
+		end
 	end
-	close.Activated:Connect(function()
-		panel.Visible = false
-	end)
-	GamepadNav.watch(panel, function()
-		panel.Visible = false
-	end)
-
-	gui.Parent = localPlayer:WaitForChild("PlayerGui")
 end
 
 -- Opens the hammer shop (e.g. from the vending machine, StoreMachineController).
