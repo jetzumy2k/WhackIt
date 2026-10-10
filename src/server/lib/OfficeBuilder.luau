@@ -15,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ArenaConfig = require(ReplicatedStorage.Config.ArenaConfig)
 local BossConfig = require(ReplicatedStorage.Config.BossConfig)
 local BossVisualConfig = require(ReplicatedStorage.Config.BossVisualConfig)
+local TowerShellBuilder = require(script.Parent.TowerShellBuilder)
 
 local OfficeBuilder = {}
 
@@ -419,13 +420,32 @@ local function buildCommonAreas(parent: Instance): ()
 			WALL_COLOR
 		)
 
-		-- Corridor walls between the lobby and the building ends, both storeys.
-		local span = half - LOBBY.HalfWidth
+		-- Corridor walls between the lobby and the building ends, both storeys,
+		-- with a doorway on the ground floor into the podium room behind
+		-- (Lib/TowerShellBuilder: the Break Room west, the Meeting Room east).
+		local doorX = TowerShellBuilder.ROOM_DOOR_X
+		local doorHalf = TowerShellBuilder.ROOM_DOOR_WIDTH / 2
+		local doorHeight = ArenaConfig.DoorHeight
+		for _, segment in
+			{
+				{ From = LOBBY.HalfWidth, To = doorX - doorHalf },
+				{ From = doorX + doorHalf, To = half },
+			}
+		do
+			local span = segment.To - segment.From
+			part(
+				area,
+				"CorridorSouthWall",
+				Vector3.new(span, roofY, WALL_THICKNESS),
+				Vector3.new(side * (segment.From + span / 2), roofY / 2, CORRIDOR.MaxZ),
+				WALL_COLOR
+			)
+		end
 		part(
 			area,
-			"CorridorSouthWall",
-			Vector3.new(span, roofY, WALL_THICKNESS),
-			Vector3.new(side * (LOBBY.HalfWidth + span / 2), roofY / 2, CORRIDOR.MaxZ),
+			"CorridorSouthWallLintel",
+			Vector3.new(doorHalf * 2, roofY - doorHeight, WALL_THICKNESS),
+			Vector3.new(side * doorX, doorHeight + (roofY - doorHeight) / 2, CORRIDOR.MaxZ),
 			WALL_COLOR
 		)
 
@@ -898,6 +918,7 @@ function OfficeBuilder.build(parent: Instance): Folder
 	buildExecutiveFloor(folder)
 	buildDepartmentFloor(folder)
 	buildGroundElevator(folder)
+	TowerShellBuilder.build(folder)
 	folder.Parent = parent
 	return folder
 end

@@ -344,4 +344,63 @@ return function()
 			office:Destroy()
 		end)
 	end)
+	describe("OfficeBuilder tower shell (visual overhaul V1a)", function()
+		it("wraps the tower in a curtain wall up to the roof, with a crown sign", function()
+			local office = build()
+			local top = ArenaConfig.DepartmentFloor.CeilingY + 1
+			local highest = 0
+			for _, p in parts(office) do
+				if p.Name == "CurtainGlass" then
+					highest = math.max(highest, p.Position.Y + p.Size.Y / 2)
+				end
+			end
+			expect(highest > top - 2).to.equal(true)
+			expect(office:FindFirstChild("CrownSign", true)).never.to.equal(nil)
+			office:Destroy()
+		end)
+
+		it(
+			"builds the Break Room and the Meeting Room with open doorways from the corridor",
+			function()
+				local office = build()
+				expect(office:FindFirstChild("Break Room", true)).never.to.equal(nil)
+				expect(office:FindFirstChild("Meeting Room", true)).never.to.equal(nil)
+				for _, side in { -1, 1 } do
+					for _, z in { -1, 0, 1 } do
+						local doorway = Vector3.new(side * 61, 4, z)
+						for _, p in parts(office) do
+							if p.CanCollide and contains(p, doorway) then
+								error(
+									p.Name
+										.. " blocks the podium room doorway at "
+										.. tostring(doorway)
+								)
+							end
+						end
+					end
+				end
+				office:Destroy()
+			end
+		)
+
+		it("keeps the shell outside the floors players walk on", function()
+			local office = build()
+			local shell = office:FindFirstChild("Curtain Wall", true) :: Instance
+			for _, p in parts(shell) do
+				-- The tower's storeys (north block) and the podium under its roof.
+				local position = p.Position
+				local withinX = math.abs(position.X) < ArenaConfig.BuildingHalfWidth - 1
+				local inTower = withinX
+					and position.Z > ArenaConfig.BuildingNorthZ + 1
+					and position.Z < -1
+					and position.Y < ArenaConfig.DepartmentFloor.CeilingY
+				local inPodium = withinX
+					and position.Z > 1
+					and position.Z < ArenaConfig.BuildingSouthZ - 1
+					and position.Y < ArenaConfig.RoofY
+				expect(inTower or inPodium).to.equal(false)
+			end
+			office:Destroy()
+		end)
+	end)
 end

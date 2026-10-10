@@ -710,3 +710,13 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 481 | Ride from a spot far from any elevator door (fire the remote from the lobby) | A toast "Use the elevator at the west end of the corridor."; nothing moves |
 | 482 | Phone emulator: open the panel | Floors readable, buttons tappable, it scrolls |
 | 483 | Output | No errors from TowerService, ExecutiveService, TowerController, OfficeBuilder, BossService |
+
+### HQ tower look (visual overhaul V1a) — please send screenshots
+| # | Steps | Expected |
+|---|---|---|
+| 484 | Walk out to the plaza and look back at the building | A 4-storey glass tower behind a 2-storey glass podium: fins every bay, a dark band at each floor, a parapet, the lit "WHACK IT OUT! HQ" sign on top, an entrance canopy "WHACK IT OUT! HEADQUARTERS" over the doors |
+| 485 | Walk round the building on the loop path | Glass on every side up to the roof (north, east, west), no gaps or floating pieces at the corners; the Recreation Center path behind is clear |
+| 486 | Look at the light | Softer, warmer daylight with a light haze in the distance and gentle glow on bright signs (Future lighting); nothing glaring |
+| 487 | Ground corridor: walk through the new doorways west and east of the lobby | West: the Break Room (wood floor, coffee bar, fridge, round tables, sofa corner, pendant lights); east: the Meeting Room (long table with chairs, screen "Q3 SYNERGY ALIGNMENT", agenda whiteboard) |
+| 488 | Inside the offices on every floor | Windows now look out through the curtain wall; nothing blocks doors, the elevator or the stairs |
+| 489 | Performance: walk round outside and in the lobby (View → Stats / MicroProfiler) | No big frame drop compared with before |
