@@ -18,8 +18,8 @@ _Written 2026-10-09 (Phase 0). Results are recorded as ✅ passed · ❌ failed 
 | B1 | `scripts/check.ps1` | ✅ 2026-10-09 (Claude) |
 | B2 | Full spec suite in Studio, record the count | ✅ 2026-10-09 (owner): **533 passed, 0 failed, 0 skipped**. The first run had 531 passed and 2 failed, both outdated specs (a phone text-scale cap and a non-preset 2-hour event length), fixed the same day |
 | B3 | Polish-pass playtest `PLAYTEST.md` 110–214 | ✅ reported done by the owner (2026-10-09) |
-| B4 | MicroProfiler / Developer Console on a 4-client Team Test: client frame time in the lobby, at a boss fight and on campus; server heartbeat; memory; instance count; network in/out kB/s | ⏭ deferred by the owner (2026-10-09); required before Phase 2a |
-| B5 | `Workspace.StreamingEnabled` value in the built place | ⏭ deferred with B4 |
+| B4 | MicroProfiler / Developer Console on a 4-client Team Test: client frame time in the lobby, at a boss fight and on campus; server heartbeat; memory; instance count; network in/out kB/s | 🟡 polish round (2026-10-10): `Services/PerfProbeService` and `Controllers/PerfProbeController` print a `[Perf]` line every 15 s in Studio only (server: heartbeat rate and worst frame, memory, Workspace instances and parts, players, network, StreamingEnabled; each client: fps, average and worst frame, memory, network, instances, position). Run a Team Test, stand ~30 s in each place; the numbers are read from Studio's log files. Not recorded yet |
+| B5 | `Workspace.StreamingEnabled` value in the built place | 🟡 the project doesn't set it; the probe's server line prints the built value. Not recorded yet |
 
 ## 3. Per-phase tests
 

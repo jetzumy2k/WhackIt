@@ -523,7 +523,20 @@ local function barFrame(gui: ScreenGui, name: string, offset: number): Frame
 	return bar
 end
 
+-- Phones: the bars are narrower (clear of the thumbstick and jump button)
+-- and their buttons show only their icon.
+local PHONE_WIDTH = 0.6
+local PHONE_HEIGHT = 46
+local PHONE_BUTTON = 46
+
 local function buildBar(gui: ScreenGui, report: (ownerId: number, name: string) -> ()): ()
+	local phone = false
+	-- Each button's full and phone label.
+	local labels: { [TextButton]: { Full: string, Short: string } } = {}
+	local function setLabel(button: TextButton, full: string, short: string): ()
+		labels[button] = { Full = full, Short = short }
+		button.Text = if phone then short else full
+	end
 	local bar = barFrame(gui, "ShowcaseBar", 70)
 	local title = Instance.new("TextLabel")
 	title.LayoutOrder = 1
@@ -561,6 +574,11 @@ local function buildBar(gui: ScreenGui, report: (ownerId: number, name: string) 
 		remote("Leave"):FireServer()
 	end)
 
+	setLabel(like, "❤️ Like", "❤️")
+	setLabel(flag, "🚩 Report", "🚩")
+	setLabel(lobby, "🚪 Lobby", "🚪")
+	local wide: { [TextButton]: number } = { [like] = 110, [flag] = 100, [lobby] = 100 }
+
 	-- Admins: moderation right where they look at the office.
 	local admin = barFrame(gui, "ShowcaseModeration", 194)
 	local status = Instance.new("TextLabel")
@@ -573,15 +591,17 @@ local function buildBar(gui: ScreenGui, report: (ownerId: number, name: string) 
 	PanelKit.setTextSize(status, PanelKit.SMALL_SIZE)
 	for order, action in
 		{
-			{ Id = "Approve", Label = "✅ Approve", Color = C.Good },
-			{ Id = "Remove", Label = "🗑️ Remove", Color = C.Danger },
-			{ Id = "Feature", Label = "⭐ Feature", Color = ACCENT },
-			{ Id = "Unfeature", Label = "Unfeature", Color = C.Neutral },
+			{ Id = "Approve", Label = "✅ Approve", Short = "✅", Color = C.Good },
+			{ Id = "Remove", Label = "🗑️ Remove", Short = "🗑️", Color = C.Danger },
+			{ Id = "Feature", Label = "⭐ Feature", Short = "⭐", Color = ACCENT },
+			{ Id = "Unfeature", Label = "Unfeature", Short = "☆", Color = C.Neutral },
 		}
 	do
 		local button = PanelKit.button(admin, action.Label, action.Color)
 		button.LayoutOrder = order
 		button.Size = UDim2.new(0, 100, 1, 0)
+		setLabel(button, action.Label, action.Short)
+		wide[button] = 100
 		button.Activated:Connect(function()
 			local current = room
 			if current then
@@ -590,11 +610,22 @@ local function buildBar(gui: ScreenGui, report: (ownerId: number, name: string) 
 		end)
 	end
 
-	Responsive.onChanged(function()
-		local phone = Responsive.formFactor() == "Phone"
-		bar.Size = if phone then UDim2.new(0.9, 0, 0, 50) else UDim2.fromOffset(560, 56)
-		admin.Size = if phone then UDim2.new(0.9, 0, 0, 50) else UDim2.fromOffset(560, 56)
-	end)
+	local function layout(): ()
+		phone = Responsive.formFactor() == "Phone"
+		local size = if phone
+			then UDim2.new(PHONE_WIDTH, 0, 0, PHONE_HEIGHT)
+			else UDim2.fromOffset(560, 56)
+		bar.Size = size
+		admin.Size = size
+		admin.Position = UDim2.new(0.5, 0, 1, if phone then -170 else -194)
+		status.Visible = not phone
+		for button, label in labels do
+			button.Text = if phone then label.Short else label.Full
+			button.Size = UDim2.new(0, if phone then PHONE_BUTTON else wide[button] or 100, 1, 0)
+		end
+		refreshBar()
+	end
+	Responsive.onChanged(layout)
 
 	refreshBar = function()
 		local current = room
@@ -625,7 +656,19 @@ local function buildBar(gui: ScreenGui, report: (ownerId: number, name: string) 
 			)
 		like.Visible = not current.Own and not contest
 		flag.Visible = not current.Own
-		like.Text = if current.Liked then "❤️ Liked" else "❤️ Like"
+		-- The title takes what the visible buttons leave.
+		local used = 0
+		for _, button in { like, flag, lobby } do
+			if button.Visible then
+				used += button.Size.X.Offset + 8
+			end
+		end
+		title.Size = UDim2.new(1, -used, 1, 0)
+		setLabel(
+			like,
+			if current.Liked then "❤️ Liked" else "❤️ Like",
+			if current.Liked then "💖" else "❤️"
+		)
 		PanelKit.setDisabled(like, current.Liked)
 		status.Text = if current.Moderation then "Status: " .. current.Moderation else ""
 	end

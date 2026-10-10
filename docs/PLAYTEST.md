@@ -834,3 +834,15 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 565 | Contest tab after results | Last week's winners list (if anyone was ranked) with Visit |
 | 566 | Rejoin after a prize | No second card or prize |
 
+### Polish round — boss pacing, phone layout, performance baseline
+| # | Steps | Expected |
+|---|---|---|
+| 567 | Watch a boss from more than 30 studs away | It strolls a couple of studs left and right with a little bob and waddle, turning the way it walks, pausing at each end |
+| 568 | Walk up to it | It hurries back to its spot and faces you before you can reach it; hits land as before |
+| 569 | Settings → Reduced motion on | No strolling (idle bob only) |
+| 570 | Studio **Test** tab → **Device** (emulator): pick a phone (e.g. iPhone 14, landscape), Play | HUD, dock buttons and windows fit; nothing important hidden under the thumbstick (bottom left) or jump button (bottom right) — screenshots please |
+| 571 | Phone emulator: visit a Showcase office | The bar is narrow, icons only (❤️ 🚩 🚪), the name fits |
+| 572 | Phone emulator: vote in a contest entry | The star bar is narrow: ⭐1-⭐5 and ⏭️, no label |
+| 573 | Phone emulator: open Quests, Bag, Store, Showcase, Player Panel | Each window fills most of the screen, scrolls, closes |
+| 574 | Performance: Test tab → Clients and Servers → 4 players, Start. With each client stand ~30 s in the lobby, ~30 s at a boss while hitting, ~30 s on the campus (Recreation Center), ~30 s in an office. Then stop | Output shows `[Perf] server …` and `[Perf] client …` lines every 15 s; tell me when done, I read them from the log files |
+
