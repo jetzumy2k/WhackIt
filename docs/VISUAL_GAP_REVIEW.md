@@ -126,3 +126,7 @@ Visual work becomes its own track, done before Phase 6, each part with a Studio 
   784/784 specs passed in Studio. The one failure on the way: rooftop bulbs of exactly 0.3 studs are stored
   as float32 0.30000001 and broke the thin-Neon rule; made 0.28. Still open: walking bosses, uploaded
   meshes through the asset table, a phone-view check.
+- **Polish round (2026-10-10, branch `feat/polish-round`):** bosses stroll a couple of studs left and
+  right of their spot with a step bob and waddle while nobody is within 30 studs (`BossMotion.pace`,
+  client-only; they hurry home when you come near, so the hitbox never disagrees; off with Reduced
+  motion).

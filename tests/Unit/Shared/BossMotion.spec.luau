@@ -67,4 +67,43 @@ return function()
 			end
 		end)
 	end)
+	describe("BossMotion.pace", function()
+		it("strolls within the pace distance, smoothly, pausing at the ends", function()
+			local studs = BossMotion.PACE_STUDS
+			local last = BossMotion.pace(0, 0, studs)
+			local paused = false
+			for step = 1, 1200 do
+				local now = step * 0.01
+				local offset, walking, direction = BossMotion.pace(now, 0, studs)
+				expect(math.abs(offset) <= studs + 1e-6).to.equal(true)
+				expect(math.abs(offset - last) < 0.1).to.equal(true) -- no jumps
+				expect(walking >= 0 and walking <= 1).to.equal(true)
+				if direction == 0 then
+					paused = true
+					expect(walking).to.equal(0)
+				end
+				last = offset
+			end
+			expect(paused).to.equal(true)
+		end)
+
+		it("starts and ends the cycle at home", function()
+			expect(math.abs((BossMotion.pace(0, 0, 3)))).to.be.near(0, 1e-6)
+			expect(math.abs((BossMotion.pace(BossMotion.PACE_CYCLE - 1e-4, 0, 3)))).to.be.near(
+				0,
+				1e-3
+			)
+		end)
+
+		it("keeps the walking bob and waddle small", function()
+			for step = 0, 100 do
+				local lift, roll = BossMotion.walkCycle(step * 0.1, 1)
+				expect(lift >= 0 and lift <= 0.3).to.equal(true)
+				expect(math.abs(roll) <= math.rad(8)).to.equal(true)
+			end
+			local lift, roll = BossMotion.walkCycle(1.3, 0)
+			expect(lift).to.equal(0)
+			expect(roll).to.equal(0)
+		end)
+	end)
 end
