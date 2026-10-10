@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BagRules = require(ReplicatedStorage.Shared.BagRules)
 local BossConfig = require(ReplicatedStorage.Config.BossConfig)
+local DailyEventRules = require(ReplicatedStorage.Shared.DailyEventRules)
 local FurnitureRules = require(ReplicatedStorage.Shared.FurnitureRules)
 local GameConfig = require(ReplicatedStorage.Config.GameConfig)
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
@@ -79,6 +80,8 @@ export type PlayerData = {
 	SeasonClaims: { number }, -- seasons whose prizes were handed out
 	-- v13 (docs/QUESTS.md)
 	Quests: QuestRules.State, -- today's and this week's quests, the tutorial step
+	-- v14 (docs/DAILY_EVENTS.md)
+	DailyEvent: DailyEventRules.State, -- today's Event of the Day points and tiers paid
 }
 
 export type PendingGift = {
@@ -94,7 +97,7 @@ export type Migration = (data: RawData) -> ()
 
 local PlayerDataSchema = {}
 
-PlayerDataSchema.CURRENT_VERSION = 13
+PlayerDataSchema.CURRENT_VERSION = 14
 
 -- Upper bound for counters; far beyond legitimate play, small enough to stay
 -- an exact integer and to keep leaderboard values sane.
@@ -204,6 +207,10 @@ PlayerDataSchema.MIGRATIONS = table.freeze({
 		-- weekly quests are drawn on first use (QuestService).
 		data.Quests = nil
 	end,
+	[14] = function(data: RawData)
+		-- v13 -> v14: the Event of the Day. Nobody has points yet.
+		data.DailyEvent = nil
+	end,
 }) :: { [number]: Migration }
 
 -- Most recent purchase ids remembered for duplicate-receipt protection. Roblox
@@ -252,6 +259,7 @@ function PlayerDataSchema.template(): PlayerData
 		ProcessedMatches = {},
 		SeasonClaims = {},
 		Quests = QuestRules.default(),
+		DailyEvent = DailyEventRules.default(),
 	}
 end
 
@@ -533,6 +541,9 @@ function PlayerDataSchema.sanitize(data: RawData): ()
 	-- Quests: unknown ids dropped, progress clamped; a broken day or week is
 	-- drawn again (QuestService).
 	data.Quests = QuestRules.sanitize(data.Quests)
+	-- Event of the Day: a broken day starts over (tiers already paid are kept
+	-- only for the saved day, so nothing pays twice).
+	data.DailyEvent = DailyEventRules.sanitize(data.DailyEvent)
 	local matches: { string } = {}
 	local rawMatches = data.ProcessedMatches
 	if typeof(rawMatches) == "table" then

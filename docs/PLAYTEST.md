@@ -661,3 +661,16 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 444 | Studio only: finish a daily quest without claiming, then in the **server** command bar run `require(game.ServerScriptService.Services.PlayerDataService).get(game.Players:GetPlayers()[1]).Quests.DayKey = "2000-01-01"` and wait up to a minute | The finished quest is paid with a toast ("Unclaimed quest rewards…"), and new daily quests are drawn |
 | 445 | Rejoin (Studio API access on) | Progress, claims, swap used and the tutorial step are kept; a v12 profile loads at tutorial step 1 |
 | 446 | Output | No errors from QuestService, QuestController, CombatService, StressService, OfficeService, PetService, RecreationService |
+
+### Event of the Day (Phase 5a)
+| # | Steps | Expected |
+|---|---|---|
+| 447 | Join | After a few seconds a card "<icon> TODAY: <EVENT>" with what the day is about, how points are earned and **SEE GOALS** |
+| 448 | SEE GOALS (or 📋 Quests) | The Quests window opens on **🌟 Today** (first tab): the event, points rules, "Ends in … (00:00 UTC)", "Your points: 0", a bar "0 / 30 to tier 1", three tiers ⬜ |
+| 449 | Do something today's event counts (see the points line) | Points go up by the event's weight within a moment; things it doesn't count change nothing |
+| 450 | Reach 30 points | A "TIER 1 OF 3!" card with +100 coins, +250 XP; coins and XP go up; tier 1 ✅; the bar now counts to tier 2 |
+| 451 | Reach tier 3 | The card lists an office supply too, and it's in office storage; the bar says "✅ All tiers reached!"; more points pay nothing |
+| 452 | Rejoin (Studio API access on) | Points and paid tiers are kept; no tier pays again |
+| 453 | Studio only: in the **server** command bar run `require(game.ServerScriptService.Services.PlayerDataService).get(game.Players:GetPlayers()[1]).DailyEvent.DayKey = "2000-01-01"`, then do something that counts | Points start over from 0 for today (an old day's points never count) |
+| 454 | Quests still work (a boss defeat moves the daily boss quests too) | Quests and the event both count the same activity |
+| 455 | Output | No errors from DailyEventService, ActivityService, QuestService, QuestController |

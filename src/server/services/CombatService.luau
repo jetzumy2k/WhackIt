@@ -23,7 +23,7 @@ local LevelRules = require(ReplicatedStorage.Shared.LevelRules)
 local RateLimiter = require(ReplicatedStorage.Shared.RateLimiter)
 local MovementGuardService = require(script.Parent.MovementGuardService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
-local QuestService = require(script.Parent.QuestService)
+local ActivityService = require(script.Parent.ActivityService)
 local ProgressionRules = require(ReplicatedStorage.Shared.ProgressionRules)
 local RemoteController = require(ServerScriptService.Controllers.RemoteController)
 local RemoteLimits = require(ServerScriptService.Config.RemoteLimits)
@@ -87,9 +87,9 @@ local function rewardContributors(live: BossService.LiveBoss): ()
 
 		local grant = RewardService.grantDefeat(player, state)
 		if grant and grant.Qualified then
-			QuestService.record(player, "DefeatBoss", 1)
+			ActivityService.record(player, "DefeatBoss", 1)
 			if grant.Coins > 0 then
-				QuestService.record(player, "EarnCoins", grant.Coins)
+				ActivityService.record(player, "EarnCoins", grant.Coins)
 			end
 		end
 		local payload: Types.BossDefeated = {

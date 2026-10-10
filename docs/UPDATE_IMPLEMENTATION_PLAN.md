@@ -35,6 +35,10 @@ on pickleball. This plan splits Phase 2 and moves Recreation forward:
 | D6 | Season length | ✅ (2026-10-10) 4 weeks starting Monday 00:00 UTC (P) | 4 |
 | D7 | First quest release | ✅ (2026-10-10) tutorial + daily + weekly quests from existing activities only; new mini-activities (coffee delivery, documents, supplies) later as 2c | 2b |
 | D8 | Quest counts and resets | ✅ (2026-10-10) 3 daily (00:00 UTC) + 3 weekly (Monday 00:00 UTC), one free reroll of a daily a day | 2b |
+| D10 | Daily events | ✅ (2026-10-10) an automatic Event of the Day from a rotation, personal points and 3 tiers; admin events stay | 5 |
+| D11 | Co-op missions | ✅ (2026-10-10) team boss missions (2-4 players, rewards by contribution with a floor) | 5 |
+| D12 | Event / co-op rewards | ✅ (2026-10-10) direct rewards (coins, XP, supplies, sometimes an egg or boost); no new currency | 5 |
+| D13 | Where progress counts | ✅ (2026-10-10) personal goals only (co-op per team); no server or global community goals | 5 |
 | D9 | Quest rewards | ✅ (2026-10-10) coins + XP; weekly quests add an office-supply roll; a bonus for claiming all 3 dailies | 2b |
 
 ## 3. Phase 1: GUI foundation
@@ -220,6 +224,11 @@ script (fake swings, swings out of reach, racing accepts, leaving mid-match).
   already sees: defeats, Zen, matches, furniture placed, coffee deliveries), reset windows in UTC,
   claims stored as ids. Career points come from quests/matches/co-op, ranks unlock furniture
   and titles only.
+- **5a Event of the Day: 🟡 implemented 2026-10-10 on branch `feat/phase5a-daily-event`**
+  (docs/DAILY_EVENTS.md, schema v14, D10/D12/D13). Also `Services/ActivityService`: one activity feed
+  for quests and events (services report there instead of to `QuestService`). `scripts/check.ps1`
+  passes; Studio specs and playtest (`docs/PLAYTEST.md` 447-455) not run yet. Tiers pay automatically
+  (no claim button). **5b team boss missions** (D11) next.
 - **5 Events and co-op:** new `EventRules` types; co-op contribution counted per action.
 - **3 Tower:** new floors stacked above the existing building, behind the existing Level/unlock rules.
   Re-check every fixed-position spec.

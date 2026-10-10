@@ -138,6 +138,7 @@ function ProgressService.snapshot(
 			DayOpponents = table.clone(data.Recreation.DayOpponents),
 		},
 		Quests = QuestRules.copy(data.Quests),
+		DailyEvent = table.clone(data.DailyEvent),
 	}
 end
 

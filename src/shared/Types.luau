@@ -106,6 +106,8 @@ export type ProfileSnapshot = {
 		TutorialStep: number,
 		TutorialProgress: number,
 	},
+	-- Event of the Day (docs/DAILY_EVENTS.md, Shared/DailyEventRules.State).
+	DailyEvent: { DayKey: string, Points: number, Tiers: number },
 }
 
 export type OwnedPet = {
