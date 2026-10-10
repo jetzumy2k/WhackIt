@@ -156,4 +156,68 @@ return function()
 			expect(emitter.Parent == nil or emitter:IsDescendantOf(game) == false).to.equal(true)
 		end)
 	end)
+	describe("PetVisual new looks (2026-10-10)", function()
+		local function count(rig: PetVisual.Rig, name: string): number
+			local found = 0
+			for _, joint in rig.Joints do
+				if joint.Part.Name == name then
+					found += 1
+				end
+			end
+			return found
+		end
+
+		it("draws the new features", function()
+			local checks: { { Id: string, Part: string, Count: number } } = {
+				{ Id = "kitsune", Part = "Tail", Count = 3 },
+				{ Id = "fox", Part = "TailTip", Count = 1 },
+				{ Id = "pegasus", Part = "Wing", Count = 2 },
+				{ Id = "deer", Part = "Antler", Count = 4 },
+				{ Id = "hedgehog", Part = "Spike", Count = 5 },
+				{ Id = "tiger", Part = "Stripe", Count = 3 },
+				{ Id = "panda", Part = "Patch", Count = 2 },
+				{ Id = "hamster", Part = "Cheek", Count = 2 },
+				{ Id = "bee", Part = "Stinger", Count = 1 },
+				{ Id = "firefly", Part = "TailLight", Count = 1 },
+				{ Id = "owl", Part = "Beak", Count = 1 },
+				{ Id = "celestial_lion", Part = "Mane", Count = 1 },
+				{ Id = "griffin", Part = "Mane", Count = 1 },
+			}
+			for _, check in checks do
+				local rig = PetVisual.build(check.Id)
+				expect(count(rig, check.Part)).to.equal(check.Count)
+				rig.Model:Destroy()
+			end
+		end)
+
+		it("gives aura pets a glowing ring and two sparks that circle it", function()
+			for _, species in PetConfig.Species do
+				local rig = PetVisual.build(species.Id)
+				local expected = if species.Look.Aura then 1 else 0
+				expect(count(rig, "Aura")).to.equal(expected)
+				expect(count(rig, "AuraSpark")).to.equal(expected * 2)
+				if species.Look.Aura then
+					local spark: BasePart? = nil
+					for _, joint in rig.Joints do
+						if joint.Part.Name == "AuraSpark" then
+							spark = joint.Part
+							break
+						end
+					end
+					local function sparkAt(time: number): Vector3
+						local parts, cframes =
+							PetVisual.pose(rig, CFrame.new(), PetVisual.restPose(time))
+						for index, part in parts do
+							if part == spark then
+								return cframes[index].Position
+							end
+						end
+						return Vector3.zero
+					end
+					expect((sparkAt(0) - sparkAt(0.8)).Magnitude > 0.3).to.equal(true)
+				end
+				rig.Model:Destroy()
+			end
+		end)
+	end)
 end

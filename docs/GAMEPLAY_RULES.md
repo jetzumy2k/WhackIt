@@ -260,10 +260,21 @@ show "Defeat <previous> N more times to unlock!".
 | Lightning Hammer (2026-10-07) | 30 | 3500 coins | white-blue head with yellow bolts; small blue glow, the odd spark |
 | Cosmic Hammer (2026-10-07) | 31 | 5000 coins | deep-space head with a glowing planet ring and stars; drifting star specks |
 | Stress Crusher (2026-10-07) | 32 | 8000 coins | heavy industrial head, diamond plate, hazard stripes, square steel shaft |
-| Mystery Hammer (Robux, docs/STORE.md) | 35 base, +15-25 % damage and +5-10 % crit damage rolled once | 199 R$ | gold head, purple bands and neon caps; soft purple glints |
+| **Legendary tier (2026-10-10)**, each with its own coloured impact burst where it lands | | | |
+| Thunder Gavel | 35 | 12,000 coins · Lv 45 | storm-blue gavel, gold bands, neon faces and yellow lightning bolts; blue glow, sparks |
+| Frost Mallet | 38 | 16,000 coins · Lv 50 | glacier-ice head with crystal spikes and glass faces; snowflakes drift down |
+| Lava Breaker | 41 | 21,000 coins · Lv 55 | basalt head with glowing cracks and cracked-lava faces; rising embers |
+| Crystal Smasher | 44 | 27,000 coins · Lv 60 | clear violet prism, diamond faces, a pink heart of light; rainbow sparkles |
+| Plasma Pounder | 47 | 34,000 coins · Lv 65 | green plasma cell between steel caps and coils; crackling sparks |
+| Jade Dragon Hammer | 50 | 42,000 coins · Lv 70 | carved jade, gold faces and dragon spine, a pearl, red tassel; gold motes |
+| Solar Flare Hammer | 52 | 52,000 coins · Lv 75 | blazing sun head inside a corona ring with rays; the brightest glow |
+| Void Crusher | 55 | 64,000 coins · Lv 80 | night-black slab with violet edges and a ring of light; specks drawn in |
+| Galaxy Gavel | 58 | 80,000 coins · Lv 88 | swirling galaxy bands, a ringed planet and stars |
+| Zen Titan Hammer | 60 | 100,000 coins · Lv 95 | white marble and gold with a jade inlay and a floating halo; petals rise |
+| Mystery Hammer (Robux, docs/STORE.md) | **62** base (35 before 2026-10-10), +15-25 % damage and +5-10 % crit damage rolled once | 199 R$ | gold head, purple bands and neon caps; soft purple glints |
 
 **Level requirements (2026-10-09):** Fire Hammer Lv 15, Lightning Hammer Lv 20, Cosmic Hammer Lv 30,
-Stress Crusher Lv 40, on top of the price (see "Level rewards"). Owned hammers are never taken away.
+Stress Crusher Lv 40, and the legendary tier Lv 45-95 (2026-10-10), on top of the price (see "Level rewards"). Owned hammers are never taken away.
 
 **Hammer vending machine (2026-10-07):** a blue-and-orange "HAMMER STORE" vending machine stands
 in the lobby beside the stairs (`ArenaConfig.StoreMachine`, `Lib/StoreMachineBuilder`,

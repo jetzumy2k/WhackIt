@@ -11,6 +11,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 
+local Attributes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Attributes"))
+local HammerConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("HammerConfig"))
+local HammerRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("HammerRules"))
+local HammerStyleConfig =
+	require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("HammerStyleConfig"))
+local StoreConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("StoreConfig"))
+
 local GameplayController = require(script.Parent.GameplayController)
 local BossVisualController = require(script.Parent.BossVisualController)
 local CharacterExpression = require(script.Parent.Parent.Lib.CharacterExpression)
@@ -140,6 +147,21 @@ local function playBonk(crit: boolean): ()
 	bonk:Play()
 end
 
+-- The impact colours of the hammer `hitter` holds (legendary hammers), if any.
+local function impactOf(hitter: Player?): HammerStyleConfig.Impact?
+	local character = if hitter then hitter.Character else nil
+	local tool = if character then character:FindFirstChildOfClass("Tool") else nil
+	local hammerId = if tool then tool:GetAttribute(Attributes.HammerId) else nil
+	if typeof(hammerId) ~= "string" then
+		return nil
+	end
+	local styleId = if HammerRules.isMysteryId(hammerId)
+		then StoreConfig.Mystery.Style
+		else (HammerConfig.ById[hammerId] or {} :: any).Style
+	local style = if typeof(styleId) == "string" then HammerStyleConfig.ById[styleId] else nil
+	return if style then style.Impact else nil
+end
+
 local function shakeCamera(): ()
 	if UiTokens.reducedMotion() then
 		return -- Reduced motion: no camera shake (docs/UI.md)
@@ -178,6 +200,7 @@ function FeedbackController.start(): ()
 		end
 
 		local isOwnHit = feedback.HitterUserId == localPlayer.UserId
+		local hitter = Players:GetPlayerByUserId(feedback.HitterUserId)
 		-- Flash the drawn monster, not the boss Model: that also holds the
 		-- invisible hitbox, which a Highlight would reveal as a white box.
 		local visual = model:FindFirstChild("Visual")
@@ -185,10 +208,10 @@ function FeedbackController.start(): ()
 			Own = isOwnHit,
 			Crit = feedback.Crit,
 			Defeated = feedback.Defeated,
+			Colors = impactOf(hitter),
 		})
 		showDamageNumber(body, feedback.Damage, isOwnHit, feedback.Crit, effects)
 		BossVisualController.onConfirmedHit(model, isOwnHit, feedback.Defeated)
-		local hitter = Players:GetPlayerByUserId(feedback.HitterUserId)
 		if isOwnHit then
 			shakeCamera()
 			playBonk(feedback.Crit)

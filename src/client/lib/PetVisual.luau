@@ -81,6 +81,7 @@ export type BuildOptions = {
 
 local INK = Color3.fromRGB(25, 25, 30)
 local GOLD = Color3.fromRGB(250, 210, 90)
+local ANTLER = Color3.fromRGB(120, 90, 60)
 local SPARKLE_TEXTURE = "rbxasset://textures/particles/sparkles_main.dds"
 
 local function newPart(
@@ -105,6 +106,8 @@ local function newPart(
 	part.BottomSurface = Enum.SurfaceType.Smooth
 	if shape == "Ball" then
 		part.Shape = Enum.PartType.Ball
+	elseif shape == "Cylinder" then
+		part.Shape = Enum.PartType.Cylinder
 	elseif shape == "Egg" then
 		-- Block + sphere mesh: an ellipsoid of the part's size.
 		local mesh = Instance.new("SpecialMesh")
@@ -314,8 +317,9 @@ function PetVisual.build(speciesId: string, options: BuildOptions?): Rig
 		end
 	elseif movement == "Flying" then
 		-- Flyers: body at the pivot, wings either side.
-		local butterfly = speciesId == "butterfly"
-		local dragon = speciesId == "dragon"
+		-- Insects (butterfly, bee, firefly): a tiny body with antennae.
+		local butterfly = look ~= nil and look.Insect == true
+		local dragon = look ~= nil and look.Dragon == true
 		local bodySize = if butterfly
 			then Vector3.new(0.22, 0.22, 0.85)
 			else Vector3.new(0.55, 0.55, 1.05)
@@ -340,6 +344,42 @@ function PetVisual.build(speciesId: string, options: BuildOptions?): Rig
 		)
 		if butterfly then
 			flapSwing = 0.9
+			local bee = look ~= nil and look.Stripes == true
+			local firefly = look ~= nil and look.Glow == true
+			if bee then
+				for _, z in { -0.08, 0.18 } do
+					add(
+						"Stripe",
+						Vector3.new(0.24, 0.24, 0.07),
+						secondary,
+						CFrame.new(0, 0, z),
+						"Torso",
+						nil,
+						nil,
+						"Egg"
+					)
+				end
+				add(
+					"Stinger",
+					Vector3.new(0.06, 0.06, 0.18),
+					secondary,
+					CFrame.new(0, 0, 0.5),
+					"Torso"
+				)
+			elseif firefly then
+				local light = add(
+					"TailLight",
+					Vector3.new(0.26, 0.26, 0.32),
+					secondary,
+					CFrame.new(0, -0.02, 0.42),
+					"Torso",
+					nil,
+					nil,
+					"Egg"
+				)
+				light.Material = Enum.Material.Neon
+				light.Transparency = 0.1
+			end
 			for _, side in { -1, 1 } do
 				add(
 					"Antenna",
@@ -353,31 +393,48 @@ function PetVisual.build(speciesId: string, options: BuildOptions?): Rig
 					nil,
 					side
 				)
-				-- Upper and lower wing: the lower one trails a little.
-				add(
-					"Wing",
-					Vector3.new(1, 0.04, 0.8),
-					secondary,
-					CFrame.new(side * 0.6, 0.05, -0.18),
-					"Torso",
-					"Wing",
-					CFrame.new(side * 0.1, 0.05, -0.18),
-					nil,
-					side,
-					0
-				)
-				add(
-					"Wing",
-					Vector3.new(0.7, 0.04, 0.6),
-					secondary:Lerp(primary, 0.25),
-					CFrame.new(side * 0.45, 0.02, 0.3),
-					"Torso",
-					"Wing",
-					CFrame.new(side * 0.1, 0.02, 0.3),
-					nil,
-					side,
-					0.5
-				)
+				if bee or firefly then
+					-- One pair of small, see-through wings.
+					local wing = add(
+						"Wing",
+						Vector3.new(0.55, 0.03, 0.38),
+						Color3.fromRGB(235, 245, 255),
+						CFrame.new(side * 0.36, 0.14, -0.05),
+						"Torso",
+						"Wing",
+						CFrame.new(side * 0.08, 0.14, -0.05),
+						nil,
+						side,
+						0
+					)
+					wing.Transparency = 0.35
+				else
+					-- Upper and lower wing: the lower one trails a little.
+					add(
+						"Wing",
+						Vector3.new(1, 0.04, 0.8),
+						secondary,
+						CFrame.new(side * 0.6, 0.05, -0.18),
+						"Torso",
+						"Wing",
+						CFrame.new(side * 0.1, 0.05, -0.18),
+						nil,
+						side,
+						0
+					)
+					add(
+						"Wing",
+						Vector3.new(0.7, 0.04, 0.6),
+						secondary:Lerp(primary, 0.25),
+						CFrame.new(side * 0.45, 0.02, 0.3),
+						"Torso",
+						"Wing",
+						CFrame.new(side * 0.1, 0.02, 0.3),
+						nil,
+						side,
+						0.5
+					)
+				end
 			end
 		else
 			local wingSize = if dragon
@@ -398,12 +455,54 @@ function PetVisual.build(speciesId: string, options: BuildOptions?): Rig
 					0
 				)
 			end
-			if speciesId == "toucan" then
+			local beak = if look then look.Beak else nil
+			if beak == "Long" then
 				add(
 					"Beak",
 					Vector3.new(0.26, 0.26, 0.6),
 					secondary,
 					CFrame.new(0, 0.12, -1.05),
+					"Head",
+					nil,
+					nil,
+					"Egg"
+				)
+			elseif beak == "Short" then
+				add(
+					"Beak",
+					Vector3.new(0.18, 0.16, 0.3),
+					GOLD,
+					CFrame.new(0, 0.12, -0.9),
+					"Head",
+					nil,
+					nil,
+					"Egg"
+				)
+			end
+			if look and look.Ears == "Tufts" then
+				-- Owl ear tufts.
+				for _, side in { -1, 1 } do
+					add(
+						"Ear",
+						Vector3.new(0.1, 0.26, 0.12),
+						primary,
+						CFrame.new(side * 0.18, 0.5, -0.6)
+							* CFrame.Angles(0, 0, math.rad(-side * 20)),
+						"Head",
+						"Ear",
+						CFrame.new(side * 0.16, 0.4, -0.6),
+						nil,
+						side
+					)
+				end
+			end
+			if look and look.Mane then
+				-- A ruff of feathers round the neck (griffin).
+				add(
+					"Mane",
+					Vector3.new(0.8, 0.7, 0.45),
+					secondary,
+					CFrame.new(0, 0.16, -0.42),
 					"Head",
 					nil,
 					nil,
@@ -516,7 +615,42 @@ function PetVisual.build(speciesId: string, options: BuildOptions?): Rig
 			nil,
 			"Ball"
 		)
-		eyes(1.44, -1.14, 0.18)
+		if look and look.BigEyes then
+			eyes(1.72, -0.95, 0.22, 0.26) -- frog eyes on top of the head
+		else
+			if look and look.Patches then
+				-- Panda patches round the eyes.
+				for _, side in { -1, 1 } do
+					add(
+						"Patch",
+						Vector3.new(0.24, 0.28, 0.1),
+						secondary,
+						CFrame.new(side * 0.18, 1.43, -1.1)
+							* CFrame.Angles(0, 0, math.rad(side * 20)),
+						"Head",
+						nil,
+						nil,
+						"Egg"
+					)
+				end
+			end
+			eyes(1.44, -1.14, 0.18)
+		end
+		if look and look.Cheeks then
+			for _, side in { -1, 1 } do
+				add(
+					"Cheek",
+					Vector3.new(0.3, 0.28, 0.3),
+					secondary,
+					CFrame.new(side * 0.32, 1.18, -1.0),
+					"Head",
+					nil,
+					nil,
+					"Ball"
+				)
+			end
+		end
+		local legColor = if look and look.Patches then secondary else primary
 		-- Diagonal gait: front-left with back-right.
 		for _, side in { -1, 1 } do
 			for _, legEnd in { "Front", "Back" } do
@@ -525,7 +659,7 @@ function PetVisual.build(speciesId: string, options: BuildOptions?): Rig
 				add(
 					"Leg",
 					Vector3.new(0.24, 0.58, 0.24),
-					primary,
+					legColor,
 					CFrame.new(side * 0.3, 0.29, z),
 					"Root",
 					"Leg",
@@ -567,7 +701,7 @@ function PetVisual.build(speciesId: string, options: BuildOptions?): Rig
 				add(
 					"Ear",
 					Vector3.new(0.3, 0.3, 0.2),
-					primary,
+					legColor,
 					CFrame.new(side * 0.33, 1.66, -0.72),
 					"Head",
 					"Ear",
@@ -586,6 +720,98 @@ function PetVisual.build(speciesId: string, options: BuildOptions?): Rig
 					CFrame.new(side * 0.15, 1.65, -0.7),
 					"Egg",
 					side
+				)
+			end
+		end
+		if look and look.Mane then
+			-- A lion's mane: a big fluffy ring behind the face.
+			add(
+				"Mane",
+				Vector3.new(1.25, 1.2, 0.7),
+				secondary,
+				CFrame.new(0, 1.34, -0.6),
+				"Head",
+				nil,
+				nil,
+				"Egg"
+			)
+		end
+		if look and look.Antlers then
+			for _, side in { -1, 1 } do
+				add(
+					"Antler",
+					Vector3.new(0.08, 0.55, 0.08),
+					ANTLER,
+					CFrame.new(side * 0.22, 1.98, -0.75) * CFrame.Angles(0, 0, math.rad(-side * 22)),
+					"Head"
+				)
+				add(
+					"Antler",
+					Vector3.new(0.07, 0.32, 0.07),
+					ANTLER,
+					CFrame.new(side * 0.36, 2.08, -0.72) * CFrame.Angles(0, 0, math.rad(-side * 55)),
+					"Head"
+				)
+			end
+		end
+		if look and look.Stripes then
+			-- Dark rings round the body, sized to it at each spot.
+			for _, band in
+				{
+					Vector3.new(0.92, 0.74, -0.3),
+					Vector3.new(1.02, 0.82, 0.05),
+					Vector3.new(0.84, 0.68, 0.4),
+				}
+			do
+				add(
+					"Stripe",
+					Vector3.new(band.X, band.Y, 0.1),
+					secondary,
+					CFrame.new(0, 0.82, band.Z),
+					"Torso",
+					nil,
+					nil,
+					"Egg"
+				)
+			end
+		end
+		if look and look.Spikes then
+			local spike = primary:Lerp(INK, 0.45)
+			for _, at in
+				{
+					Vector3.new(0, 1.24, -0.2),
+					Vector3.new(-0.26, 1.16, 0.08),
+					Vector3.new(0.26, 1.16, 0.08),
+					Vector3.new(0, 1.2, 0.38),
+					Vector3.new(0, 1.0, 0.68),
+				}
+			do
+				add(
+					"Spike",
+					Vector3.new(0.16, 0.42, 0.16),
+					spike,
+					CFrame.new(at) * CFrame.Angles(math.rad(-40), 0, math.rad(-at.X * 60)),
+					"Torso",
+					nil,
+					nil,
+					"Egg"
+				)
+			end
+		end
+		if look and look.Wings then
+			-- Pegasus wings on its back: they beat slowly as it walks.
+			for _, side in { -1, 1 } do
+				add(
+					"Wing",
+					Vector3.new(1.1, 0.06, 0.6),
+					secondary,
+					CFrame.new(side * 1.0, 1.15, -0.05),
+					"Torso",
+					"Wing",
+					CFrame.new(side * 0.45, 1.15, -0.05),
+					nil,
+					side,
+					0
 				)
 			end
 		end
@@ -622,6 +848,39 @@ function PetVisual.build(speciesId: string, options: BuildOptions?): Rig
 				CFrame.new(0, 0.9, 0.68),
 				"Ball"
 			)
+		elseif tail == "Bushy" then
+			-- A fox's big brush (a kitsune has several, fanned out).
+			tailRate, tailSwing = 2.2, 0.3
+			local count = math.clamp(if look and look.Tails then look.Tails else 1, 1, 3)
+			local hinge = CFrame.new(0, 0.95, 0.68)
+			for index = 1, count do
+				local fan = if count == 1 then 0 else (index - (count + 1) / 2) * 28
+				local turn = CFrame.Angles(0, math.rad(fan), 0)
+				add(
+					"Tail",
+					Vector3.new(0.42, 0.42, 1.0),
+					primary,
+					hinge * turn * CFrame.new(0, 0.18, 0.45) * CFrame.Angles(math.rad(30), 0, 0),
+					"Torso",
+					"Tail",
+					hinge,
+					"Egg",
+					0,
+					index * 0.7
+				)
+				if count == 1 then
+					add(
+						"TailTip",
+						Vector3.new(0.3, 0.3, 0.36),
+						secondary,
+						hinge * CFrame.new(0, 0.42, 0.9),
+						"Torso",
+						"Tail",
+						hinge,
+						"Egg"
+					)
+				end
+			end
 		elseif tail == "Curl" then
 			tailRate, tailSwing = 1.4, 0.35 -- a slow cat sway
 			add(
@@ -633,6 +892,41 @@ function PetVisual.build(speciesId: string, options: BuildOptions?): Rig
 				"Tail",
 				CFrame.new(0, 0.92, 0.75)
 			)
+		end
+	end
+
+	local aura = if look then look.Aura else nil
+	if aura then
+		-- Mythical: a soft ring of light under the pet with two sparks
+		-- circling it (Neon, no Light; spun in pose()).
+		local y = if movement == "Flying" then -0.75 else 0.06
+		local ring = add(
+			"Aura",
+			Vector3.new(0.05, 2.1, 2.1),
+			aura,
+			CFrame.new(0, y, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			"Root",
+			"Aura",
+			CFrame.new(0, y, 0),
+			"Cylinder"
+		)
+		ring.Material = Enum.Material.Neon
+		ring.Transparency = 0.6
+		for index = 1, 2 do
+			local spark = add(
+				"AuraSpark",
+				Vector3.new(0.2, 0.2, 0.2),
+				aura,
+				CFrame.new(1.05, y + 0.12, 0),
+				"Root",
+				"Orbit",
+				CFrame.new(0, y + 0.12, 0),
+				"Ball",
+				0,
+				(index - 1) * math.pi
+			)
+			spark.Material = Enum.Material.Neon
+			spark.Transparency = 0.15
 		end
 	end
 
@@ -728,6 +1022,13 @@ function PetVisual.pose(rig: Rig, pivot: CFrame, state: PoseState): ({ BasePart 
 				CFrame.Angles(back + math.sin(t * 1.3 + joint.Side) * 0.04, 0, joint.Side * twitch)
 		elseif kind == "Antenna" then
 			motion = CFrame.Angles(math.sin(t * 3 + joint.Side) * 0.15, 0, 0)
+		elseif kind == "Aura" then
+			-- The ring turns slowly and breathes up and down a little.
+			motion = CFrame.new(0, math.sin(t * 2) * 0.04 * s, 0) * CFrame.Angles(0, t * 0.6, 0)
+		elseif kind == "Orbit" then
+			-- Sparks circle the ring, bobbing as they go.
+			motion = CFrame.new(0, math.sin(t * 3 + joint.Phase) * 0.12 * s, 0)
+				* CFrame.Angles(0, t * 1.8 + joint.Phase, 0)
 		end
 		table.insert(parts, joint.Part)
 		table.insert(cframes, base * joint.Hinge * motion * joint.Rest)

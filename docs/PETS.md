@@ -19,9 +19,19 @@ and buffs go through `BuffService`. There is no new DataStore, inventory, store 
 ## Rarities and species (`PetConfig.Species`, `EggOdds`)
 | Egg | Hatches (odds) | Buffs |
 |---|---|---|
-| **Common** | 🐶 Dog 25 %, 🐱 Cat 25 %, 🦋 Butterfly 20 %, 🪲 Beetle 15 %, 🐞 Ladybug 15 % | one of its own: Dog +3 % XP, Cat +3 % Damage, Butterfly +5 % Crit Damage, Beetle +3 % Damage, Ladybug +5 % Crit Damage |
-| **Rare** | 🐰 Rabbit 35 %, 🐻 Bear 25 %, 🐵 Monkey 25 %, 🦜 Toucan 15 % | one of its own (Rabbit +6 % XP, Bear +6 % Damage, Monkey +10 % Crit Damage, Toucan +6 % Damage) **plus one random buff** of another kind: +2-5 % XP, +2-5 % Damage or +3-8 % Crit Damage |
-| **Mythical** | 🐉 Dragon 40 %, 🔥 Phoenix 40 %, 🦄 Unicorn 20 % | two of its own: Dragon +10 % Damage +10 % Crit Damage, Phoenix +10 % XP +6 % Damage, Unicorn +8 % XP +12 % Crit Damage |
+| **Common** | 🐶 Dog 12 %, 🐱 Cat 12 %, 🐹 Hamster 11 %, 🦋 Butterfly 10 %, 🐸 Frog 10 %, 🐝 Bee 10 %, 🪲 Beetle 9 %, 🐞 Ladybug 9 %, 🦔 Hedgehog 9 %, ✨ Firefly 8 % | one of its own: Dog +3 % XP, Cat +3 % Damage, Butterfly +5 % Crit Damage, Beetle +3 % Damage, Ladybug +5 % Crit Damage, Hamster +4 % XP, Frog +4 % Damage, Bee +5 % Crit Damage, Firefly +5 % XP, Hedgehog +4 % Damage |
+| **Rare** | 🐰 Rabbit 14 %, 🐻 Bear 12 %, 🐵 Monkey 12 %, 🦊 Fox 12 %, 🐼 Panda 11 %, 🦉 Owl 11 %, 🦌 Deer 10 %, 🦜 Toucan 9 %, 🐯 Tiger 9 % | one of its own (Rabbit +6 % XP, Bear +6 % Damage, Monkey +10 % Crit Damage, Toucan +6 % Damage, Fox +10 % Crit Damage, Panda +8 % XP, Owl +9 % XP, Tiger +8 % Damage, Deer +9 % Crit Damage) **plus one random buff** of another kind: +2-5 % XP, +2-5 % Damage or +3-8 % Crit Damage |
+| **Mythical** | 🐉 Dragon 15 %, 🔥 Phoenix 15 %, 🦅 Griffin 13 %, 🐴 Pegasus 13 %, 🦄 Unicorn 12 %, 🌸 Kitsune 11 %, 🐲 Ice Dragon 11 %, 🦁 Celestial Lion 10 % | two of its own: Dragon +10 % Damage +10 % Crit Damage, Phoenix +10 % XP +6 % Damage, Unicorn +8 % XP +12 % Crit Damage, Griffin +10 % Damage +12 % Crit Damage, Pegasus +12 % XP +10 % Crit Damage, Kitsune +15 % Crit Damage +8 % XP, Ice Dragon +10 % Damage +10 % XP, Celestial Lion +10 % Damage +14 % Crit Damage |
+
+**New pets (2026-10-10):** 15 species, 5 per egg, sharing the odds. Their looks (Lib/PetVisual, from
+`Look` flags so any species can use them): Hamster with cheek pouches; Frog with eyes on top, hopping;
+Bee with stripes, a stinger and see-through wings; Firefly with a glowing tail light; Hedgehog with
+prickles; Fox with a big white-tipped brush tail; Panda with eye patches and black legs and ears; Owl
+with ear tufts and a little beak; Tiger with stripes; Deer with antlers; Griffin (eagle beak, feather
+ruff, big wings, tail and claws); Pegasus (a walker whose wings beat slowly as it walks); Kitsune with
+three fanned tails; Ice Dragon; Celestial Lion with a fiery mane. The new **Mythical** pets also have
+an **aura**: a soft ring of light under them that slowly turns and breathes, with two sparks circling
+it (Neon parts, no lights). Every pet stays at most 20 parts.
 
 - **Crit** means crit damage, like the store's Crit Damage boosts: extra damage when a hit crits.
 - **Balance:** a pet buff is at most what the strongest timed boost of that kind gives, and rarer pets

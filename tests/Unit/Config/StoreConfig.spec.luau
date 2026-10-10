@@ -105,7 +105,7 @@ return function()
 
 		it("has valid Mystery Hammer ranges", function()
 			local mystery = StoreConfig.Mystery
-			expect(mystery.BaseDamage).to.equal(35)
+			expect(mystery.BaseDamage).to.equal(62)
 			expect(mystery.BonusDamageMinPercent).to.equal(15)
 			expect(mystery.BonusDamageMaxPercent).to.equal(25)
 			expect(mystery.CritDamageMinPercent).to.equal(5)

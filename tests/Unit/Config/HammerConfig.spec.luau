@@ -76,4 +76,31 @@ return function()
 			end
 		end)
 	end)
+	describe("HammerConfig legendary tier (2026-10-10)", function()
+		it(
+			"adds ten hammers stronger than the Stress Crusher, each with its own impact burst",
+			function()
+				local crusher = HammerConfig.ById.stress_crusher
+				local legendary = 0
+				for _, hammer in HammerConfig.List do
+					if hammer.Damage > crusher.Damage then
+						legendary += 1
+						expect((hammer.MinLevel or 0) > (crusher.MinLevel or 0)).to.equal(true)
+						expect(HammerStyleConfig.ById[hammer.Style].Impact).never.to.equal(nil)
+					end
+				end
+				expect(legendary).to.equal(10)
+			end
+		)
+
+		it("asks for a higher level as the damage goes up", function()
+			for _, lower in HammerConfig.List do
+				for _, higher in HammerConfig.List do
+					if higher.Damage > lower.Damage and lower.MinLevel and higher.MinLevel then
+						expect(higher.MinLevel >= lower.MinLevel).to.equal(true)
+					end
+				end
+			end
+		end)
+	end)
 end
