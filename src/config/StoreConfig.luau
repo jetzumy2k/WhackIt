@@ -85,9 +85,9 @@ local PRODUCT_IDS: { [string]: number } = {
 	egg_common = 3717165483,
 	egg_rare = 3717165621,
 	egg_mythical = 3717165777,
-	-- Synthesis Pick (2026-10-19, docs/SYNTHESIS.md): create it (5 Robux), then
-	-- paste the id. Until then the machine hides the option.
-	synthesis_pick = 0,
+	-- Synthesis Pick (2026-10-19, docs/SYNTHESIS.md): 12 Robux. Without an id
+	-- the machine hides the option.
+	synthesis_pick = 3719811155,
 }
 
 -- Pet eggs (docs/PETS.md): each waits in the Bag until it's put in an
@@ -209,7 +209,7 @@ table.insert(products, {
 	Kind = "SynthesisPick",
 	Percent = 0,
 	Seconds = 0,
-	SuggestedPrice = 5,
+	SuggestedPrice = 12, -- owner's Creator Hub price (2026-10-19)
 	ProductId = PRODUCT_IDS.synthesis_pick or 0,
 	DisplayName = "Synthesis Pick",
 })

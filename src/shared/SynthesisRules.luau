@@ -15,6 +15,12 @@
 	"rank" is its place in that list (1 = weakest). The result gets the
 	weakest rank put in, so mixing in one strong boost never upgrades weak
 	ones, and only the duration grows, never the percent.
+
+	Admin switches: admins can turn any recipe on or off for every server
+	(Services/SynthesisSettingsService, Admin -> Synthesis). The server
+	publishes them as attributes on Remotes.Synthesis; each side passes them to
+	setSwitches(), and isOn() (used by plan, recipesIn and suggest) prefers a
+	switch over the config's Enabled.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -70,6 +76,9 @@ export type Plan = {
 	Random: boolean,
 	Picked: Outcome?, -- set when a Synthesis Pick chooses the result
 }
+
+-- Recipe id -> on, set by an admin. A recipe without one uses its Enabled.
+export type Switches = { [string]: boolean }
 
 -- Saved per player (PlayerDataSchema v21).
 export type State = {
@@ -156,15 +165,83 @@ function SynthesisRules.recipe(id: string): Recipe?
 	return recipes[id]
 end
 
--- Every recipe in config order (disabled ones too; check Enabled).
+-- Every recipe in config order (switched-off ones too; check isOn).
 function SynthesisRules.recipes(): { Recipe }
 	return ordered
+end
+
+-- Prefix of the Remotes.Synthesis attributes holding the switches
+-- ("On_egg_rare" = true).
+SynthesisRules.SWITCH_ATTRIBUTE_PREFIX = "On_"
+
+local switches: Switches = {}
+
+-- Replaces the admin switches in effect on this side (server or client).
+function SynthesisRules.setSwitches(new: Switches): ()
+	switches = table.clone(new)
+end
+
+function SynthesisRules.switches(): Switches
+	return table.clone(switches)
+end
+
+-- Whether a recipe can be used right now: the admin's switch, else the config.
+function SynthesisRules.isOn(recipe: Recipe): boolean
+	local switch = switches[recipe.Id]
+	if switch == nil then
+		return recipe.Enabled
+	end
+	return switch
+end
+
+-- Validates saved or admin-sent switches: known recipe ids to booleans only.
+function SynthesisRules.parseSwitches(raw: unknown): (Switches?, string?)
+	if typeof(raw) ~= "table" then
+		return nil, "bad switches"
+	end
+	local parsed: Switches = {}
+	local count = 0
+	for id, on in raw :: { [unknown]: unknown } do
+		count += 1
+		if count > #ordered then
+			return nil, "too many switches"
+		end
+		if typeof(id) ~= "string" or recipes[id] == nil then
+			return nil, "unknown recipe"
+		end
+		if typeof(on) ~= "boolean" then
+			return nil, "a switch must be on or off"
+		end
+		parsed[id] = on
+	end
+	return parsed, nil
+end
+
+-- The switches as attributes ("On_<id>" = on, every recipe), and back.
+function SynthesisRules.switchAttributes(): { [string]: boolean }
+	local attributes: { [string]: boolean } = {}
+	for _, recipe in ordered do
+		attributes[SynthesisRules.SWITCH_ATTRIBUTE_PREFIX .. recipe.Id] =
+			SynthesisRules.isOn(recipe)
+	end
+	return attributes
+end
+
+function SynthesisRules.switchesFromAttributes(attributes: { [string]: unknown }): Switches
+	local parsed: Switches = {}
+	for _, recipe in ordered do
+		local on = attributes[SynthesisRules.SWITCH_ATTRIBUTE_PREFIX .. recipe.Id]
+		if typeof(on) == "boolean" then
+			parsed[recipe.Id] = on
+		end
+	end
+	return parsed
 end
 
 function SynthesisRules.recipesIn(category: string): { Recipe }
 	local list: { Recipe } = {}
 	for _, recipe in ordered do
-		if recipe.Category == category and recipe.Enabled then
+		if recipe.Category == category and SynthesisRules.isOn(recipe) then
 			table.insert(list, recipe)
 		end
 	end
@@ -313,7 +390,7 @@ function SynthesisRules.plan(
 	pick: string?
 ): (Plan?, string?)
 	local recipe = recipes[recipeId]
-	if recipe == nil or not recipe.Enabled then
+	if recipe == nil or not SynthesisRules.isOn(recipe) then
 		return nil, "That recipe isn't available."
 	end
 	local total = 0
@@ -450,7 +527,7 @@ end
 	window's Auto-fill and the "you can synthesize" hint.
 ]]
 function SynthesisRules.suggest(recipe: Recipe, inventory: Inventory): Selection?
-	if not recipe.Enabled then
+	if not SynthesisRules.isOn(recipe) then
 		return nil
 	end
 	local need = recipe.Count

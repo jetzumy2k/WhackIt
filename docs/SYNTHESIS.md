@@ -40,14 +40,21 @@ server checks you're within 14 studs and alive).
 - **No loops.** Nothing turns an output back into its inputs, every recipe gives fewer items than it
   takes, and the swap never returns the supply you put in.
 
-## Synthesis Pick (5 Robux, owner approval 2026-10-19)
+## Turning recipes on and off (admins, 2026-10-19)
+Admin panel → **Synthesis** has an On/Off switch for every recipe (docs/ADMIN.md). It applies to
+every server within seconds, no new game version needed; **Reset to defaults** goes back to
+`Enabled` in `SynthesisConfig`. A recipe that's off disappears from the window and the server
+refuses it (`SynthesisRules.isOn`); nobody loses items. Code: `Services/SynthesisSettingsService`
+(DataStore `SynthesisSettings`), the `Remotes.Synthesis` attributes `On_<recipe id>` tell clients.
+
+## Synthesis Pick (12 Robux, owner approval 2026-10-19; price set by the owner in Creator Hub)
 `StoreConfig` product `synthesis_pick` (Kind `SynthesisPick`). Buying one puts it in the Bag through
 the normal receipt path (`PurchaseService`: idempotent per PurchaseId, granted only once saved). On
 a **random** recipe (mixed boosts, Supply Swap), the player can spend 1 Pick together with the coin
 fee to choose which of the listed results they get. Guaranteed recipes never use one. A Pick isn't
 random, isn't giftable and has no store tab: it's bought from the machine's window ("Want a
-specific result?"). **Hidden until its Developer Product id is pasted** into
-`StoreConfig.PRODUCT_IDS.synthesis_pick` (see docs/PRODUCT_IDS.md). Admins can give Picks through
+specific result?"). Developer Product id `3719811155` is set in
+`StoreConfig.PRODUCT_IDS.synthesis_pick` (2026-10-19); without one the button is hidden. Admins can give Picks through
 Admin → Rewards → Item.
 
 ## The window

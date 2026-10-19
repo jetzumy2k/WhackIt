@@ -123,6 +123,10 @@
             "$className": "RemoteEvent"
           },
 
+          "SetSynthesis": {
+            "$className": "RemoteEvent"
+          },
+
           "Moderate": {
             "$className": "RemoteEvent"
           },

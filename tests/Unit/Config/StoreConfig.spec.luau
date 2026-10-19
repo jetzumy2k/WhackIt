@@ -24,11 +24,12 @@ return function()
 			end
 		)
 
-		it("offers the Synthesis Pick at 5 Robux, not random and not a boost", function()
+		it("offers the Synthesis Pick at 12 Robux, not random and not a boost", function()
 			local pick = StoreConfig.ByKey.synthesis_pick
 			expect(pick).never.to.equal(nil)
 			expect(pick.Kind).to.equal("SynthesisPick")
-			expect(pick.SuggestedPrice).to.equal(5)
+			expect(pick.SuggestedPrice).to.equal(12)
+			expect(pick.ProductId > 0).to.equal(true)
 			expect(StoreConfig.BuffKinds[pick.Kind]).to.equal(nil)
 			expect(pick.DisplayName).to.equal("Synthesis Pick")
 		end)

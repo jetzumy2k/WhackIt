@@ -14,6 +14,7 @@
 	  Bosses      create a custom boss where you stand; move or delete them
 	  Events      create, schedule, stop and review events (every server)
 	  Drop Rates  office boss buff drop chances and the Lucky window (all servers)
+	  Synthesis   turn Synthesis Machine recipes on or off (all servers)
 	  Announce    a message on every player's screen in this server
 	  Moderation  ban, suspend or unban by player or username
 	Store opening hours stay in the Store panel's Admin tab.
@@ -42,6 +43,10 @@ local FurnitureConfig =
 	require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("FurnitureConfig"))
 local PetConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("PetConfig"))
 local StoreConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("StoreConfig"))
+local SynthesisConfig =
+	require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("SynthesisConfig"))
+local SynthesisRules =
+	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SynthesisRules"))
 
 local LocalTime = require(script.Parent.Parent.Lib.LocalTime)
 local PanelKit = require(script.Parent.Parent.Lib.PanelKit)
@@ -67,6 +72,7 @@ local TABS = {
 	{ Id = "Bosses", Label = "Bosses" },
 	{ Id = "Events", Label = "Events" },
 	{ Id = "Drops", Label = "Drop Rates" },
+	{ Id = "Synthesis", Label = "Synthesis" },
 	{ Id = "Announce", Label = "Announce" },
 	{ Id = "Rewards", Label = "Rewards" },
 	{ Id = "History", Label = "History" },
@@ -370,6 +376,7 @@ function AdminController.start(): ()
 	local editBossRemote = remote("EditBoss")
 	local moderateRemote = remote("Moderate")
 	local setDropRatesRemote = remote("SetDropRates")
+	local setSynthesisRemote = remote("SetSynthesis")
 	local announceRemote = remote("Announce")
 	local eventsRemote = remote("Events")
 	local spawnEggRemote = remote("SpawnEgg")
@@ -972,6 +979,43 @@ function AdminController.start(): ()
 				texts[key] = nil
 			end
 			setDropRatesRemote:FireServer("Reset")
+		end)
+	end
+
+	local function synthesisPage(): ()
+		note(
+			"Turn Synthesis Machine recipes on or off for every server. A recipe that's off disappears from the machine's window at once and the server refuses it; nobody loses items. Reset goes back to the defaults in SynthesisConfig."
+		)
+		for _, category in SynthesisConfig.Categories do
+			local inCategory: { SynthesisRules.Recipe } = {}
+			for _, recipe in SynthesisRules.recipes() do
+				if recipe.Category == category.Id then
+					table.insert(inCategory, recipe)
+				end
+			end
+			if #inCategory > 0 then
+				heading(category.Icon .. " " .. category.Label)
+				for _, recipe in inCategory do
+					PanelKit.toggle(
+						container,
+						SynthesisRules.recipeTitle(recipe),
+						string.format(
+							"%d coins · default %s",
+							recipe.Fee,
+							if recipe.Enabled then "on" else "off"
+						),
+						SynthesisRules.isOn(recipe),
+						function(on: boolean)
+							setSynthesisRemote:FireServer(recipe.Id, on)
+						end
+					)
+				end
+			end
+		end
+		heading("Defaults")
+		local resetRow = row()
+		confirmButton(rowButton(resetRow, "Reset to defaults", DANGER_COLOR, 0.5), function()
+			setSynthesisRemote:FireServer("Reset")
 		end)
 	end
 
@@ -1863,6 +1907,8 @@ function AdminController.start(): ()
 			eventsPage(page)
 		elseif activeTab == "Drops" then
 			dropsPage(page)
+		elseif activeTab == "Synthesis" then
+			synthesisPage()
 		elseif activeTab == "Announce" then
 			announcePage()
 		elseif activeTab == "Rewards" then
@@ -1906,6 +1952,16 @@ function AdminController.start(): ()
 					serverDropTexts[key] = text
 				end
 			end
+			render()
+		end
+	end)
+	-- Synthesis switches arrive as Remotes.Synthesis attributes.
+	local synthesisFolder = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Synthesis")
+	synthesisFolder.AttributeChanged:Connect(function()
+		SynthesisRules.setSwitches(
+			SynthesisRules.switchesFromAttributes(synthesisFolder:GetAttributes())
+		)
+		if activeTab == "Synthesis" then
 			render()
 		end
 	end)

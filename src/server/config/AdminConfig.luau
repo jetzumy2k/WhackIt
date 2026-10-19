@@ -20,6 +20,12 @@ local AdminConfig = table.freeze({
 	DropRateTopic = "DropRates",
 	DropRateRefreshSeconds = 300,
 
+	-- Synthesis Machine recipe on/off switches (Services/SynthesisSettingsService).
+	SynthesisStoreName = "SynthesisSettings",
+	SynthesisKey = "Global",
+	SynthesisTopic = "SynthesisSettings",
+	SynthesisRefreshSeconds = 300,
+
 	-- Admin events (docs/EVENTS.md, Config/EventConfig), shared by every server.
 	EventStoreName = "Events",
 	EventKey = "Global",

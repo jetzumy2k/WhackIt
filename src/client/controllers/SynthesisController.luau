@@ -659,7 +659,7 @@ local function buildWindow(parent: Instance): ()
 	local function recipeList(): ()
 		local section = PanelKit.section(content, "📖 All recipes", true, false)
 		for _, recipe in SynthesisRules.recipes() do
-			if recipe.Enabled then
+			if SynthesisRules.isOn(recipe) then
 				PanelKit.text(
 					section.Body,
 					string.format(
@@ -704,11 +704,19 @@ local function buildWindow(parent: Instance): ()
 		local recipes = SynthesisRules.recipesIn(activeCategory)
 		local recipe = currentRecipe()
 		if recipe == nil then
+			local switchedOff = false
+			for _, other in SynthesisRules.recipes() do
+				switchedOff = switchedOff or other.Category == activeCategory
+			end
 			PanelKit.notice(
 				content,
 				"Locked",
 				(if info then info.Unavailable else nil)
-					or "No recipes here yet. No higher-tier version is available."
+					or (
+						if switchedOff
+							then "These recipes are switched off for now. Check back later!"
+							else "No recipes here yet. No higher-tier version is available."
+					)
 			)
 			recipeList()
 			return
@@ -832,6 +840,24 @@ local function buildWindow(parent: Instance): ()
 			UIController.showToast(message :: string)
 		end
 	end)
+	-- Admin on/off switches (Remotes.Synthesis attributes): a recipe turned
+	-- off disappears at once, and the server refuses it anyway.
+	local switchFolder = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Synthesis")
+	local function readSwitches(): ()
+		local before = currentRecipe()
+		SynthesisRules.setSwitches(
+			SynthesisRules.switchesFromAttributes(switchFolder:GetAttributes())
+		)
+		local after = currentRecipe()
+		if (if before then before.Id else nil) ~= (if after then after.Id else nil) then
+			resetSelection()
+		end
+		if window:isOpen() and not busy then
+			render()
+		end
+	end
+	readSwitches()
+	switchFolder.AttributeChanged:Connect(readSwitches)
 	remote("Store", "State").OnClientEvent:Connect(function(state: unknown)
 		if typeof(state) == "table" then
 			storeOpen = (state :: { [string]: unknown }).Open == true

@@ -954,3 +954,8 @@ Admin → Rewards gives what's needed: Item `xp_10_30m` ×3, `dmg_3_30m` / `crit
 | 646 | Phone (Device emulator) | Tabs on top, cards wrap, SYNTHESIZE fits, nothing clipped |
 | 647 | Hammer Vending Machine, a boost from the Bag, an egg in an incubator, a Store purchase | All still work as before |
 | 648 | Eggs: recipe buttons 4 Common → 1 Rare and 4 Rare → 1 Mythical; pick the Rare one, Auto-fill 4 Rare Eggs, SYNTHESIZE (1,200 coins) | GUARANTEED Mythical Egg, fee 1,200; a Legendary celebration card; the four Rare Eggs are gone, the Mythical Egg is in the Bag and hatches a Mythical pet; with 3 Rare Eggs or under 1,200 coins SYNTHESIZE stays greyed |
+| 649 | Admin → Synthesis tab | Boosts, Eggs and Office Supplies cards; a switch per recipe showing its fee and default, all On |
+| 650 | Turn 4 Rare → 1 Mythical **Off** while another player has the machine window open on Eggs | Toast "Recipe off. …"; on both screens the Rare recipe button disappears at once and only 4 Common → 1 Rare is left; nothing in anyone's Bag changes |
+| 651 | Turn both egg recipes Off, open the Eggs tab | "These recipes are switched off for now"; switch one back On → it comes back without reopening |
+| 652 | A non-admin fires `Remotes.Admin.SetSynthesis:FireServer("egg_rare", false)`; an admin fires it with `"nope", true` and `"egg_rare", "off"` | All rejected; nothing changes |
+| 653 | Reset to defaults (click twice), then restart the server (published place) | Every recipe back to its default; a switch changed before a restart is still in effect after it |

@@ -347,4 +347,79 @@ return function()
 			expect(clean.PicksUsed).to.equal(0)
 		end)
 	end)
+
+	describe("SynthesisRules admin switches", function()
+		afterEach(function()
+			SynthesisRules.setSwitches({})
+		end)
+
+		it("uses the config until an admin switches a recipe", function()
+			for _, recipe in SynthesisRules.recipes() do
+				expect(SynthesisRules.isOn(recipe)).to.equal(recipe.Enabled)
+			end
+		end)
+
+		it("turns a recipe off everywhere: plan, recipesIn, suggest and ready", function()
+			local inv = inventory({ egg_rare = 4 })
+			SynthesisRules.setSwitches({ egg_rare = false })
+			local recipe = SynthesisRules.recipe("egg_rare") :: SynthesisRules.Recipe
+			expect(SynthesisRules.isOn(recipe)).to.equal(false)
+			local plan, reason = SynthesisRules.plan("egg_rare", { egg_rare = 4 }, inv, nil)
+			expect(plan).to.equal(nil)
+			expect(reason).to.equal("That recipe isn't available.")
+			for _, listed in SynthesisRules.recipesIn("Eggs") do
+				expect(listed.Id).never.to.equal("egg_rare")
+			end
+			expect(SynthesisRules.suggest(recipe, inv)).to.equal(nil)
+			expect(table.find(SynthesisRules.ready(inv), "egg_rare")).to.equal(nil)
+			-- Back on: works again.
+			SynthesisRules.setSwitches({ egg_rare = true })
+			expect((SynthesisRules.plan("egg_rare", { egg_rare = 4 }, inv, nil))).never.to.equal(
+				nil
+			)
+		end)
+
+		it("accepts only known recipe ids switched to true or false", function()
+			local ok = SynthesisRules.parseSwitches({ egg_rare = false, boost_30m = true })
+			expect(ok).never.to.equal(nil)
+			expect((ok :: SynthesisRules.Switches).egg_rare).to.equal(false)
+			expect((SynthesisRules.parseSwitches({ egg_rare = "off" }))).to.equal(nil)
+			expect((SynthesisRules.parseSwitches({ hammer_free = true }))).to.equal(nil)
+			expect((SynthesisRules.parseSwitches({ [1] = true }))).to.equal(nil)
+			expect((SynthesisRules.parseSwitches("egg_rare"))).to.equal(nil)
+			local tooMany: { [string]: boolean } = {}
+			for index = 1, #SynthesisRules.recipes() + 1 do
+				tooMany["x" .. index] = true
+			end
+			expect((SynthesisRules.parseSwitches(tooMany))).to.equal(nil)
+		end)
+
+		it("round-trips the switches through attributes, ignoring junk", function()
+			SynthesisRules.setSwitches({ egg_common = false })
+			local attributes: { [string]: unknown } = SynthesisRules.switchAttributes()
+			local count = 0
+			for name in attributes do
+				expect(string.sub(name, 1, #SynthesisRules.SWITCH_ATTRIBUTE_PREFIX)).to.equal(
+					SynthesisRules.SWITCH_ATTRIBUTE_PREFIX
+				)
+				count += 1
+			end
+			expect(count).to.equal(#SynthesisRules.recipes())
+			attributes.On_unknown = true
+			attributes.On_egg_rare = "yes"
+			SynthesisRules.setSwitches({})
+			local back = SynthesisRules.switchesFromAttributes(attributes)
+			expect(back.egg_common).to.equal(false)
+			expect(back.boost_30m).to.equal(true)
+			expect(back.egg_rare).to.equal(nil)
+			expect(back.unknown).to.equal(nil)
+		end)
+
+		it("keeps its own copy of the switches", function()
+			local switches = { egg_rare = false }
+			SynthesisRules.setSwitches(switches)
+			switches.egg_rare = true
+			expect(SynthesisRules.switches().egg_rare).to.equal(false)
+		end)
+	end)
 end

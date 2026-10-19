@@ -2,8 +2,9 @@
 
 Added 2026-10-06. Admins get a purple **Admin** button above the Store button, or press **F2**. The panel
 (redesigned 2026-10-07, `Lib/PanelKit`) is a wide window with a sidebar (a tab strip on top on
-narrow screens and phones): **Dashboard, Players, Bosses, Events, Drop Rates, Announce, Rewards,
-History, Moderation** (Events, Announce, Rewards and History added 2026-10-08). Each page is a
+narrow screens and phones): **Dashboard, Players, Bosses, Events, Drop Rates, Synthesis, Announce,
+Rewards, History, Moderation** (Events, Announce, Rewards and History added 2026-10-08; Synthesis
+2026-10-19). Each page is a
 set of cards; some long ones start folded (click a card's title to open or fold it). Pages scroll
 instead of shrinking their text, and keep their scroll position when the server sends an update.
 Close with X or F2. Admins can also open it from the Player Panel's Game page.
@@ -86,6 +87,22 @@ The tab shows whether the Lucky window is on now and how long until it changes. 
 servers** stores the values in DataStore `DropRates` and every server picks them up within seconds
 (or within 5 minutes if a message is missed). **Reset to defaults** (click twice) goes back to
 `src/config/DropRateConfig.luau`. In Studio without API access, saving fails with a toast.
+
+## Synthesis tab: recipe switches (2026-10-19)
+Turns each Synthesis Machine recipe (docs/SYNTHESIS.md) **On** or **Off** for every server, grouped
+by Boosts, Eggs and Office Supplies, each with its coin fee and its default. Click the switch: the
+change is saved at once (no Save button) and every server picks it up within seconds (or within
+5 minutes if a message is missed). **Reset to defaults** (click twice) goes back to `Enabled` in
+`src/config/SynthesisConfig.luau`.
+
+- A recipe that's **off** disappears from every player's machine window straight away (a category
+  with every recipe off says "switched off for now"), and the server refuses it even if a request
+  still arrives. Nothing is taken from anyone; items just wait in the Bag or storage.
+- Saved in DataStore `SynthesisSettings` (key `Global`) with `UpdateAsync`, so two admins on
+  different servers switching different recipes don't undo each other.
+- In Studio without DataStore access the switch still works, **for that server only** (the toast
+  says so), so it can be tested.
+- Every change is in the admin History ("turned synthesis recipe … on/off").
 
 ## Events tab (2026-10-08)
 Create, schedule, stop and review events that run in **every server**: XP events, outdoor boss
