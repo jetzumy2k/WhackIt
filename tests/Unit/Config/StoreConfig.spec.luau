@@ -20,8 +20,18 @@ return function()
 				expect(counts.MysteryHammer).to.equal(1)
 				expect(counts.Bundle).to.equal(2)
 				expect(counts.Egg).to.equal(3)
+				expect(counts.SynthesisPick).to.equal(1)
 			end
 		)
+
+		it("offers the Synthesis Pick at 5 Robux, not random and not a boost", function()
+			local pick = StoreConfig.ByKey.synthesis_pick
+			expect(pick).never.to.equal(nil)
+			expect(pick.Kind).to.equal("SynthesisPick")
+			expect(pick.SuggestedPrice).to.equal(5)
+			expect(StoreConfig.BuffKinds[pick.Kind]).to.equal(nil)
+			expect(pick.DisplayName).to.equal("Synthesis Pick")
+		end)
 
 		it("has unique keys and sane buff values", function()
 			local seen: { [string]: boolean } = {}

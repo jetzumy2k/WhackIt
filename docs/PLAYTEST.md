@@ -888,7 +888,7 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | 599 | Trainers: only Intern Ivy is open; ⚔️ Battle! | The battle screen: two pets on a little stage, Pep bars, Boop / Charge / Guard and 🏳️ |
 | 600 | Boop, Charge, Guard a few times | Boops lunge and the target wobbles; Guard shows a bubble; a charged pet glows; the round text tells what happened |
 | 601 | Win | Card "YOUR PET WON!" with 80 coins and 240 XP (first win today ×2); Barista Ben unlocks |
-| 602 | Lose a battle (or 🏳️) | "YOUR PET GOT DIZZY"; no reward |
+| 602 | Lose a battle (or X → 🏳️ Give up) | "YOUR PET GOT DIZZY"; no reward |
 | 603 | Beat Director Dee (or Admin data) | The first win of the day also gives an office supply |
 | 604 | Two players: Challenge | The other player gets a card with ACCEPT; the battle starts on both screens; moves wait for both; 15 s timeout boops |
 | 605 | Win 10 trainer battles in a day | The 11th says no reward today |
@@ -897,20 +897,59 @@ Settings first. Admin → Rewards can top up coins if a test player runs short.
 | # | Steps | Expected |
 |---|---|---|
 | 606 | Walk to the machine east of the Recreation Center entrance (or 🏢 Social → 🎁 Capsules) | A gumball machine with coloured capsules in a glass dome and a "🎁 LUCKY CAPSULES" sign; the prompt opens the window |
-| 607 | The window | Price 200 coins, "10 of 10 spins left", the lucky-spin note, SPIN, and the odds list (adds up to 100 %) plus the lucky-spin odds |
+| 607 | The window | The capsule stage; "10 / 10 spins left" with 10 dots (last one gold) and "resets in"; "SPIN · 200 coins"; the lucky-spin note; the odds table (adds up to 100 %) with an Every spin / Lucky spin switch. No empty sidebar |
 | 608 | SPIN | Coins drop by 200; the handle turns; the capsule wobbles, pops and shows the prize in its tier colour; you get it (coins / XP / Bag item / office supply) |
 | 609 | Spin until 1 left | "Your next spin is today's LUCKY spin"; that spin gives Rare, Epic or Jackpot and a celebration card |
-| 610 | 11th spin / under 200 coins / below Level 5 | SPIN greyed with the reason |
+| 610 | 11th spin / under 200 coins / below Level 5 | SPIN greyed and its caption is the reason ("No spins left · resets in …", "Need 200 coins", "Reach Level 5"); after a spin the prize stays in the capsule |
 | 611 | Tap SPIN twice quickly | Only one spin is charged |
 
 ### Paper Toss Showdown (2026-10-10)
 | # | Steps | Expected |
 |---|---|---|
 | 612 | Walk to the 🗑️ PAPER TOSS booth (east end of the Recreation Center entrance) or 🏢 Social → 🗑️ Paper Toss | Window with Intern Izzy open, Max and Cora locked, your best score, how to play |
-| 613 | Play Izzy | Game screen: an office with a bin and a breeze label; AIM marker sweeps; tap stops it; POWER bar sweeps; tap throws |
+| 613 | Play Izzy | The world dims; game screen: scoreboard, an office with breeze and distance chips, AIM and POWER meters with gold / green zones; STOP (or Space) stops the aim (marker turns gold / green / red), again stops the power and throws; a big result banner |
 | 614 | Throws | The paper arcs and lands in the bin (swish / in) or off the rim / on the floor; the coworker throws after; the scoreboard and round update |
 | 615 | Far bin / strong breeze | You need more power / aim against the arrow |
 | 616 | Win the game | Card "YOU WON THE TOSS-OFF!" with 80 coins and 240 XP (first win today ×2); Max unlocks |
-| 617 | Lose / tie / 🚪 Quit | No reward; Quit closes the game |
+| 617 | Lose / tie / X | No reward; X shows ▶ Keep playing / 🚪 Quit; Quit closes the game; Space doesn't jump while the game is open |
 | 618 | Beat CEO Cora | The first win of the day also gives an office supply |
 
+## UI polish: recreation games and windows (2026-10-11)
+From owner screenshots (docs/screenshot-ai-review): the games were hard to control and the windows looked rough.
+| # | Do | Expect |
+|---|---|---|
+| 619 | Open any window without tabs (🎁 Capsules, 🗑️ Paper Toss) | No empty sidebar: the page uses the full width |
+| 620 | Open any window (Menu, Store, Capsules) | The world dims behind it; clicking the dim closes the window; the close button is a drawn ✕ |
+| 621 | Collapsible cards (Fair play, How to play) | A › arrow on the right, pointing down when open |
+| 622 | Pet Arena → Challenge a player, they accept | The arena window closes; only the battle screen shows, over a dimmed world (no window peeking out behind it) |
+| 623 | Battle: press 1 / 2 / 3 | Boop / Charge / Guard; the picked move shows ✓ and stays lit while waiting; Charge's text is dark on gold (readable) |
+| 624 | Battle: let Pep drop | The bar turns gold under half, red under a quarter; ⚡ CHARGED badge after Charge |
+| 625 | Player battle | ⏱ timer chip in the header counts down, red at 5 s |
+| 626 | Battle: X | ▶ Keep battling / 🏳️ Give up; Give up ends it as a loss |
+| 627 | Paper Toss on a phone (Device emulator) | Scoreboard, stage, meters, hint and the STOP button all fit without overlap; the stage shrinks first |
+| 628 | Reduced motion on | Windows, the dim and game screens appear at once; no result pops |
+
+## Synthesis Machine (2026-10-19, docs/SYNTHESIS.md)
+Admin → Rewards gives what's needed: Item `xp_10_30m` ×3, `dmg_3_30m` / `crit_3_30m` ×1, `egg_common` ×4,
+`synthesis_pick` ×1; Furniture `desk_fan` ×4; coins.
+| # | Do | Expect |
+|---|---|---|
+| 629 | Spawn and look right of the stairs | The machine stands north of the Hammer Vending Machine with open floor between them; nameplate "⚗️ SYNTHESIS MACHINE" readable from across the lobby; rings turn slowly, the core glows and pulses |
+| 630 | Walk between the two machines | Only one E prompt shows at a time; the synthesis one says "Synthesize · Synthesis Machine"; the vendor still opens the Hammer Store |
+| 631 | E on the machine | The window: tabs Boosts / Eggs / Office Supplies / Hammers, the chamber, Coins and Picks tiles, "How it works" open (first time), recipe buttons 3 × 30 min → 1 h and 6 × 1 h → 5 h |
+| 632 | Boosts: Add 3 × +10 % XP (30 min) | Counter 3 / 3; preview "✅ GUARANTEED · +10% XP boost (1 h)"; fee 150; SYNTHESIZE lit |
+| 633 | SYNTHESIZE | Chamber shakes, then opens green with the result; sockets light, core flashes, OUTPUT orb glows on the machine; card "Synthesis complete"; coins −150; Bag: the three 30-min boosts gone, one 1-h boost there |
+| 634 | Mix XP + Damage + Crit (30 min) | "🎲 RANDOM · one of these, 1 in 3 each" with three 1-h boosts listed; result is one of them |
+| 635 | Same, with a Synthesis Pick | Buttons 🎲 Random / each result; pick Damage → "✅ CHOSEN"; result is the Damage boost; Picks −1 |
+| 636 | Eggs: Auto-fill 4 Common Eggs, SYNTHESIZE | GUARANTEED Rare Egg, fee 300; a Rare celebration card; the Rare Egg is in the Bag and hatches at an incubator |
+| 637 | Office Supplies: 4 Standing Fans in storage (one placed) | The card says "3 in storage"; ⚠️ asks for one more; pick up the placed one (office edit) → 4 → random among the other 5 supplies; the result is in office storage |
+| 638 | Hammers tab | Explains there are no hammer recipes yet; nothing to select |
+| 639 | 2 items, wrong-length boost, under 150 coins, too far away | SYNTHESIZE greyed; the ⚠️ line / caption names the reason; nothing used |
+| 640 | Tap SYNTHESIZE several times fast | One synthesis; the button locks until the result |
+| 641 | Close and reopen the window 5 times, switch tabs | No duplicate cards or buttons; selection clears when switching tab |
+| 642 | Die / reset with the window open | The window closes; reopen works |
+| 643 | Leave right after a synthesis, rejoin | The result is still there, the inputs are still gone (no duplicates, no loss) |
+| 644 | Bag → Synthesis Pick card → "Synthesis" | Opens the machine window; Bag "Use" never spends the Pick |
+| 645 | Two players, one synthesizes | The other sees the machine's sockets, burst and orb |
+| 646 | Phone (Device emulator) | Tabs on top, cards wrap, SYNTHESIZE fits, nothing clipped |
+| 647 | Hammer Vending Machine, a boost from the Bag, an egg in an incubator, a Store purchase | All still work as before |

@@ -5,8 +5,9 @@
 	The Bag holds store items the player hasn't used yet, counted by StoreConfig
 	product key ("xp_10_30m", "mystery_hammer"). Bought items, gifts and
 	custom-boss drops all go into the Bag; the player uses them when they like.
-	Boosts are giftable; the Mystery Hammer and pet eggs (paid random items)
-	and bundles are not. Eggs wait here until they go into an incubator
+	Boosts are giftable; the Mystery Hammer and pet eggs (paid random items),
+	bundles and Synthesis Picks (used at the Synthesis Machine,
+	docs/SYNTHESIS.md) are not. Eggs wait here until they go into an incubator
 	(PetService, docs/PETS.md). A bundle is never kept whole: grant() puts its contents in the
 	Bag as separate boosts (3 x 30-min XP is three items, not one 90-min one).
 
@@ -51,7 +52,7 @@ function BagRules.itemText(product: StoreConfig.Product): string
 	if product.Kind == "MysteryHammer" then
 		return StoreConfig.Mystery.DisplayName
 	end
-	if product.Kind == "Bundle" or product.Kind == "Egg" then
+	if product.Kind == "Bundle" or product.Kind == "Egg" or product.Kind == "SynthesisPick" then
 		return product.DisplayName or product.Key
 	end
 	local minutes = product.Seconds // 60

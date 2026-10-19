@@ -5,19 +5,25 @@
 	  * Window (🏢 Social → Pet Arena, or the Arena sign at the Recreation
 	    Center): pick one of your pets (its battle stats shown), then fight
 	    the 🏆 Trainers ladder or 🤝 Challenge a player in the server.
-	  * Battle screen: the two pets face each other on a little stage
-	    (a ViewportFrame with Lib/PetVisual pets), Pep bars, the round, and
-	    three moves: 💥 Boop, ⚡ Charge, 🛡️ Guard. Boops lunge and the target
-	    wobbles, a guard puts up a bubble, a charged pet glows, the loser
-	    gets dizzy stars.
+	  * Battle screen (PanelKit.gameScreen; the world dims and the arena
+	    window closes): the two pets face each other on a little stage (a
+	    ViewportFrame with Lib/PetVisual pets), fighter cards with Pep bars
+	    (green, gold when low, red when nearly dizzy) and a ⚡ CHARGED badge,
+	    a log of the last round, the round and (player battles) the turn
+	    timer in the header, and three moves with a one-line hint each:
+	    💥 Boop, ⚡ Charge, 🛡️ Guard (keys 1 / 2 / 3). The X asks before
+	    giving up. Boops lunge and the target wobbles, a guard puts up a
+	    bubble, a charged pet glows, the loser gets dizzy stars.
 	  * Incoming challenges and results as notification cards.
 	The server runs every battle (PetArenaService); this only asks and shows.
 ]]
 
+local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 local PetArenaConfig =
 	require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("PetArenaConfig"))
@@ -72,6 +78,7 @@ local selectedPetId: string? = nil
 local openWindow: ((tab: string?) -> ())? = nil
 local showBattle: (view: BattleView) -> () = function() end
 local endBattle: () -> () = function() end
+local closeArenaWindow: () -> () = function() end
 
 local function remote(name: string): RemoteEvent
 	local found =
@@ -449,6 +456,9 @@ local function buildWindow(parent: Instance): ()
 			render()
 		end
 	end)
+	closeArenaWindow = function()
+		window:close()
+	end
 	openWindow = function(tab: string?)
 		if tab then
 			activeTab = tab
@@ -471,47 +481,57 @@ type Actor = {
 	Aura: Part,
 }
 
+local MOVE_HINT = {
+	Boop = "Take Pep",
+	Charge = "Next boop x" .. PetArenaConfig.ChargeMultiplier,
+	Guard = string.format("Take only %d%%", math.floor(PetArenaConfig.GuardTaken * 100 + 0.5)),
+}
+local MOVE_COLOR = {
+	Boop = C.Danger,
+	Charge = UiTokens.Color.Gold,
+	Guard = C.Primary,
+}
+local MOVE_KEYS = { Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three }
+local MOVE_ACTION = "PetBattleMove"
+
+type Card = { Name: TextLabel, Bar: PanelKit.ProgressBar, Fill: Frame, Badge: TextLabel }
+
+-- Green while healthy, gold when low, red when nearly dizzy.
+local function pepColor(fraction: number): Color3
+	return if fraction > 0.5
+		then C.Good
+		elseif fraction > 0.25 then UiTokens.Color.Gold
+		else C.Danger
+end
+
 local function buildBattle(parent: Instance): ()
-	local gui = Instance.new("ScreenGui")
-	gui.Name = "PetBattle"
-	gui.ResetOnSpawn = false
-	gui.DisplayOrder = 8
-	gui.Enabled = false
-	gui.Parent = parent
+	local screen = PanelKit.gameScreen({
+		Name = "PetBattle",
+		Title = "🐾 Pet Battle",
+		Accent = ACCENT,
+	}, parent)
+	local body = screen.Body
+	local roundChip = screen.chip("Round 1")
+	local timerChip = screen.chip("⏱ 15s", C.Field)
+	timerChip.Visible = false
 
-	local panel = Instance.new("Frame")
-	panel.AnchorPoint = Vector2.new(0.5, 0.5)
-	panel.Position = UDim2.fromScale(0.5, 0.5)
-	panel.Size = UDim2.fromScale(0.7, 0.8)
-	panel.BackgroundColor3 = C.Window
-	panel.Parent = gui
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, UiTokens.Radius.Window)
-	corner.Parent = panel
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = ACCENT
-	stroke.Thickness = 2
-	stroke.Parent = panel
-	local limit = Instance.new("UISizeConstraint")
-	limit.MaxSize = Vector2.new(820, 600)
-	limit.Parent = panel
-	Responsive.onChanged(function()
-		panel.Size = if Responsive.formFactor() == "Phone"
-			then UDim2.fromScale(0.96, 0.92)
-			else UDim2.fromScale(0.7, 0.8)
-	end)
-
-	-- The stage.
+	-- The stage: takes the leftover height.
 	local viewport = Instance.new("ViewportFrame")
-	viewport.Position = UDim2.fromScale(0.02, 0.03)
-	viewport.Size = UDim2.fromScale(0.96, 0.55)
+	viewport.Name = "Stage"
+	viewport.LayoutOrder = 1
+	viewport.Size = UDim2.new(1, 0, 0, 140)
 	viewport.BackgroundColor3 = Color3.fromRGB(150, 205, 255)
 	viewport.Ambient = Color3.fromRGB(200, 200, 210)
 	viewport.LightColor = Color3.fromRGB(255, 250, 240)
-	viewport.Parent = panel
+	viewport.Parent = body
+	PanelKit.fill(viewport)
 	local vpCorner = Instance.new("UICorner")
-	vpCorner.CornerRadius = UDim.new(0, 12)
+	vpCorner.CornerRadius = UDim.new(0, UiTokens.Radius.Card)
 	vpCorner.Parent = viewport
+	local sky = Instance.new("UIGradient")
+	sky.Rotation = 90
+	sky.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(200, 225, 255))
+	sky.Parent = viewport
 	local world = Instance.new("WorldModel")
 	world.Parent = viewport
 	local camera = Instance.new("Camera")
@@ -535,71 +555,226 @@ local function buildBattle(parent: Instance): ()
 	ring.Transparency = 0.5
 	ring.Parent = world
 
-	-- Names and Pep bars.
-	local function sideBar(
-		xScale: number,
-		align: Enum.TextXAlignment
-	): (TextLabel, PanelKit.ProgressBar)
-		local holder = Instance.new("Frame")
-		holder.BackgroundTransparency = 1
-		holder.Position = UDim2.fromScale(xScale, 0.6)
-		holder.Size = UDim2.fromScale(0.46, 0.12)
-		holder.Parent = panel
+	-- Fighter cards: name, a Pep bar coloured by how much is left, a ⚡ badge.
+	local fighters = Instance.new("Frame")
+	fighters.Name = "Fighters"
+	fighters.LayoutOrder = 2
+	fighters.BackgroundTransparency = 1
+	fighters.Size = UDim2.new(1, 0, 0, 74)
+	fighters.Parent = body
+	local function fighterCard(side: number): Card
+		local card = Instance.new("Frame")
+		card.AnchorPoint = Vector2.new(side, 0)
+		card.Position = UDim2.fromScale(side, 0)
+		card.Size = UDim2.new(0.5, -6, 1, 0)
+		card.BackgroundColor3 = C.Card
+		card.Parent = fighters
+		local round = Instance.new("UICorner")
+		round.CornerRadius = UDim.new(0, UiTokens.Radius.Card)
+		round.Parent = card
+		local pad = Instance.new("UIPadding")
+		pad.PaddingLeft = UDim.new(0, 12)
+		pad.PaddingRight = UDim.new(0, 12)
+		pad.PaddingTop = UDim.new(0, 10)
+		pad.PaddingBottom = UDim.new(0, 10)
+		pad.Parent = card
 		local layout = Instance.new("UIListLayout")
-		layout.Padding = UDim.new(0, 4)
-		layout.Parent = holder
-		local label = PanelKit.text(holder, "", "Heading")
-		label.TextXAlignment = align
-		local bar = PanelKit.progressBar(holder, C.Good)
-		return label, bar
+		layout.SortOrder = Enum.SortOrder.LayoutOrder
+		layout.Padding = UDim.new(0, 6)
+		layout.Parent = card
+		local name = Instance.new("TextLabel")
+		name.LayoutOrder = 1
+		name.BackgroundTransparency = 1
+		name.Size = UDim2.new(1, 0, 0, 22)
+		name.Font = PanelKit.FONT_BOLD
+		name.TextColor3 = C.Text
+		name.TextXAlignment = if side == 0
+			then Enum.TextXAlignment.Left
+			else Enum.TextXAlignment.Right
+		name.TextTruncate = Enum.TextTruncate.AtEnd
+		name.Parent = card
+		PanelKit.setTextSize(name, 17)
+		local bar = PanelKit.progressBar(card, C.Good)
+		bar.Frame.LayoutOrder = 2
+		local badge = Instance.new("TextLabel")
+		badge.Name = "Charged"
+		badge.AnchorPoint = Vector2.new(1 - side, 0)
+		badge.Position = UDim2.fromScale(1 - side, 0)
+		badge.Size = UDim2.fromOffset(92, 22)
+		badge.BackgroundColor3 = UiTokens.Color.Gold
+		badge.Font = PanelKit.FONT_BOLD
+		badge.TextSize = 13
+		badge.TextColor3 = C.Ink
+		badge.Text = "⚡ CHARGED"
+		badge.Visible = false
+		badge.ZIndex = 2
+		badge.Parent = name
+		local badgeCorner = Instance.new("UICorner")
+		badgeCorner.CornerRadius = UDim.new(0, 11)
+		badgeCorner.Parent = badge
+		return {
+			Name = name,
+			Bar = bar,
+			Fill = bar.Frame:FindFirstChild("Fill") :: Frame,
+			Badge = badge,
+		}
 	end
-	local nameA, barA = sideBar(0.02, Enum.TextXAlignment.Left)
-	local nameB, barB = sideBar(0.52, Enum.TextXAlignment.Right)
+	local cardA = fighterCard(0)
+	local cardB = fighterCard(1)
 
-	local status = Instance.new("TextLabel")
-	status.BackgroundTransparency = 1
-	status.Position = UDim2.fromScale(0.02, 0.73)
-	status.Size = UDim2.fromScale(0.96, 0.08)
-	status.Font = PanelKit.FONT_BOLD
-	status.TextColor3 = C.Text
-	status.TextWrapped = true
-	status.Parent = panel
-	Responsive.capText(status, 18)
+	-- What just happened, one line per move.
+	local log = Instance.new("TextLabel")
+	log.Name = "Log"
+	log.LayoutOrder = 3
+	log.Size = UDim2.new(1, 0, 0, 50)
+	log.BackgroundColor3 = C.Card
+	log.BackgroundTransparency = 0.4
+	log.Font = PanelKit.FONT_BOLD
+	log.TextColor3 = C.Text
+	log.TextWrapped = true
+	log.Parent = body
+	Responsive.capText(log, 17)
+	local logCorner = Instance.new("UICorner")
+	logCorner.CornerRadius = UDim.new(0, UiTokens.Radius.Tile)
+	logCorner.Parent = log
+	local logPad = Instance.new("UIPadding")
+	logPad.PaddingLeft = UDim.new(0, 10)
+	logPad.PaddingRight = UDim.new(0, 10)
+	logPad.Parent = log
 
+	-- Moves (with a one-line hint each), and in the same place the forfeit
+	-- confirmation.
+	local actions = Instance.new("Frame")
+	actions.Name = "Actions"
+	actions.LayoutOrder = 4
+	actions.BackgroundTransparency = 1
+	actions.Size = UDim2.new(1, 0, 0, 68)
+	actions.Parent = body
 	local moves = Instance.new("Frame")
+	moves.Name = "Moves"
 	moves.BackgroundTransparency = 1
-	moves.Position = UDim2.fromScale(0.02, 0.83)
-	moves.Size = UDim2.fromScale(0.96, 0.14)
-	moves.Parent = panel
+	moves.Size = UDim2.fromScale(1, 1)
+	moves.Parent = actions
 	local movesLayout = Instance.new("UIListLayout")
 	movesLayout.FillDirection = Enum.FillDirection.Horizontal
-	movesLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	movesLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	movesLayout.Padding = UDim.new(0, 8)
 	movesLayout.Parent = moves
-	local moveButtons: { TextButton } = {}
-	local colors = { Boop = C.Danger, Charge = Color3.fromRGB(240, 190, 60), Guard = C.Primary }
-	for _, move in PetArenaConfig.Moves do
-		local button =
-			PanelKit.button(moves, PetArenaConfig.MoveText[move] or move, colors[move] or C.Neutral)
-		button.Size = UDim2.fromScale(0.24, 1)
+
+	local moveButtons: { [string]: TextButton } = {}
+	local picked: string? = nil
+	local pickMove: (move: string) -> () = function() end
+	local keyboard = UserInputService.KeyboardEnabled
+	for index, move in PetArenaConfig.Moves do
+		local button = PanelKit.button(
+			moves,
+			PetArenaConfig.MoveText[move] or move,
+			MOVE_COLOR[move] or C.Neutral
+		)
+		button.Name = move
+		button.LayoutOrder = index
+		button.Size = UDim2.new(1 / #PetArenaConfig.Moves, -8, 1, 0)
+		button.TextYAlignment = Enum.TextYAlignment.Top
+		PanelKit.setTextSize(button, 20)
+		local inset = Instance.new("UIPadding")
+		inset.PaddingTop = UDim.new(0, 10)
+		inset.PaddingBottom = UDim.new(0, 26)
+		inset.Parent = button
+		local hint = Instance.new("TextLabel")
+		hint.Name = "Hint"
+		hint.AnchorPoint = Vector2.new(0.5, 0)
+		hint.Position = UDim2.new(0.5, 0, 1, 2)
+		hint.Size = UDim2.new(1, -8, 0, 18)
+		hint.BackgroundTransparency = 1
+		hint.Font = PanelKit.FONT
+		hint.TextColor3 = UiTokens.textOn(MOVE_COLOR[move] or C.Neutral)
+		hint.TextTransparency = 0.2
+		hint.Text = (MOVE_HINT[move] or "")
+			.. (if keyboard then string.format("  [%d]", index) else "")
+		hint.Parent = button
+		Responsive.capText(hint, 14)
 		button.Activated:Connect(function()
-			remote("Move"):FireServer(move)
-			for _, other in moveButtons do
-				PanelKit.setDisabled(other, true)
-			end
-			status.Text = "⏳ Your pet is ready..."
+			pickMove(move)
 		end)
-		table.insert(moveButtons, button)
+		moveButtons[move] = button
 	end
-	local giveUp = PanelKit.button(moves, "🏳️", C.Neutral)
-	giveUp.Size = UDim2.fromScale(0.12, 1)
-	giveUp.Activated:Connect(function()
+
+	local confirmRow = Instance.new("Frame")
+	confirmRow.Name = "ConfirmForfeit"
+	confirmRow.BackgroundTransparency = 1
+	confirmRow.Size = UDim2.fromScale(1, 1)
+	confirmRow.Visible = false
+	confirmRow.Parent = actions
+	local confirmLayout = Instance.new("UIListLayout")
+	confirmLayout.FillDirection = Enum.FillDirection.Horizontal
+	confirmLayout.Padding = UDim.new(0, 8)
+	confirmLayout.Parent = confirmRow
+	local keepButton = PanelKit.button(confirmRow, "▶ Keep battling", C.Good)
+	keepButton.Size = UDim2.new(0.5, -4, 1, 0)
+	local forfeitButton =
+		PanelKit.button(confirmRow, "🏳️ Give up (counts as a loss)", C.Danger)
+	forfeitButton.Size = UDim2.new(0.5, -4, 1, 0)
+
+	local function showConfirm(visible: boolean): ()
+		confirmRow.Visible = visible
+		moves.Visible = not visible
+	end
+	screen.Close.Activated:Connect(function()
+		showConfirm(not confirmRow.Visible)
+	end)
+	keepButton.Activated:Connect(function()
+		showConfirm(false)
+	end)
+	forfeitButton.Activated:Connect(function()
+		showConfirm(false)
 		remote("Forfeit"):FireServer()
 	end)
 
 	local actors: { [string]: Actor } = {}
 	local current: BattleView? = nil
 	local stepConnection: RBXScriptConnection? = nil
+	local turnDeadline = 0
+
+	-- While waiting for the other side, the picked move stays lit and the
+	-- others grey out.
+	local function setWaiting(waiting: boolean): ()
+		for move, button in moveButtons do
+			if waiting and move == picked then
+				button.Active = false
+				button.Text = "✓ " .. (PetArenaConfig.MoveText[move] or move)
+			else
+				button.Text = PetArenaConfig.MoveText[move] or move
+				PanelKit.setDisabled(button, waiting)
+			end
+		end
+	end
+
+	pickMove = function(move: string)
+		local button: TextButton? = moveButtons[move]
+		if current == nil or button == nil or not button.Active or confirmRow.Visible then
+			return
+		end
+		picked = move
+		remote("Move"):FireServer(move)
+		setWaiting(true)
+		log.Text = "⏳ Your pet is ready..."
+	end
+
+	local function onKey(
+		_name: string,
+		state: Enum.UserInputState,
+		input: InputObject
+	): Enum.ContextActionResult
+		if state == Enum.UserInputState.Begin then
+			for index, key in MOVE_KEYS do
+				local move = PetArenaConfig.Moves[index]
+				if input.KeyCode == key and move then
+					pickMove(move)
+				end
+			end
+		end
+		return Enum.ContextActionResult.Sink
+	end
 
 	local function clearStage(): ()
 		for _, actor in actors do
@@ -687,66 +862,86 @@ local function buildBattle(parent: Instance): ()
 			actor.Bubble.CFrame =
 				CFrame.new(pivot.Position + Vector3.new(0, 1 * actor.Rig.Scale, 0))
 		end
+		-- Player battles: seconds left to pick a move.
+		if timerChip.Visible then
+			local left = math.max(0, math.ceil(turnDeadline - now))
+			timerChip.Text = string.format("⏱ %ds", left)
+			timerChip.BackgroundColor3 = if left <= 5 then C.Danger else C.Field
+		end
 	end
 
 	local function describe(event: EventView, view: BattleView): string
 		local who = if event.Side == view.You then "Your pet" else "The other pet"
 		if event.Move == "Boop" then
 			return string.format(
-				"%s boops for %d%s%s",
+				"💥 %s boops for %d%s%s",
 				who,
 				event.Damage,
 				if event.Lucky then " 🍀 lucky!" else "",
 				if event.Guarded then " (guarded)" else ""
 			)
 		elseif event.Move == "Charge" then
-			return who .. " charges up ⚡"
+			return "⚡ " .. who .. " charges up"
 		end
-		return who .. " guards 🛡️"
+		return "🛡️ " .. who .. " guards"
 	end
 
 	local function refresh(view: BattleView): ()
-		nameA.Text = string.format(
+		cardA.Name.Text = string.format(
 			"%s %s · %s",
 			emojiOf(view.A.Species),
 			nameOf(view.A.Species),
 			view.A.Name
 		)
-		nameB.Text = string.format(
+		cardB.Name.Text = string.format(
 			"%s · %s %s",
 			view.B.Name,
 			nameOf(view.B.Species),
 			emojiOf(view.B.Species)
 		)
-		barA.set(
-			view.A.Pep / view.A.MaxPep,
-			string.format("%d / %d Pep", view.A.Pep, view.A.MaxPep)
-		)
-		barB.set(
-			view.B.Pep / view.B.MaxPep,
-			string.format("%d / %d Pep", view.B.Pep, view.B.MaxPep)
-		)
-		local waiting = view.Waiting
-		for _, button in moveButtons do
-			PanelKit.setDisabled(button, waiting)
+		local function show(card: Card, fighter: FighterView): ()
+			local fraction = fighter.Pep / fighter.MaxPep
+			card.Bar.set(fraction, string.format("%d / %d Pep", fighter.Pep, fighter.MaxPep))
+			card.Fill.BackgroundColor3 = pepColor(fraction)
+			card.Badge.Visible = fighter.Charged
 		end
+		show(cardA, view.A)
+		show(cardB, view.B)
+		roundChip.Text = string.format("Round %d / %d", view.Round + 1, PetArenaConfig.MaxRounds)
+		if view.TurnLeft > 0 then
+			turnDeadline = os.clock() + view.TurnLeft
+		end
+		timerChip.Visible = view.Vs ~= "Cpu" and view.TurnLeft > 0
+		if not view.Waiting then
+			picked = nil
+		end
+		setWaiting(view.Waiting)
 	end
 
 	showBattle = function(view: BattleView)
 		local same = current ~= nil and (current :: BattleView).BattleId == view.BattleId
 		if view.Kind == "Battle" or not same then
+			closeArenaWindow()
 			clearStage()
 			spawnActor("A", view.A)
 			spawnActor("B", view.B)
-			status.Text = string.format(
-				"Round 1 · pick a move! (%s)",
+			showConfirm(false)
+			log.Text = string.format(
+				"Pick a move! (%s)",
 				if view.Vs == "Cpu" then "vs trainer" else "vs player"
 			)
 		end
 		current = view
-		gui.Enabled = true
+		screen.setOpen(true)
 		if stepConnection == nil then
 			stepConnection = RunService.RenderStepped:Connect(step)
+			ContextActionService:BindActionAtPriority(
+				MOVE_ACTION,
+				onKey,
+				false,
+				Enum.ContextActionPriority.High.Value,
+				table.unpack(MOVE_KEYS)
+			)
 		end
 		if view.Kind == "Round" then
 			-- Play the round's events one after another.
@@ -773,10 +968,9 @@ local function buildBattle(parent: Instance): ()
 				local fighter = if side == "A" then view.A else view.B
 				actor.Dizzy = fighter.Pep <= 0
 			end
-			status.Text =
-				string.format("Round %d · %s", view.Round + 1, table.concat(lines, " · "))
+			log.Text = table.concat(lines, "   ·   ")
 		elseif view.Kind == "Waiting" then
-			status.Text = if view.Waiting
+			log.Text = if view.Waiting
 				then "⏳ Waiting for the other trainer..."
 				else "Pick a move!"
 		end
@@ -784,11 +978,13 @@ local function buildBattle(parent: Instance): ()
 	end
 
 	endBattle = function()
-		gui.Enabled = false
+		screen.setOpen(false)
 		current = nil
+		picked = nil
 		if stepConnection then
 			stepConnection:Disconnect()
 			stepConnection = nil
+			ContextActionService:UnbindAction(MOVE_ACTION)
 		end
 		clearStage()
 	end

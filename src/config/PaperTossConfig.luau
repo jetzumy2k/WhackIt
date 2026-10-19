@@ -30,9 +30,10 @@ local PaperTossConfig = table.freeze({
 	Points = table.freeze({ Swish = 3, In = 2, Rim = 0, Miss = 0 }),
 	-- Seconds the server waits between two throws (no spamming).
 	MinThrowSeconds = 1.2,
-	-- How fast the meters sweep (seconds for one way across).
-	AimSweepSeconds = 0.9,
-	PowerSweepSeconds = 0.8,
+	-- How fast the meters sweep (seconds for one way across). Slowed from
+	-- 0.9 / 0.8 on 2026-10-11 after owner feedback ("hard to control").
+	AimSweepSeconds = 1.2,
+	PowerSweepSeconds = 1.05,
 
 	Opponents = table.freeze({
 		table.freeze({

@@ -16,12 +16,12 @@ export type BundleItem = { Key: string, Count: number }
 
 export type Product = {
 	Key: string, -- stable id, e.g. "xp_10_1h"
-	Kind: BuffKind | "MysteryHammer" | "Bundle" | "Egg",
+	Kind: BuffKind | "MysteryHammer" | "Bundle" | "Egg" | "SynthesisPick",
 	Percent: number, -- buff strength (0 for the hammer and bundles)
 	Seconds: number, -- buff duration in play time (0 for the hammer and bundles)
 	SuggestedPrice: number, -- Robux, display only
 	ProductId: number, -- Creator Hub Developer Product id; 0 = not set up yet
-	DisplayName: string?, -- bundles and eggs
+	DisplayName: string?, -- bundles, eggs and the Synthesis Pick
 	Rarity: string?, -- eggs only: what it hatches (Config/PetConfig)
 	-- Bundles only: what one purchase puts in the Bag, as separate items.
 	Contents: { BundleItem }?,
@@ -85,6 +85,9 @@ local PRODUCT_IDS: { [string]: number } = {
 	egg_common = 3717165483,
 	egg_rare = 3717165621,
 	egg_mythical = 3717165777,
+	-- Synthesis Pick (2026-10-19, docs/SYNTHESIS.md): create it (5 Robux), then
+	-- paste the id. Until then the machine hides the option.
+	synthesis_pick = 0,
 }
 
 -- Pet eggs (docs/PETS.md): each waits in the Bag until it's put in an
@@ -196,6 +199,20 @@ for _, egg in EGGS do
 		Rarity = egg.Rarity,
 	})
 end
+
+-- Synthesis Pick (docs/SYNTHESIS.md, owner approval 2026-10-19): one goes
+-- in the Bag; the Synthesis Machine uses it to give the result the player
+-- chooses on a random recipe. Not random itself, not giftable, not in a tab
+-- of the store (bought from the machine's window).
+table.insert(products, {
+	Key = "synthesis_pick",
+	Kind = "SynthesisPick",
+	Percent = 0,
+	Seconds = 0,
+	SuggestedPrice = 5,
+	ProductId = PRODUCT_IDS.synthesis_pick or 0,
+	DisplayName = "Synthesis Pick",
+})
 
 local byKey: { [string]: Product } = {}
 local byProductId: { [number]: Product } = {}

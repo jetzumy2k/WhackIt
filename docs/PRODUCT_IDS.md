@@ -3,7 +3,7 @@
 Generated 2026-10-08 from `src/config/StoreConfig.luau` (`PRODUCT_IDS`).
 
 A store product with no Product ID stays **hidden** in the Store, and the server refuses to prompt
-it. Nothing breaks while one is missing: the item just isn't for sale yet. **11 products** have no
+it. Nothing breaks while one is missing: the item just isn't for sale yet. **12 products** have no
 id. The other 29 already have one (see the last section).
 
 ## How to add one
@@ -19,7 +19,7 @@ id. The other 29 already have one (see the last section).
 4. Run `scripts/check.ps1`. A spec stops the build if two keys share the same id.
 5. Test the purchase in Studio (test purchases are free) and check the item arrives in the Bag.
 
-## Missing Product IDs (11)
+## Missing Product IDs (12)
 
 ### Crit Damage boosts: top two tiers (6)
 These are in the catalogue but were never given ids, so the store's **Crit Dmg** tab shows only
@@ -50,6 +50,14 @@ These are in the catalogue but were never given ids, so the store's **Crit Dmg**
 | `egg_common` | Common Egg | 49 | 1 Common Egg in the Bag (hatches Dog, Cat, Butterfly, Beetle or Ladybug) |
 | `egg_rare` | Rare Egg | 149 | 1 Rare Egg in the Bag (hatches Rabbit, Bear, Monkey or Toucan) |
 | `egg_mythical` | Mythical Egg | 399 | 1 Mythical Egg in the Bag (hatches Dragon, Phoenix or Unicorn) |
+
+### Synthesis Pick (1), docs/SYNTHESIS.md (added 2026-10-19)
+Not random. Until the id is set, the Synthesis Machine window hides the "Get a Synthesis Pick"
+button (random recipes still work, just without choosing).
+
+| Key | Suggested product name | Suggested price (R$) | What the player gets |
+|---|---|---|---|
+| `synthesis_pick` | Synthesis Pick | 5 | 1 Synthesis Pick in the Bag: choose the result of one random synthesis (mixed boosts or Supply Swap) |
 
 ## Already set up (29, no action needed)
 | Group | Keys |

@@ -3,8 +3,9 @@
 	The Bag (docs/STORE.md "Bag and gifts"): store items the player owns but
 	hasn't used yet (bought, gifted by friends, or dropped by custom bosses).
 	"Use" starts a boost; "Open" opens a Mystery Hammer or a bundle;
-	"Incubate" sends an egg to an incubator. Display only: the server checks
-	the player really has the item (BagService).
+	"Incubate" sends an egg to an incubator; a Synthesis Pick opens the
+	Synthesis Machine window (it's used there). Display only: the server
+	checks the player really has the item (BagService).
 
 	Since the visual overhaul (V4b) a PanelKit window with item cards in a
 	grid (Lib/PanelKit.itemCard), like every newer panel.
@@ -19,6 +20,7 @@ local PanelKit = require(script.Parent.Parent.Lib.PanelKit)
 local ProgressController = require(script.Parent.ProgressController)
 local Responsive = require(script.Parent.Parent.Lib.Responsive)
 local StoreConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("StoreConfig"))
+local SynthesisController = require(script.Parent.SynthesisController)
 
 local BagController = {}
 
@@ -38,6 +40,7 @@ local KIND_LOOK: { [string]: { Icon: string, Accent: Color3 } } = {
 	Egg = { Icon = "🥚", Accent = Color3.fromRGB(150, 210, 120) },
 	Bundle = { Icon = "📦", Accent = Color3.fromRGB(190, 140, 255) },
 	MysteryHammer = { Icon = "🎁", Accent = Color3.fromRGB(255, 120, 170) },
+	SynthesisPick = { Icon = "🎯", Accent = Color3.fromRGB(150, 110, 255) },
 }
 local RARITY_ACCENT: { [string]: Color3 } = {
 	Common = Color3.fromRGB(150, 210, 120),
@@ -89,6 +92,8 @@ local function actionText(product: StoreConfig.Product): string
 		return "Incubate"
 	elseif product.Kind == "MysteryHammer" or product.Kind == "Bundle" then
 		return "Open"
+	elseif product.Kind == "SynthesisPick" then
+		return "Synthesis"
 	end
 	return "Use"
 end
@@ -100,6 +105,8 @@ local function detailText(product: StoreConfig.Product): string
 		return "A hammer with surprise bonus stats."
 	elseif product.Kind == "Bundle" then
 		return "Opens into its boosts, ready in your Bag."
+	elseif product.Kind == "SynthesisPick" then
+		return "Choose the result of a random synthesis at the Synthesis Machine."
 	end
 	return "Counts down while you play. The strongest boost of each kind applies."
 end
@@ -163,6 +170,11 @@ function BagController.start(): ()
 			card.Button.Text = actionText(product)
 			PanelKit.setColor(card.Button, C.Good)
 			card.Button.Activated:Connect(function()
+				if product.Kind == "SynthesisPick" then
+					window:close()
+					SynthesisController.open()
+					return
+				end
 				local question = sameBuffQuestion(product)
 				if question then
 					confirm.ask(question, "Use it", function()

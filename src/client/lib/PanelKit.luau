@@ -183,10 +183,14 @@ end
 -- Buttons -----------------------------------------------------------------
 
 -- Remembers a button's colour so hover / disabled can return to it.
+-- Light buttons (gold, light blue) get dark text so their caption stays readable.
 function PanelKit.setColor(button: GuiButton, color: Color3): ()
 	button:SetAttribute("BaseColor", color)
 	if button.Active then
 		button.BackgroundColor3 = color
+		if button:IsA("TextButton") then
+			button.TextColor3 = UiTokens.textOn(color)
+		end
 	end
 end
 
@@ -200,6 +204,7 @@ function PanelKit.setDisabled(button: GuiButton, disabled: boolean): ()
 		else C.Neutral
 	if button:IsA("TextButton") then
 		button.TextTransparency = if disabled then 0.45 else 0
+		button.TextColor3 = UiTokens.textOn(button.BackgroundColor3)
 	end
 end
 
@@ -218,6 +223,12 @@ function PanelKit.button(parent: Instance, content: string, color: Color3?): Tex
 	button.Parent = parent
 	PanelKit.setTextSize(button, PanelKit.TEXT_SIZE)
 	corner(button, UiTokens.Radius.Button)
+	-- A soft top-to-bottom shade, so buttons read as pressable.
+	local shade = Instance.new("UIGradient")
+	shade.Name = "Shade"
+	shade.Rotation = 90
+	shade.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(215, 215, 222))
+	shade.Parent = button
 	local scale = Instance.new("UIScale")
 	scale.Parent = button
 	PanelKit.setColor(button, color or C.Neutral)
@@ -303,7 +314,28 @@ function PanelKit.section(
 	headerText.TextColor3 = C.Heading
 	headerText.TextXAlignment = Enum.TextXAlignment.Left
 	headerText.TextTruncate = Enum.TextTruncate.AtEnd
+	headerText.Text = title
 	header.Parent = card
+
+	-- Collapsible cards: a chevron on the right that points down when open.
+	local chevron: TextLabel? = nil
+	if collapsible then
+		local arrow = Instance.new("TextLabel")
+		arrow.Name = "Chevron"
+		arrow.AnchorPoint = Vector2.new(1, 0.5)
+		arrow.Position = UDim2.new(1, 26, 0.5, 0) -- past the header's 30 px right padding
+		arrow.Size = UDim2.fromOffset(22, 22)
+		arrow.BackgroundTransparency = 1
+		arrow.Font = PanelKit.FONT_BOLD
+		arrow.TextSize = 26
+		arrow.TextColor3 = C.Muted
+		arrow.Text = "›"
+		arrow.Parent = header
+		chevron = arrow
+		local inset = Instance.new("UIPadding")
+		inset.PaddingRight = UDim.new(0, 30)
+		inset.Parent = header
+	end
 
 	local body = Instance.new("Frame")
 	body.Name = "Body"
@@ -316,9 +348,9 @@ function PanelKit.section(
 
 	local function show(isExpanded: boolean): ()
 		body.Visible = isExpanded
-		headerText.Text = if collapsible
-			then (if isExpanded then "v  " else ">  ") .. title
-			else title
+		if chevron then
+			chevron.Rotation = if isExpanded then 90 else 0
+		end
 	end
 	show(expanded or not collapsible)
 	if collapsible then
@@ -717,6 +749,77 @@ end
 
 -- Window ------------------------------------------------------------------
 
+-- The dim behind a window or game screen. It fades in and out with the
+-- window (instantly with reduced motion) and catches clicks, so they don't
+-- reach the world behind it.
+export type Backdrop = {
+	Button: TextButton,
+	show: (visible: boolean) -> (),
+}
+
+function PanelKit.backdrop(parent: Instance): Backdrop
+	local button = Instance.new("TextButton")
+	button.Name = "Backdrop"
+	button.Text = ""
+	button.AutoButtonColor = false
+	button.Selectable = false
+	button.BorderSizePixel = 0
+	button.BackgroundColor3 = C.Backdrop
+	button.BackgroundTransparency = 1
+	-- Reaches up under Roblox's top bar, so the whole screen dims.
+	button.Position = UDim2.fromOffset(0, -120)
+	button.Size = UDim2.new(1, 0, 1, 120)
+	button.Visible = false
+	button.Parent = parent
+
+	local token = 0
+	local function show(visible: boolean): ()
+		token += 1
+		local target = if visible then UiTokens.BACKDROP_TRANSPARENCY else 1
+		if UiTokens.reducedMotion() then
+			button.Visible = visible
+			button.BackgroundTransparency = target
+			return
+		end
+		if visible then
+			button.Visible = true
+		end
+		local mine = token
+		local tween = TweenService:Create(
+			button,
+			TweenInfo.new(OPEN_SECONDS),
+			{ BackgroundTransparency = target }
+		)
+		tween.Completed:Connect(function()
+			if not visible and token == mine then
+				button.Visible = false
+			end
+		end)
+		tween:Play()
+	end
+	return { Button = button, show = show }
+end
+
+-- A square close button with a drawn X (no font glyph to go missing).
+function PanelKit.closeButton(parent: Instance): TextButton
+	local close = PanelKit.button(parent, "", C.Field)
+	close.Name = "Close"
+	close.Size = UDim2.fromOffset(44, 44)
+	for _, angle in { 45, -45 } do
+		local bar = Instance.new("Frame")
+		bar.Name = "Glyph"
+		bar.AnchorPoint = Vector2.new(0.5, 0.5)
+		bar.Position = UDim2.fromScale(0.5, 0.5)
+		bar.Size = UDim2.new(0.42, 0, 0, 3)
+		bar.Rotation = angle
+		bar.BackgroundColor3 = C.Text
+		bar.BorderSizePixel = 0
+		bar.Parent = close
+		corner(bar, 2)
+	end
+	return close
+end
+
 export type WindowOptions = {
 	Name: string,
 	Title: string,
@@ -734,6 +837,8 @@ function PanelKit.window(options: WindowOptions, parent: Instance): Window
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.DisplayOrder = options.DisplayOrder or 5
 
+	local backdrop = PanelKit.backdrop(gui)
+
 	local frame = Instance.new("Frame")
 	frame.Name = "Window"
 	frame.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -741,6 +846,7 @@ function PanelKit.window(options: WindowOptions, parent: Instance): Window
 	frame.BackgroundColor3 = C.Window
 	frame.Visible = false
 	frame.ClipsDescendants = true
+	frame.ZIndex = 2 -- above the backdrop
 	frame.Parent = gui
 	corner(frame, UiTokens.Radius.Window)
 	local stroke = Instance.new("UIStroke")
@@ -790,12 +896,9 @@ function PanelKit.window(options: WindowOptions, parent: Instance): Window
 	subtitle.TextTruncate = Enum.TextTruncate.AtEnd
 	subtitle.Text = options.Subtitle
 	subtitle.Parent = header
-	local close = PanelKit.button(header, "X", C.Neutral)
-	close.Name = "Close"
+	local close = PanelKit.closeButton(header)
 	close.AnchorPoint = Vector2.new(1, 0.5)
 	close.Position = UDim2.new(1, -14, 0.5, 2)
-	close.Size = UDim2.fromOffset(44, 44)
-	PanelKit.setTextSize(close, 20)
 
 	-- Navigation (sidebar or top strip) and the scrolling content.
 	local nav = Instance.new("ScrollingFrame")
@@ -824,9 +927,11 @@ function PanelKit.window(options: WindowOptions, parent: Instance): Window
 	list(content, 12)
 
 	local navButtons: { [string]: TextButton } = {}
+	local hasTabs = false
 
 	-- `compact`: tabs on top instead of a sidebar. `short`: a slimmer header
-	-- (no subtitle) and tab strip, for windows with little height.
+	-- (no subtitle) and tab strip, for windows with little height. A window
+	-- without tabs has no nav at all: the page gets the full width.
 	local function layoutFor(compact: boolean, short: boolean): ()
 		local headerHeight = if short then SHORT_HEADER_HEIGHT else HEADER_HEIGHT
 		local topnavHeight = if short then SHORT_TOPNAV_HEIGHT else TOPNAV_HEIGHT
@@ -835,7 +940,11 @@ function PanelKit.window(options: WindowOptions, parent: Instance): Window
 		title.TextSize = if short then 22 else 26
 		subtitle.Visible = not short
 		close.Size = if short then UDim2.fromOffset(40, 40) else UDim2.fromOffset(44, 44)
-		if compact then
+		nav.Visible = hasTabs
+		if not hasTabs then
+			content.Position = UDim2.fromOffset(0, headerHeight)
+			content.Size = UDim2.new(1, 0, 1, -headerHeight)
+		elseif compact then
 			nav.Position = UDim2.fromOffset(0, headerHeight)
 			nav.Size = UDim2.new(1, 0, 0, topnavHeight + 12)
 			nav.ScrollingDirection = Enum.ScrollingDirection.X
@@ -898,6 +1007,7 @@ function PanelKit.window(options: WindowOptions, parent: Instance): Window
 		open = function(_self: Window): ()
 			closing += 1
 			local reduced = UiTokens.reducedMotion()
+			backdrop.show(true)
 			if not frame.Visible then
 				scale.Scale = if reduced then 1 else 0.94
 				frame.Visible = true
@@ -922,6 +1032,7 @@ function PanelKit.window(options: WindowOptions, parent: Instance): Window
 				return
 			end
 			closing += 1
+			backdrop.show(false)
 			if UiTokens.reducedMotion() then
 				frame.Visible = false
 				return
@@ -947,6 +1058,7 @@ function PanelKit.window(options: WindowOptions, parent: Instance): Window
 			end
 		end,
 		setTabs = function(_self: Window, tabs: { Tab }, onSelect: (id: string) -> ()): ()
+			hasTabs = true
 			for index, tab in tabs do
 				local button = PanelKit.button(nav, tab.Label, C.Neutral)
 				button.Name = tab.Id
@@ -980,6 +1092,10 @@ function PanelKit.window(options: WindowOptions, parent: Instance): Window
 	}
 
 	close.Activated:Connect(function()
+		window:close()
+	end)
+	-- Clicking or tapping the dim outside the window closes it.
+	backdrop.Button.Activated:Connect(function()
 		window:close()
 	end)
 	GamepadNav.watch(frame, function()
@@ -1066,6 +1182,199 @@ function PanelKit.confirmDialog(window: Window, accent: Color3?): ConfirmDialog
 		end,
 		hide = hide,
 	}
+end
+
+-- Game screen -----------------------------------------------------------------
+
+-- A full-screen minigame layout (Paper Toss, Pet Battle): the world dims, a
+-- centred panel holds a header (title, info chips, a close / quit button)
+-- and a body whose children stack top to bottom. Give the one child that
+-- should take the leftover height (the stage) `PanelKit.fill(child)`.
+-- Clicking the dim does nothing, so a match is never quit by accident.
+export type GameScreenOptions = {
+	Name: string,
+	Title: string,
+	Accent: Color3,
+	DisplayOrder: number?,
+	MaxSize: Vector2?,
+}
+
+export type GameScreen = {
+	Gui: ScreenGui,
+	Panel: Frame,
+	Body: Frame,
+	Title: TextLabel,
+	Close: TextButton,
+	-- A rounded info chip in the header; returns its label to update.
+	chip: (text: string, color: Color3?) -> TextLabel,
+	setOpen: (open: boolean) -> (),
+	isOpen: () -> boolean,
+}
+
+local GAME_HEADER_HEIGHT = 58
+
+-- Makes `child` take the leftover height of its UIListLayout parent.
+function PanelKit.fill(child: GuiObject): ()
+	local flex = Instance.new("UIFlexItem")
+	flex.FlexMode = Enum.UIFlexMode.Fill
+	flex.Parent = child
+end
+
+function PanelKit.gameScreen(options: GameScreenOptions, parent: Instance): GameScreen
+	local gui = Instance.new("ScreenGui")
+	gui.Name = options.Name
+	gui.ResetOnSpawn = false
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	gui.DisplayOrder = options.DisplayOrder or 8
+	gui.Enabled = false
+	gui.Parent = parent
+	local backdrop = PanelKit.backdrop(gui)
+
+	local panel = Instance.new("Frame")
+	panel.Name = "Panel"
+	panel.AnchorPoint = Vector2.new(0.5, 0.5)
+	panel.Position = UDim2.fromScale(0.5, 0.5)
+	panel.BackgroundColor3 = C.Window
+	panel.ClipsDescendants = true
+	panel.ZIndex = 2
+	panel.Parent = gui
+	corner(panel, UiTokens.Radius.Window)
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = options.Accent
+	stroke.Thickness = 2
+	stroke.Transparency = 0.25
+	stroke.Parent = panel
+	local limit = Instance.new("UISizeConstraint")
+	limit.MaxSize = options.MaxSize or Vector2.new(880, 700)
+	limit.Parent = panel
+	local scale = Instance.new("UIScale")
+	scale.Parent = panel
+	Responsive.onChanged(function()
+		panel.Size = if Responsive.formFactor() == "Phone"
+			then UDim2.fromScale(0.98, 0.96)
+			else UDim2.fromScale(0.64, 0.86)
+	end)
+
+	local header = Instance.new("Frame")
+	header.Name = "Header"
+	header.BackgroundColor3 = C.Header
+	header.BorderSizePixel = 0
+	header.Size = UDim2.new(1, 0, 0, GAME_HEADER_HEIGHT)
+	header.Parent = panel
+	local strip = Instance.new("Frame")
+	strip.Name = "Accent"
+	strip.BackgroundColor3 = options.Accent
+	strip.BorderSizePixel = 0
+	strip.Size = UDim2.new(1, 0, 0, 4)
+	strip.Parent = header
+	local title = Instance.new("TextLabel")
+	title.Name = "Title"
+	title.BackgroundTransparency = 1
+	title.Position = UDim2.fromOffset(18, 4)
+	title.Size = UDim2.new(0.42, -18, 1, -4)
+	title.Font = PanelKit.TITLE_FONT
+	title.TextColor3 = C.Text
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.Text = options.Title
+	title.Parent = header
+	PanelKit.setTextSize(title, 24)
+
+	local chips = Instance.new("Frame")
+	chips.Name = "Chips"
+	chips.BackgroundTransparency = 1
+	chips.AnchorPoint = Vector2.new(1, 0.5)
+	chips.Position = UDim2.new(1, -70, 0.5, 2)
+	chips.Size = UDim2.new(0.58, -80, 0, 32)
+	chips.Parent = header
+	local chipLayout = list(chips, UiTokens.Space.S, true)
+	chipLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+
+	local close = PanelKit.closeButton(header)
+	close.AnchorPoint = Vector2.new(1, 0.5)
+	close.Position = UDim2.new(1, -12, 0.5, 2)
+
+	local body = Instance.new("Frame")
+	body.Name = "Body"
+	body.BackgroundTransparency = 1
+	body.Position = UDim2.fromOffset(0, GAME_HEADER_HEIGHT)
+	body.Size = UDim2.new(1, 0, 1, -GAME_HEADER_HEIGHT)
+	body.Parent = panel
+	padding(body, UiTokens.Space.M)
+	list(body, UiTokens.Space.S + 2)
+
+	local function chip(content: string, color: Color3?): TextLabel
+		local label = Instance.new("TextLabel")
+		label.Name = "Chip"
+		label.LayoutOrder = nextOrder(chips)
+		label.AutomaticSize = Enum.AutomaticSize.X
+		label.Size = UDim2.fromScale(0, 1)
+		label.BackgroundColor3 = color or C.Field
+		label.Font = PanelKit.FONT_BOLD
+		label.TextSize = math.max(12, math.floor(PanelKit.SMALL_SIZE * Responsive.textScale()))
+		label.TextColor3 = UiTokens.textOn(label.BackgroundColor3)
+		label.Text = content
+		label.Parent = chips
+		corner(label, 16)
+		local inset = Instance.new("UIPadding")
+		inset.PaddingLeft = UDim.new(0, 12)
+		inset.PaddingRight = UDim.new(0, 12)
+		inset.Parent = label
+		return label
+	end
+
+	local function setOpen(open: boolean): ()
+		if open == gui.Enabled then
+			return
+		end
+		backdrop.show(open)
+		gui.Enabled = open
+		if open then
+			if UiTokens.reducedMotion() then
+				scale.Scale = 1
+			else
+				scale.Scale = 0.94
+				TweenService:Create(
+					scale,
+					TweenInfo.new(OPEN_SECONDS, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+					{ Scale = 1 }
+				):Play()
+			end
+		end
+	end
+
+	return {
+		Gui = gui,
+		Panel = panel,
+		Body = body,
+		Title = title,
+		Close = close,
+		chip = chip,
+		setOpen = setOpen,
+		isOpen = function(): boolean
+			return gui.Enabled
+		end,
+	}
+end
+
+-- A short "pop" (grow then settle) on a label or button, skipped with
+-- reduced motion. Used for results and score changes.
+function PanelKit.pop(object: GuiObject): ()
+	if UiTokens.reducedMotion() then
+		return
+	end
+	local scale = object:FindFirstChildOfClass("UIScale")
+	if scale == nil then
+		local created = Instance.new("UIScale")
+		created.Parent = object
+		scale = created
+	end
+	local s = scale :: UIScale
+	s.Scale = 1.25
+	TweenService:Create(
+		s,
+		TweenInfo.new(UiTokens.Motion.Pop, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+		{ Scale = 1 }
+	):Play()
 end
 
 return PanelKit

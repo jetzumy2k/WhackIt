@@ -13,7 +13,7 @@ validation live in `src/server/lib/PlayerDataSchema.luau`; storage settings in
 | Session locking | ProfileStore | One server owns a profile at a time, so progress can't be duplicated by joining two servers |
 | Auto-save | ProfileStore | Periodic, plus on leave (`EndSession`) and server shutdown |
 
-## Schema v20 (current)
+## Schema v21 (current)
 ```lua
 type PlayerData = {
     SchemaVersion: number,        -- 11
@@ -130,6 +130,10 @@ type PlayerData = {
         Best: number,             -- best score in one game (0..15)
         TotalWins: number,
     },
+    Synthesis: {                  -- v21, docs/SYNTHESIS.md (Shared/SynthesisRules.State)
+        Total: number,            -- syntheses done (0 = the window's guide starts open)
+        PicksUsed: number,        -- Synthesis Picks spent
+    },
 }
 ```
 New players start from `PlayerDataSchema.template()`: `StartingScore`, `StartingStress`, `StartingCoins`,
@@ -148,6 +152,7 @@ zero counters, `DefaultHammerId`, nothing bought, no defeats.
 | v10 | Level rework (2026-10-09): **no level is lost.** XP is raised to `max(Xp, LevelRules.scoreForLevel(min(oldLevel, 100)))`, where `oldLevel` is the old curve's `floor(sqrt(Xp / 600)) + 1` (`LevelRules.legacyLevelFor`); players at Level 10 or below keep their XP exactly. `LevelRewardsClaimed = that level` (no back-dated coins); `Cosmetics = {}`. XP only ever goes up, so the XP leaderboard keeps every player's order among themselves. |
 | v11 | Offices (2026-10-09): `Furniture = {}`, `OfficePrivacy = "Public"`; no `OfficeLayout` yet, so sanitize gives the starting furniture (`FurnitureConfig.DefaultLayout`: desk, chair, plant). |
 | v12 | Pickleball (2026-10-10): `Recreation` left empty (sanitize gives the starting record: rating 1000, no matches), `ProcessedMatches = {}`, `SeasonClaims = {}`. |
+| v21 | Synthesis Machine (2026-10-19): `Synthesis` left empty, so sanitize gives 0 syntheses and 0 picks used. The new Bag item `synthesis_pick` needs no migration (it's an ordinary `StoreConfig` key); the version bump keeps v20 servers from loading the data and dropping it. |
 | v20 | Paper Toss Showdown (2026-10-10): `PaperToss` left empty, so sanitize gives no games. |
 | v19 | Lucky Capsule Machine (2026-10-10): `Capsule` left empty, so sanitize gives no spins. |
 | v18 | Pet Arena (2026-10-10): `PetArena` left empty, so sanitize gives no trainers beaten and no battles today. |

@@ -332,6 +332,18 @@
           }
         },
 
+        "Synthesis": {
+          "$className": "Folder",
+
+          "Synthesize": {
+            "$className": "RemoteEvent"
+          },
+
+          "Result": {
+            "$className": "RemoteEvent"
+          }
+        },
+
         "PetArena": {
           "$className": "Folder",
 

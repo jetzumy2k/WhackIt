@@ -70,6 +70,23 @@ Besides windows, sections, rows, buttons, text, stat tiles and grids:
 | `tooltip(object, text)` | a hint above a control: on hover, while selected with a gamepad, and for 2 s after a touch long-press. Use on unclipped controls (HUD buttons); the Menu button has one |
 | `confirmDialog(window, accent)` | "Are you sure?" with [Cancel] [Confirm]; the Admin panel's confirmations use it |
 
+## Polish round (2026-10-11)
+From owner screenshots (`docs/screenshot-ai-review`): hard-to-control games and rough windows.
+- **Readable buttons:** `UiTokens.textOn(colour)` picks dark ink on light colours (gold, light blue,
+  orange) and white elsewhere; `PanelKit.setColor` / `setDisabled` apply it, so a gold button never
+  has white text. Buttons have a soft top-to-bottom shade.
+- **Windows:** a window without tabs has no nav (no empty sidebar). The world dims behind an open
+  window (`PanelKit.backdrop`, `UiTokens.BACKDROP_TRANSPARENCY`); clicking the dim closes it. The
+  close button is a drawn ✕ (`PanelKit.closeButton`). Collapsible cards show a › chevron on the right
+  instead of "v" / ">".
+- **Game screens (`PanelKit.gameScreen`):** Paper Toss and Pet Battle share one layout: the world
+  dims (clicks on the dim do nothing), a header with the title, info chips and ✕, and a body that
+  stacks top to bottom; the stage takes the leftover height (`PanelKit.fill`, a `UIFlexItem`), so
+  phones lose stage height, never controls. ✕ asks first (Keep playing / Quit). Games have keys:
+  Space (Paper Toss), 1 / 2 / 3 (Pet Battle), bound only while the screen is open.
+- **`PanelKit.pop(object)`:** a short grow-and-settle for results and score changes (skipped with
+  Reduced motion).
+
 ## Settings (2026-10-09)
 Player Panel → **Settings**. Each switch is saved with the player's data (`Settings`, schema v9) and
 follows them to every server; a change shows at once and the server's next sync confirms it

@@ -147,6 +147,7 @@ function ProgressService.snapshot(
 		},
 		Capsule = table.clone(data.Capsule),
 		PaperToss = { Cleared = data.PaperToss.Cleared, Best = data.PaperToss.Best },
+		Synthesis = table.clone(data.Synthesis),
 	}
 end
 

@@ -36,6 +36,7 @@ local QuestRules = require(ReplicatedStorage.Shared.QuestRules)
 local SettingsRules = require(ReplicatedStorage.Shared.SettingsRules)
 local ShowcaseRules = require(ReplicatedStorage.Shared.ShowcaseRules)
 local StoreConfig = require(ReplicatedStorage.Config.StoreConfig)
+local SynthesisRules = require(ReplicatedStorage.Shared.SynthesisRules)
 
 export type PlayerData = {
 	SchemaVersion: number,
@@ -100,6 +101,8 @@ export type PlayerData = {
 	Capsule: CapsuleRules.State, -- today's Lucky Capsule spins
 	-- v20 (docs/PAPER_TOSS.md)
 	PaperToss: PaperTossRules.Record, -- opponents beaten, best score, today's wins
+	-- v21 (docs/SYNTHESIS.md)
+	Synthesis: SynthesisRules.State, -- syntheses done, Synthesis Picks used
 }
 
 export type PendingGift = {
@@ -115,7 +118,7 @@ export type Migration = (data: RawData) -> ()
 
 local PlayerDataSchema = {}
 
-PlayerDataSchema.CURRENT_VERSION = 20
+PlayerDataSchema.CURRENT_VERSION = 21
 
 -- Upper bound for counters; far beyond legitimate play, small enough to stay
 -- an exact integer and to keep leaderboard values sane.
@@ -253,6 +256,12 @@ PlayerDataSchema.MIGRATIONS = table.freeze({
 		-- v19 -> v20: Paper Toss Showdown. No games yet.
 		data.PaperToss = nil
 	end,
+	[21] = function(data: RawData)
+		-- v20 -> v21: the Synthesis Machine. Nothing synthesized yet. (Its
+		-- Synthesis Pick lives in the Bag; this version also keeps older
+		-- servers, which don't know that item, from loading the data.)
+		data.Synthesis = nil
+	end,
 }) :: { [number]: Migration }
 
 -- Most recent purchase ids remembered for duplicate-receipt protection. Roblox
@@ -308,6 +317,7 @@ function PlayerDataSchema.template(): PlayerData
 		PetArena = PetArenaRules.defaultRecord(),
 		Capsule = CapsuleRules.defaultState(),
 		PaperToss = PaperTossRules.defaultRecord(),
+		Synthesis = SynthesisRules.defaultState(),
 	}
 end
 
@@ -598,6 +608,7 @@ function PlayerDataSchema.sanitize(data: RawData): ()
 	data.PetArena = PetArenaRules.sanitizeRecord(data.PetArena)
 	data.Capsule = CapsuleRules.sanitizeState(data.Capsule)
 	data.PaperToss = PaperTossRules.sanitizeRecord(data.PaperToss)
+	data.Synthesis = SynthesisRules.sanitizeState(data.Synthesis)
 	local matches: { string } = {}
 	local rawMatches = data.ProcessedMatches
 	if typeof(rawMatches) == "table" then

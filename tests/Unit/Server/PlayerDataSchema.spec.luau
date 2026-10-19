@@ -1087,4 +1087,43 @@ return function()
 			expect(record.TotalWins).to.equal(6)
 		end)
 	end)
+	describe("PlayerDataSchema v21 (synthesis machine)", function()
+		local SynthesisRules = require(ReplicatedStorage.Shared.SynthesisRules)
+
+		it("starts existing players with nothing synthesized, touching nothing else", function()
+			local data = validData()
+			data.SchemaVersion = 20
+			data.Synthesis = { Total = 9, PicksUsed = 2 } -- can't exist before v21
+			expect((PlayerDataSchema.prepare(data))).to.equal(true)
+			local state = data.Synthesis :: SynthesisRules.State
+			expect(state.Total).to.equal(0)
+			expect(state.PicksUsed).to.equal(0)
+			expect(data.Coins).to.equal(250)
+			expect(data.SchemaVersion).to.equal(PlayerDataSchema.CURRENT_VERSION)
+		end)
+
+		it("keeps a saved record and repairs a broken one", function()
+			local data = validData()
+			data.Synthesis = { Total = 12, PicksUsed = 3 }
+			PlayerDataSchema.prepare(data)
+			PlayerDataSchema.prepare(data)
+			local state = data.Synthesis :: SynthesisRules.State
+			expect(state.Total).to.equal(12)
+			expect(state.PicksUsed).to.equal(3)
+
+			local broken = validData()
+			broken.Synthesis = { Total = -5, PicksUsed = 0 / 0 }
+			PlayerDataSchema.prepare(broken)
+			local repaired = broken.Synthesis :: SynthesisRules.State
+			expect(repaired.Total).to.equal(0)
+			expect(repaired.PicksUsed).to.equal(0)
+		end)
+
+		it("keeps a Synthesis Pick in the Bag", function()
+			local data = validData()
+			data.Bag = { synthesis_pick = 2 }
+			PlayerDataSchema.prepare(data)
+			expect((data.Bag :: { [string]: number }).synthesis_pick).to.equal(2)
+		end)
+	end)
 end

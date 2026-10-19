@@ -14,13 +14,16 @@ on the Social page.
 2. Pick your fighter: one of your pets (its battle stats are shown).
 3. 🏆 **Trainers**: battle the five CPU trainers in order, or 🤝 **Challenge** a player in the server
    (they get a card with ACCEPT; their picked pet fights).
-4. Each round pick a move. The battle screen shows both pets on a little stage with Pep bars:
+4. Each round pick a move (or press **1** / **2** / **3**). The battle screen dims the world and closes
+   the arena window. It shows both pets on a little stage, a card per pet with its Pep bar (green, gold
+   when low, red when nearly dizzy) and a ⚡ CHARGED badge, a log of the last round, the round and (in
+   player battles) the turn timer (red under 5 s). Each move button has a one-line hint:
    - 💥 **Boop**: takes Pep from the other pet. 🍀 Lucky boops do 1.5×.
    - ⚡ **Charge**: your next Boop does 2× (the pet glows).
    - 🛡️ **Guard**: a boop on you this round only does 40 % (a bubble appears).
    Both pets choose at the same time; the faster pet acts first. Boops lunge and the target wobbles;
    the dizzy pet spins. After 20 rounds the pet with the bigger share of its Pep left wins.
-5. 🏳️ gives up. Against a player, a pet whose trainer doesn't choose within 15 s Boops.
+5. The **X** asks first: ▶ Keep battling or 🏳️ Give up (a loss). Against a player, a pet whose trainer doesn't choose within 15 s Boops.
 
 ## Battle stats (`PetArenaRules.statsFor`)
 | | Common | Rare | Mythical |

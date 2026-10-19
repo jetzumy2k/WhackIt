@@ -88,6 +88,13 @@ local RemoteLimits = table.freeze({
 		RefillPerSecond = 0.5,
 	}),
 
+	-- Synthesis Machine: one request per synthesis; the server also waits
+	-- SynthesisConfig.CooldownSeconds between two.
+	Synthesis = table.freeze({
+		Capacity = 3,
+		RefillPerSecond = 1,
+	}),
+
 	-- Paper Toss: starting, throwing, quitting (throws also wait
 	-- PaperTossConfig.MinThrowSeconds).
 	PaperToss = table.freeze({

@@ -12,10 +12,18 @@ Code: `Config/PaperTossConfig`, `Shared/PaperTossRules` (pure, unit-tested), `Se
 1. Walk to the 🗑️ PAPER TOSS sign (prompt "Play") or 🏢 Social → 🗑️ Paper Toss.
 2. Pick a coworker: 🧑‍💼 **Intern Izzy**, 👔 **Manager Max**, 👑 **CEO Cora** (beat each to unlock the next).
 3. **5 rounds.** Each round the server places the bin (near, mid or far) and sets a desk-fan **breeze**.
-   The game screen shows a little office with the bin and a breeze arrow.
-4. Tap **THROW** to stop the sweeping **aim** marker, then again to stop the **power** bar. Your paper
-   ball arcs to where it lands; then your coworker throws.
-5. Far bins need more power; aim a little against the breeze.
+   The game screen (the world dims behind it) shows the scoreboard (you vs the coworker), a little
+   office with the bin, a breeze chip and a distance chip, then the **AIM** and **POWER** meters.
+4. Each meter shows its target: a **gold zone** (swish) inside a **green zone** (in). Press **STOP**
+   (or **Space**; **R2** / **X** on a gamepad) while the aim marker is in the zone, then again for the
+   power bar. A stopped marker turns gold, green or red. Your paper ball arcs to where it lands, a big
+   banner shows the result, then your coworker throws.
+5. The zones move with the bin's distance (far bins need more power) and the breeze.
+6. The **X** asks first: ▶ Keep playing or 🚪 Quit (no reward).
+
+The meters sweep in 1.2 s (aim) and 1.05 s (power) one way across (`PaperTossConfig`; slowed from
+0.9 / 0.8 on 2026-10-11 after owner feedback that the toss was hard to control). The zones are drawn
+from the round the client already knows; the server still judges every throw.
 
 | Result | How close to the ideal throw | Points |
 |---|---|---|

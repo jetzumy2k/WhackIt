@@ -27,6 +27,11 @@ Every boost comes in three lengths of **play time**: 30 minutes, 1 hour or 5 hou
 | **Beginner Bundle** (2026-10-08) | 99 | | |
 | **Stress Reliever Package** (2026-10-08) | 599 | | |
 | **Common / Rare / Mythical Egg** (2026-10-08, docs/PETS.md) | 49 / 149 / 399 | | |
+| **Synthesis Pick** (2026-10-19, docs/SYNTHESIS.md) | 5 | | |
+
+The Synthesis Pick has no store tab: it's offered in the Synthesis Machine window on random
+recipes, where it lets the player choose the result. It goes to the Bag like every purchase, isn't
+random and isn't giftable.
 
 Why these prices: 30-minute boosts sit at impulse prices (10–49 R$). Longer boosts give a better
 rate per minute, so the 5-hour packs are about 30–40 % of the 30-minute rate. Damage boosts cost more

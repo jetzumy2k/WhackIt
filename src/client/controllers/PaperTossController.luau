@@ -5,18 +5,23 @@
 	  * Window (the booth at the Recreation Center, or 🏢 Social): pick a CPU
 	    coworker (Intern Izzy, Manager Max, CEO Cora; beat each to unlock the
 	    next), your best score and the rules.
-	  * Game screen: a little office in a ViewportFrame with the bin at this
-	    round's distance and a desk-fan breeze arrow. Tap THROW to stop the
-	    sweeping aim marker, tap again to stop the power bar; your paper ball
-	    arcs to where it lands (swish, in, off the rim or a miss), then the
-	    coworker throws. Scores and the round on top.
+	  * Game screen (PanelKit.gameScreen, the world dims): a scoreboard (you
+	    vs the coworker), a little office in a ViewportFrame with the bin at
+	    this round's distance plus breeze and distance chips, then the AIM
+	    and POWER meters with their target zones (gold = swish, green = in).
+	    Press STOP (or Space / R2 / X) to stop the aim marker, again to stop
+	    the power; each stopped marker turns gold, green or red. Your paper
+	    ball arcs to where it lands, a big banner shows the result, then the
+	    coworker throws. The X asks before quitting.
 	The server judges every throw and pays the rewards (PaperTossService).
 ]]
 
+local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 local PaperTossConfig =
 	require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("PaperTossConfig"))
@@ -40,6 +45,13 @@ local RESULT_TEXT = {
 	Rim = "😬 Off the rim!",
 	Miss = "❌ Missed",
 }
+local RESULT_COLOR = {
+	Swish = UiTokens.Color.Gold,
+	In = C.Good,
+	Rim = C.Text,
+	Miss = C.Text,
+}
+local THROW_ACTION = "PaperTossThrow"
 -- The thrower stands here; bins stand down the room (-Z) by distance.
 local THROW_FROM = Vector3.new(0, 2.2, 6)
 local BIN_Z = { -2, -6, -10 }
@@ -114,55 +126,99 @@ local startGame: (opponent: number, rounds: number, round: RoundView?) -> () = f
 local playRound: (payload: { [string]: unknown }) -> () = function() end
 local closeGame: () -> () = function() end
 
+type Meter = {
+	Row: Frame,
+	Label: TextLabel,
+	Track: Frame,
+	Outline: UIStroke,
+	InZone: Frame,
+	SwishZone: Frame,
+	Marker: Frame,
+}
+
+local DISTANCE_TEXT = { "📏 Near bin", "📏 Middle bin", "📏 Far bin" }
+local MARKER_IDLE = Color3.fromRGB(250, 250, 255)
+
 local function buildGame(parent: Instance): ()
-	local gui = Instance.new("ScreenGui")
-	gui.Name = "PaperTossGame"
-	gui.ResetOnSpawn = false
-	gui.DisplayOrder = 8
-	gui.Enabled = false
-	gui.Parent = parent
+	local screen = PanelKit.gameScreen({
+		Name = "PaperTossGame",
+		Title = "🗑️ Paper Toss",
+		Accent = ACCENT,
+	}, parent)
+	local body = screen.Body
+	local roundChip = screen.chip("Round 1 / 5")
 
-	local panel = Instance.new("Frame")
-	panel.AnchorPoint = Vector2.new(0.5, 0.5)
-	panel.Position = UDim2.fromScale(0.5, 0.5)
-	panel.Size = UDim2.fromScale(0.7, 0.82)
-	panel.BackgroundColor3 = C.Window
-	panel.Parent = gui
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, UiTokens.Radius.Window)
-	corner.Parent = panel
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = ACCENT
-	stroke.Thickness = 2
-	stroke.Parent = panel
-	local limit = Instance.new("UISizeConstraint")
-	limit.MaxSize = Vector2.new(820, 620)
-	limit.Parent = panel
-	Responsive.onChanged(function()
-		panel.Size = if Responsive.formFactor() == "Phone"
-			then UDim2.fromScale(0.96, 0.92)
-			else UDim2.fromScale(0.7, 0.82)
-	end)
+	-- Scoreboard: you on the left, the coworker on the right.
+	local scoreRow = Instance.new("Frame")
+	scoreRow.Name = "Scoreboard"
+	scoreRow.LayoutOrder = 1
+	scoreRow.BackgroundTransparency = 1
+	scoreRow.Size = UDim2.new(1, 0, 0, 56)
+	scoreRow.Parent = body
+	local function scoreCard(side: number, accent: Color3): (TextLabel, TextLabel)
+		local card = Instance.new("Frame")
+		card.AnchorPoint = Vector2.new(side, 0)
+		card.Position = UDim2.fromScale(side, 0)
+		card.Size = UDim2.new(0.5, -30, 1, 0)
+		card.BackgroundColor3 = C.Card
+		card.Parent = scoreRow
+		local round = Instance.new("UICorner")
+		round.CornerRadius = UDim.new(0, UiTokens.Radius.Card)
+		round.Parent = card
+		local outline = Instance.new("UIStroke")
+		outline.Color = accent
+		outline.Transparency = 0.5
+		outline.Thickness = 1.5
+		outline.Parent = card
+		local name = Instance.new("TextLabel")
+		name.BackgroundTransparency = 1
+		name.Position = UDim2.fromOffset(if side == 0 then 14 else 76, 0)
+		name.Size = UDim2.new(1, -90, 1, 0)
+		name.Font = PanelKit.FONT_BOLD
+		name.TextColor3 = C.Text
+		name.TextXAlignment = if side == 0
+			then Enum.TextXAlignment.Left
+			else Enum.TextXAlignment.Right
+		name.Parent = card
+		Responsive.capText(name, 18)
+		local score = Instance.new("TextLabel")
+		score.BackgroundTransparency = 1
+		score.AnchorPoint = Vector2.new(1 - side, 0)
+		score.Position = UDim2.new(1 - side, if side == 0 then -10 else 10, 0, 0)
+		score.Size = UDim2.new(0, 60, 1, 0)
+		score.Font = UiTokens.Font.Title
+		score.TextSize = 34
+		score.TextColor3 = accent
+		score.Text = "0"
+		score.Parent = card
+		return name, score
+	end
+	local youName, youScore = scoreCard(0, ACCENT)
+	local cpuName, cpuScore = scoreCard(1, C.Heading)
+	youName.Text = "🙂 You"
+	local versus = Instance.new("TextLabel")
+	versus.BackgroundTransparency = 1
+	versus.AnchorPoint = Vector2.new(0.5, 0)
+	versus.Position = UDim2.fromScale(0.5, 0)
+	versus.Size = UDim2.new(0, 56, 1, 0)
+	versus.Font = UiTokens.Font.Title
+	versus.TextSize = 20
+	versus.TextColor3 = C.Muted
+	versus.Text = "VS"
+	versus.Parent = scoreRow
 
-	local scoreboard = Instance.new("TextLabel")
-	scoreboard.BackgroundTransparency = 1
-	scoreboard.Position = UDim2.fromScale(0.02, 0.01)
-	scoreboard.Size = UDim2.fromScale(0.96, 0.08)
-	scoreboard.Font = Enum.Font.FredokaOne
-	scoreboard.TextColor3 = C.Text
-	scoreboard.Parent = panel
-	Responsive.capText(scoreboard, 24)
-
-	-- The office.
+	-- The office: takes the leftover height.
 	local viewport = Instance.new("ViewportFrame")
-	viewport.Position = UDim2.fromScale(0.02, 0.1)
-	viewport.Size = UDim2.fromScale(0.96, 0.5)
+	viewport.Name = "Stage"
+	viewport.LayoutOrder = 2
+	viewport.Size = UDim2.new(1, 0, 0, 140)
 	viewport.BackgroundColor3 = Color3.fromRGB(205, 220, 240)
 	viewport.Ambient = Color3.fromRGB(200, 200, 210)
 	viewport.LightColor = Color3.fromRGB(255, 250, 240)
-	viewport.Parent = panel
+	viewport.Parent = body
+	PanelKit.fill(viewport)
 	local vpCorner = Instance.new("UICorner")
-	vpCorner.CornerRadius = UDim.new(0, 12)
+	vpCorner.CornerRadius = UDim.new(0, UiTokens.Radius.Card)
 	vpCorner.Parent = viewport
 	local world = Instance.new("WorldModel")
 	world.Parent = viewport
@@ -213,82 +269,229 @@ local function buildGame(parent: Instance): ()
 	)
 	paper.Transparency = 1
 
-	local windLabel = Instance.new("TextLabel")
-	windLabel.BackgroundTransparency = 0.3
-	windLabel.BackgroundColor3 = C.Window
-	windLabel.Position = UDim2.fromScale(0.03, 0.12)
-	windLabel.Size = UDim2.fromScale(0.3, 0.06)
-	windLabel.Font = PanelKit.FONT_BOLD
-	windLabel.TextColor3 = C.Text
-	windLabel.Parent = panel
-	Responsive.capText(windLabel, 16)
-	Instance.new("UICorner").Parent = windLabel
+	-- Chips over the stage: the breeze (top left) and the distance (top right).
+	local function stageChip(side: number): TextLabel
+		local chip = Instance.new("TextLabel")
+		chip.AnchorPoint = Vector2.new(side, 0)
+		chip.Position = UDim2.new(side, if side == 0 then 10 else -10, 0, 10)
+		chip.AutomaticSize = Enum.AutomaticSize.X
+		chip.Size = UDim2.fromOffset(0, 32)
+		chip.BackgroundColor3 = C.Window
+		chip.BackgroundTransparency = 0.15
+		chip.Font = PanelKit.FONT_BOLD
+		chip.TextSize = 16
+		chip.TextColor3 = C.Text
+		chip.ZIndex = 3
+		chip.Parent = viewport
+		local round = Instance.new("UICorner")
+		round.CornerRadius = UDim.new(0, 16)
+		round.Parent = chip
+		local inset = Instance.new("UIPadding")
+		inset.PaddingLeft = UDim.new(0, 12)
+		inset.PaddingRight = UDim.new(0, 12)
+		inset.Parent = chip
+		return chip
+	end
+	local windChip = stageChip(0)
+	local distanceChip = stageChip(1)
 
-	local status = Instance.new("TextLabel")
-	status.BackgroundTransparency = 1
-	status.Position = UDim2.fromScale(0.02, 0.61)
-	status.Size = UDim2.fromScale(0.96, 0.07)
-	status.Font = PanelKit.FONT_BOLD
-	status.TextColor3 = C.Heading
-	status.Parent = panel
-	Responsive.capText(status, 20)
+	-- A big result banner in the middle of the stage ("SWISH! +3").
+	local banner = Instance.new("TextLabel")
+	banner.Name = "Result"
+	banner.AnchorPoint = Vector2.new(0.5, 0.5)
+	banner.Position = UDim2.fromScale(0.5, 0.42)
+	banner.Size = UDim2.new(0.9, 0, 0, 56)
+	banner.BackgroundTransparency = 1
+	banner.Font = UiTokens.Font.Title
+	banner.TextSize = 40
+	banner.TextColor3 = C.Text
+	banner.TextStrokeColor3 = C.Ink
+	banner.TextStrokeTransparency = 0.2
+	banner.Text = ""
+	banner.ZIndex = 4
+	banner.Parent = viewport
 
-	-- Meters.
-	local function meter(y: number, label: string): (Frame, Frame)
+	-- Meters: AIM and POWER, each with its target zones.
+	local meterCard = Instance.new("Frame")
+	meterCard.Name = "Meters"
+	meterCard.LayoutOrder = 3
+	meterCard.Size = UDim2.new(1, 0, 0, 108)
+	meterCard.BackgroundColor3 = C.Card
+	meterCard.Parent = body
+	local cardCorner = Instance.new("UICorner")
+	cardCorner.CornerRadius = UDim.new(0, UiTokens.Radius.Card)
+	cardCorner.Parent = meterCard
+	local cardPad = Instance.new("UIPadding")
+	cardPad.PaddingLeft = UDim.new(0, 14)
+	cardPad.PaddingRight = UDim.new(0, 14)
+	cardPad.PaddingTop = UDim.new(0, 12)
+	cardPad.PaddingBottom = UDim.new(0, 12)
+	cardPad.Parent = meterCard
+	local cardList = Instance.new("UIListLayout")
+	cardList.SortOrder = Enum.SortOrder.LayoutOrder
+	cardList.Padding = UDim.new(0, 8)
+	cardList.Parent = meterCard
+
+	local function meter(caption: string, order: number): Meter
+		local row = Instance.new("Frame")
+		row.LayoutOrder = order
+		row.BackgroundTransparency = 1
+		row.Size = UDim2.new(1, 0, 0, 38)
+		row.Parent = meterCard
+		local label = Instance.new("TextLabel")
+		label.BackgroundTransparency = 1
+		label.Size = UDim2.new(0, 104, 1, 0)
+		label.Font = PanelKit.FONT_BOLD
+		label.TextSize = 16
+		label.TextColor3 = C.Muted
+		label.TextXAlignment = Enum.TextXAlignment.Left
+		label.Text = caption
+		label.Parent = row
 		local track = Instance.new("Frame")
-		track.Position = UDim2.fromScale(0.08, y)
-		track.Size = UDim2.fromScale(0.84, 0.05)
+		track.AnchorPoint = Vector2.new(0, 0.5)
+		track.Position = UDim2.new(0, 108, 0.5, 0)
+		track.Size = UDim2.new(1, -108, 0, 22)
 		track.BackgroundColor3 = C.Field
-		track.Parent = panel
-		Instance.new("UICorner").Parent = track
-		local caption = Instance.new("TextLabel")
-		caption.BackgroundTransparency = 1
-		caption.Position = UDim2.fromOffset(-48, 0)
-		caption.Size = UDim2.new(0, 44, 1, 0)
-		caption.Font = PanelKit.FONT_BOLD
-		caption.Text = label
-		caption.TextColor3 = C.Muted
-		caption.TextScaled = true
-		caption.Parent = track
+		track.Parent = row
+		local trackCorner = Instance.new("UICorner")
+		trackCorner.CornerRadius = UDim.new(0, 11)
+		trackCorner.Parent = track
+		local outline = Instance.new("UIStroke")
+		outline.Color = ACCENT
+		outline.Thickness = 2
+		outline.Transparency = 1
+		outline.Parent = track
+		local function zone(width: number, color: Color3, transparency: number): Frame
+			local z = Instance.new("Frame")
+			z.AnchorPoint = Vector2.new(0.5, 0)
+			z.Size = UDim2.fromScale(width, 1)
+			z.BackgroundColor3 = color
+			z.BackgroundTransparency = transparency
+			z.BorderSizePixel = 0
+			z.Parent = track
+			local zc = Instance.new("UICorner")
+			zc.CornerRadius = UDim.new(0, 8)
+			zc.Parent = z
+			return z
+		end
+		local inZone = zone(PaperTossConfig.InWithin * 2, C.Good, 0.35)
+		local swishZone = zone(PaperTossConfig.SwishWithin * 2, UiTokens.Color.Gold, 0.05)
 		local marker = Instance.new("Frame")
 		marker.AnchorPoint = Vector2.new(0.5, 0.5)
 		marker.Position = UDim2.fromScale(0.5, 0.5)
-		marker.Size = UDim2.new(0, 8, 1.6, 0)
-		marker.BackgroundColor3 = Color3.fromRGB(255, 220, 90)
+		marker.Size = UDim2.new(0, 6, 1, 16)
+		marker.BackgroundColor3 = MARKER_IDLE
+		marker.ZIndex = 3
 		marker.Parent = track
-		Instance.new("UICorner").Parent = marker
-		return track, marker
+		local markerCorner = Instance.new("UICorner")
+		markerCorner.CornerRadius = UDim.new(0, 3)
+		markerCorner.Parent = marker
+		local markerStroke = Instance.new("UIStroke")
+		markerStroke.Color = C.Ink
+		markerStroke.Thickness = 1.5
+		markerStroke.Parent = marker
+		return {
+			Row = row,
+			Label = label,
+			Track = track,
+			Outline = outline,
+			InZone = inZone,
+			SwishZone = swishZone,
+			Marker = marker,
+		}
 	end
-	local _, aimMarker = meter(0.7, "AIM")
-	local _, powerMarker = meter(0.78, "POWER")
+	local aimMeter = meter("① AIM", 1)
+	local powerMeter = meter("② POWER", 2)
 
+	local hint = Instance.new("TextLabel")
+	hint.Name = "Hint"
+	hint.LayoutOrder = 4
+	hint.BackgroundTransparency = 1
+	hint.Size = UDim2.new(1, 0, 0, 22)
+	hint.Font = PanelKit.FONT
+	hint.TextColor3 = C.Muted
+	hint.Parent = body
+	Responsive.capText(hint, 16)
+
+	-- The big action button, and (in the same place) the quit confirmation.
 	local actions = Instance.new("Frame")
+	actions.Name = "Actions"
+	actions.LayoutOrder = 5
 	actions.BackgroundTransparency = 1
-	actions.Position = UDim2.fromScale(0.08, 0.86)
-	actions.Size = UDim2.fromScale(0.84, 0.11)
-	actions.Parent = panel
-	local actionsLayout = Instance.new("UIListLayout")
-	actionsLayout.FillDirection = Enum.FillDirection.Horizontal
-	actionsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	actionsLayout.Padding = UDim.new(0, 8)
-	actionsLayout.Parent = actions
-	local throwButton = PanelKit.button(actions, "🧻 THROW", C.Good)
-	throwButton.Size = UDim2.fromScale(0.7, 1)
-	local quitButton = PanelKit.button(actions, "🚪 Quit", C.Neutral)
-	quitButton.Size = UDim2.fromScale(0.26, 1)
+	actions.Size = UDim2.new(1, 0, 0, 58)
+	actions.Parent = body
+	local throwButton = PanelKit.button(actions, "", C.Good)
+	throwButton.Name = "Throw"
+	throwButton.Size = UDim2.fromScale(1, 1)
+	PanelKit.setTextSize(throwButton, 22)
+
+	local confirmRow = Instance.new("Frame")
+	confirmRow.Name = "ConfirmQuit"
+	confirmRow.BackgroundTransparency = 1
+	confirmRow.Size = UDim2.fromScale(1, 1)
+	confirmRow.Visible = false
+	confirmRow.Parent = actions
+	local confirmLayout = Instance.new("UIListLayout")
+	confirmLayout.FillDirection = Enum.FillDirection.Horizontal
+	confirmLayout.Padding = UDim.new(0, 8)
+	confirmLayout.Parent = confirmRow
+	local keepButton = PanelKit.button(confirmRow, "▶ Keep playing", C.Good)
+	keepButton.Size = UDim2.new(0.5, -4, 1, 0)
+	local quitButton = PanelKit.button(confirmRow, "🚪 Quit (no reward)", C.Danger)
+	quitButton.Size = UDim2.new(0.5, -4, 1, 0)
 
 	-- State.
 	local phase = "Idle" -- "Aim" | "Power" | "Flying" | "Idle"
 	local sweepStart = os.clock()
 	local aim, power = 0.5, 0.5
+	local idealAim, idealPower = 0.5, 0.5
 	local current: RoundView? = nil
 	local opponentIndex = 1
 	local rounds = PaperTossConfig.Rounds
 	local you, cpu = 0, 0
+	local stepConnection: RBXScriptConnection? = nil
+	local bannerToken = 0
 
 	local function sweep(seconds: number): number
 		local t = ((os.clock() - sweepStart) / seconds) % 2
 		return if t <= 1 then t else 2 - t
+	end
+
+	-- Gold inside the swish zone, green inside the "in" zone, red outside.
+	local function zoneColor(value: number, ideal: number): Color3
+		local off = math.abs(value - ideal)
+		return if off <= PaperTossConfig.SwishWithin
+			then UiTokens.Color.Gold
+			elseif off <= PaperTossConfig.InWithin then C.Good
+			else C.Danger
+	end
+
+	local function setActive(active: Meter?): ()
+		for _, m in { aimMeter, powerMeter } do
+			local on = m == active
+			m.Label.TextColor3 = if on then C.Text else C.Muted
+			m.Outline.Transparency = if on then 0.1 else 1
+		end
+	end
+
+	-- Keyboard players see the shortcut on the button.
+	local function setCaption(caption: string, withKey: boolean): ()
+		throwButton.Text = if withKey and UserInputService.KeyboardEnabled
+			then caption .. "   [Space]"
+			else caption
+	end
+
+	local function showBanner(message: string, color: Color3): ()
+		bannerToken += 1
+		local mine = bannerToken
+		banner.Text = message
+		banner.TextColor3 = color
+		PanelKit.pop(banner)
+		task.delay(1.4, function()
+			if bannerToken == mine then
+				banner.Text = ""
+			end
+		end)
 	end
 
 	local function setRound(round: RoundView?): ()
@@ -296,18 +499,32 @@ local function buildGame(parent: Instance): ()
 		if round then
 			bin.Position = Vector3.new(0, 0.8, BIN_Z[round.Distance] or -6)
 			binRim.Position = Vector3.new(0, 1.7, BIN_Z[round.Distance] or -6)
-			windLabel.Text = windText(round.Wind)
+			windChip.Text = windText(round.Wind)
+			distanceChip.Text = DISTANCE_TEXT[round.Distance] or DISTANCE_TEXT[2]
+			idealAim, idealPower =
+				PaperTossRules.ideal({ Distance = round.Distance, Wind = round.Wind })
+			for _, zone in { aimMeter.InZone, aimMeter.SwishZone } do
+				zone.Position = UDim2.fromScale(idealAim, 0)
+			end
+			for _, zone in { powerMeter.InZone, powerMeter.SwishZone } do
+				zone.Position = UDim2.fromScale(idealPower, 0)
+			end
 		end
 	end
 
 	local function setScore(): ()
 		local opponent = PaperTossConfig.Opponents[opponentIndex]
-		scoreboard.Text = string.format(
-			"You %d  –  %d %s %s   ·   Round %d / %d",
-			you,
-			cpu,
-			opponent.Icon,
-			opponent.Title,
+		cpuName.Text = string.format("%s %s %s", opponent.Title, opponent.Name, opponent.Icon)
+		if youScore.Text ~= tostring(you) then
+			youScore.Text = tostring(you)
+			PanelKit.pop(youScore)
+		end
+		if cpuScore.Text ~= tostring(cpu) then
+			cpuScore.Text = tostring(cpu)
+			PanelKit.pop(cpuScore)
+		end
+		roundChip.Text = string.format(
+			"Round %d / %d",
 			math.min(if current then current.Number else rounds, rounds),
 			rounds
 		)
@@ -316,22 +533,48 @@ local function buildGame(parent: Instance): ()
 	local function beginAim(): ()
 		phase = "Aim"
 		sweepStart = os.clock()
-		status.Text = "Tap THROW to stop the aim marker"
-		throwButton.Text = "🎯 AIM"
+		aimMeter.Marker.BackgroundColor3 = MARKER_IDLE
+		powerMeter.Marker.BackgroundColor3 = MARKER_IDLE
+		power = 0
+		setActive(aimMeter)
+		hint.Text = "Stop the marker in the gold zone for a SWISH (green = in)"
+		setCaption("🎯 STOP AIM", true)
+		PanelKit.setColor(throwButton, C.Good)
 		PanelKit.setDisabled(throwButton, false)
+	end
+
+	-- One press stops the aim; the next stops the power and throws.
+	local function press(): ()
+		if phase == "Aim" then
+			aimMeter.Marker.BackgroundColor3 = zoneColor(aim, idealAim)
+			phase = "Power"
+			sweepStart = os.clock()
+			setActive(powerMeter)
+			hint.Text = "Now the power: far bins need more"
+			setCaption("💪 STOP POWER", true)
+			PanelKit.setColor(throwButton, C.Primary)
+		elseif phase == "Power" then
+			powerMeter.Marker.BackgroundColor3 = zoneColor(power, idealPower)
+			phase = "Flying"
+			setActive(nil)
+			setCaption("🧻 Throwing...", false)
+			PanelKit.setDisabled(throwButton, true)
+			hint.Text = ""
+			remote("Throw"):FireServer(aim, power)
+		end
 	end
 
 	-- Where a throw lands, from how far it was from the ideal one.
 	local function landing(round: RoundView, throw: ThrowView): Vector3
-		local idealAim, idealPower =
+		local bestAim, bestPower =
 			PaperTossRules.ideal({ Distance = round.Distance, Wind = round.Wind })
 		local binAt = Vector3.new(0, 1.6, BIN_Z[round.Distance] or -6)
 		if throw.Result == "Swish" then
 			return binAt + Vector3.new(0, -0.6, 0)
 		elseif throw.Result == "In" then
-			return binAt + Vector3.new((throw.Aim - idealAim) * 4, -0.4, 0)
+			return binAt + Vector3.new((throw.Aim - bestAim) * 4, -0.4, 0)
 		end
-		local offset = Vector3.new((throw.Aim - idealAim) * 14, 0, -(throw.Power - idealPower) * 16)
+		local offset = Vector3.new((throw.Aim - bestAim) * 14, 0, -(throw.Power - bestPower) * 16)
 		local spot = binAt + offset
 		return Vector3.new(spot.X, 0.25, spot.Z)
 	end
@@ -357,46 +600,70 @@ local function buildGame(parent: Instance): ()
 		end)
 	end
 
-	RunService.RenderStepped:Connect(function()
-		if not gui.Enabled then
-			return
-		end
+	local function step(): ()
 		if phase == "Aim" then
 			aim = sweep(PaperTossConfig.AimSweepSeconds)
 		elseif phase == "Power" then
 			power = sweep(PaperTossConfig.PowerSweepSeconds)
 		end
-		aimMarker.Position = UDim2.fromScale(aim, 0.5)
-		powerMarker.Position = UDim2.fromScale(power, 0.5)
-	end)
+		aimMeter.Marker.Position = UDim2.fromScale(aim, 0.5)
+		powerMeter.Marker.Position = UDim2.fromScale(power, 0.5)
+	end
 
-	throwButton.Activated:Connect(function()
-		if phase == "Aim" then
-			phase = "Power"
-			sweepStart = os.clock()
-			status.Text = "Tap THROW to stop the power bar"
-			throwButton.Text = "💪 POWER"
-		elseif phase == "Power" then
-			phase = "Flying"
-			PanelKit.setDisabled(throwButton, true)
-			status.Text = "..."
-			remote("Throw"):FireServer(aim, power)
-		end
+	local function showConfirm(visible: boolean): ()
+		confirmRow.Visible = visible
+		throwButton.Visible = not visible
+	end
+
+	throwButton.Activated:Connect(press)
+	screen.Close.Activated:Connect(function()
+		showConfirm(not confirmRow.Visible)
+	end)
+	keepButton.Activated:Connect(function()
+		showConfirm(false)
 	end)
 	quitButton.Activated:Connect(function()
 		remote("Quit"):FireServer()
 		closeGame()
 	end)
 
+	-- Space (keyboard) or R2 / X (gamepad) works like the big button while
+	-- the game is open; Space doesn't jump meanwhile.
+	local function onKey(
+		_name: string,
+		state: Enum.UserInputState,
+		_input: InputObject
+	): Enum.ContextActionResult
+		if state == Enum.UserInputState.Begin and not confirmRow.Visible then
+			press()
+		end
+		return Enum.ContextActionResult.Sink
+	end
+
 	startGame = function(opponent: number, total: number, round: RoundView?)
 		opponentIndex = math.clamp(opponent, 1, #PaperTossConfig.Opponents)
 		rounds = total
 		you, cpu = 0, 0
-		gui.Enabled = true
+		aim, power = 0.5, 0
 		paper.Transparency = 1
+		banner.Text = ""
+		showConfirm(false)
+		screen.setOpen(true)
 		setRound(round)
 		setScore()
 		beginAim()
+		if stepConnection == nil then
+			stepConnection = RunService.RenderStepped:Connect(step)
+		end
+		ContextActionService:BindActionAtPriority(
+			THROW_ACTION,
+			onKey,
+			false,
+			Enum.ContextActionPriority.High.Value,
+			Enum.KeyCode.Space,
+			Enum.KeyCode.ButtonR2,
+			Enum.KeyCode.ButtonX
+		)
 	end
 
 	playRound = function(payload: { [string]: unknown })
@@ -411,23 +678,26 @@ local function buildGame(parent: Instance): ()
 			Distance = played.Distance,
 			Wind = played.Wind,
 		}
+		local opponent = PaperTossConfig.Opponents[opponentIndex]
 		fly(playedRound, mine, THROW_FROM, function()
-			status.Text = "You: " .. (RESULT_TEXT[mine.Result] or mine.Result)
+			showBanner(RESULT_TEXT[mine.Result] or mine.Result, RESULT_COLOR[mine.Result] or C.Text)
 			you = number(payload.You) - theirs.Points
 			setScore()
-			task.delay(0.6, function()
+			hint.Text = string.format("%s %s is throwing...", opponent.Icon, opponent.Title)
+			task.delay(0.9, function()
 				fly(playedRound, theirs, THROW_FROM + Vector3.new(2.5, 0, 0), function()
-					local opponent = PaperTossConfig.Opponents[opponentIndex]
-					status.Text = string.format(
-						"%s: %s",
-						opponent.Title,
-						RESULT_TEXT[theirs.Result] or theirs.Result
+					showBanner(
+						opponent.Icon .. " " .. (RESULT_TEXT[theirs.Result] or theirs.Result),
+						RESULT_COLOR[theirs.Result] or C.Text
 					)
 					you, cpu = number(payload.You), number(payload.Cpu)
 					local nextRound = parseRound(payload.Round)
 					setRound(nextRound or current)
 					setScore()
-					task.delay(0.8, function()
+					task.delay(1.1, function()
+						if not screen.isOpen() then
+							return -- quit meanwhile
+						end
 						paper.Transparency = 1
 						local outcome = text(payload.Outcome)
 						if outcome ~= "" then
@@ -476,8 +746,13 @@ local function buildGame(parent: Instance): ()
 	end
 
 	closeGame = function()
-		gui.Enabled = false
+		screen.setOpen(false)
 		phase = "Idle"
+		if stepConnection then
+			stepConnection:Disconnect()
+			stepConnection = nil
+		end
+		ContextActionService:UnbindAction(THROW_ACTION)
 	end
 end
 
@@ -547,8 +822,8 @@ local function buildWindow(parent: Instance): ()
 					"%d rounds. Each round you throw, then your coworker throws.",
 					PaperTossConfig.Rounds
 				),
-				"Tap THROW to stop the sweeping aim marker, then again to stop the power bar.",
-				"Far bins need more power. Aim a little against the breeze (the arrow shows where it blows).",
+				"Press STOP (or Space) while the aim marker is in the gold zone, then again for the power bar.",
+				"Gold zone = swish, green = in. The zones move with the bin's distance and the breeze.",
 				"🎯 Swish = 3 points, ✅ In = 2, off the rim or a miss = 0. Most points wins.",
 				string.format(
 					"Up to %d rewarded wins a day; the first win against each coworker pays %dx; your first CEO win each day also gives an office supply.",

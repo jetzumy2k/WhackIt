@@ -191,6 +191,16 @@ Client -> server remotes: `RemoteLimits.PaperToss` (burst 4, 1/s).
 | `Capsule.Spin` | client -> server | none; `maxArgs` 0; `RemoteLimits.Capsule` (burst 2, 0.5/s) | data and session loaded; `CapsuleRules.canSpin` (Level ≥ 5, a spin left today, coins ≥ 200); `trySpendCoins(200)`; spin counted; prize rolled with the server's Random (last spin of the day: Rare+ only); paid at once (coins, XP, a Bag item, or an office supply); history entry. Never yields |
 | `Capsule.Result` | server -> one client | `{ PrizeId, Label, Icon, Tier, Detail, Lucky, SpinsLeft }` | after every spin |
 
+## Synthesis: the Synthesis Machine (docs/SYNTHESIS.md, 2026-10-19)
+| Remote | Direction | Payload | Server checks / handling |
+|---|---|---|---|
+| `Synthesis.Synthesize` | client -> server | `recipeId` (id), `selection` (map item key -> whole count 1-100, at most 8 keys), `pick` (optional id: a boost kind or a supply key); `maxArgs` 3; `RemoteLimits.Synthesis` (burst 3, 1/s) | bad payload rejected; data and session loaded; 1.5 s per-player cooldown; alive and within 14 studs of the machine; `SynthesisRules.plan`: recipe exists and enabled, every item accepted by it, owned (office supplies: unplaced only), exact count, output exists with room, pick only on random recipes, one of the results and a Synthesis Pick owned, coins >= fee. The client never names an output: the result is rolled with the server's Random (equal odds) or is the pick. `trySpendCoins(fee)`, items and pick taken, result added with no yield; on an error part-way everything is restored. Bumps the machine's `SynthesisPlays` attribute; history entry |
+| `Synthesis.Result` | server -> one client | `{ Ok = true, RecipeId, Key, Store ("Bag" / "Furniture"), Label, Icon, Tier, Random, Picked, Detail }` or `{ Ok = false, Message }` | after every request, also every refusal |
+
+The Synthesis Pick is bought through the existing `Store.RequestPurchase("synthesis_pick")` and
+delivered to the Bag by `PurchaseService`; `Bag.Use` on it only answers with a toast (it's used by
+the machine).
+
 ## PetArena: pet battles (docs/PET_ARENA.md, 2026-10-10)
 Client -> server remotes: `RemoteLimits.PetArena` (burst 5, 1/s). Pet ids must name one of the
 sender's own pets (`PetRules.isPetId` + saved `Pets`), else rejected. A player in a battle, a
