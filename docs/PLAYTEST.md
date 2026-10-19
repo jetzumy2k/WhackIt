@@ -953,3 +953,4 @@ Admin → Rewards gives what's needed: Item `xp_10_30m` ×3, `dmg_3_30m` / `crit
 | 645 | Two players, one synthesizes | The other sees the machine's sockets, burst and orb |
 | 646 | Phone (Device emulator) | Tabs on top, cards wrap, SYNTHESIZE fits, nothing clipped |
 | 647 | Hammer Vending Machine, a boost from the Bag, an egg in an incubator, a Store purchase | All still work as before |
+| 648 | Eggs: recipe buttons 4 Common → 1 Rare and 4 Rare → 1 Mythical; pick the Rare one, Auto-fill 4 Rare Eggs, SYNTHESIZE (1,200 coins) | GUARANTEED Mythical Egg, fee 1,200; a Legendary celebration card; the four Rare Eggs are gone, the Mythical Egg is in the Bag and hatches a Mythical pet; with 3 Rare Eggs or under 1,200 coins SYNTHESIZE stays greyed |

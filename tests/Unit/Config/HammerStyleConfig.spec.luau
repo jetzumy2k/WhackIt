@@ -26,7 +26,8 @@ return function()
 				expect(shaft.Length >= HammerStyleConfig.MinShaftLength).to.equal(true)
 				expect(shaft.Length <= HammerStyleConfig.MaxShaftLength).to.equal(true)
 				expect(shaft.Width > 0 and shaft.Width < 0.6).to.equal(true)
-				expect(maxComponent(style.Head.Size) <= HammerStyleConfig.MaxHeadSize).to.equal(
+				-- Vector3 is float32: a 2.4 head reads back as 2.4000001.
+				expect(maxComponent(style.Head.Size) <= HammerStyleConfig.MaxHeadSize + 1e-4).to.equal(
 					true
 				)
 				-- Longer between its faces than it is thick, like a mallet.

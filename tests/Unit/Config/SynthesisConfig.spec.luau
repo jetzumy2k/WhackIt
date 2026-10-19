@@ -36,13 +36,22 @@ return function()
 			end
 		end)
 
-		it("keeps the Mythical egg out of reach (owner decision 2026-10-19)", function()
-			for _, recipe in SynthesisConfig.ItemRecipes do
-				if recipe.Output == "egg_mythical" then
-					expect(recipe.Enabled).to.equal(false)
+		it(
+			"makes the Mythical egg cost 4 Rare Eggs and 1,200 coins (owner decision 2026-10-19)",
+			function()
+				local found = false
+				for _, recipe in SynthesisConfig.ItemRecipes do
+					if recipe.Output == "egg_mythical" then
+						found = true
+						expect(recipe.Enabled).to.equal(true)
+						expect(recipe.Input).to.equal("egg_rare")
+						expect(recipe.Count).to.equal(4)
+						expect(recipe.Fee).to.equal(1200)
+					end
 				end
+				expect(found).to.equal(true)
 			end
-		end)
+		)
 
 		it("swaps only office supplies, never trophies or prizes", function()
 			for _, key in SynthesisConfig.SupplyPool do

@@ -331,7 +331,8 @@ return function()
 			expect(buffs.Xp.SecondsLeft).to.equal(600)
 			expect((data.ProcessedPurchases :: { string })[1]).to.equal("receipt-1")
 			local mystery = data.MysteryHammers :: { [string]: { [string]: number } }
-			expect(mystery.mystery_1.Damage).to.equal(35)
+			-- Base damage is fixed by config (raised from 35 to 62 on 2026-10-10).
+			expect(mystery.mystery_1.Damage).to.equal(StoreConfig.Mystery.BaseDamage)
 			expect(mystery.mystery_1.BonusDamagePercent).to.equal(20)
 			expect(mystery.mystery_1.CritDamagePercent).to.equal(7)
 		end)

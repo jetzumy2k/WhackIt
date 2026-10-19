@@ -140,11 +140,19 @@ return function()
 			expect(inv.Bag.egg_rare).to.equal(1)
 		end)
 
-		it("keeps Rare -> Mythical switched off (owner decision)", function()
-			local inv = inventory({ egg_rare = 4 })
-			local plan, reason = SynthesisRules.plan("egg_rare", { egg_rare = 4 }, inv, nil)
-			expect(plan).to.equal(nil)
-			expect(reason).to.equal("That recipe isn't available.")
+		it("turns 4 Rare Eggs into 1 Mythical Egg for 1,200 coins (owner decision)", function()
+			local inv = inventory({ egg_rare = 4 }, nil, 1200)
+			local plan =
+				SynthesisRules.plan("egg_rare", { egg_rare = 4 }, inv, nil) :: SynthesisRules.Plan
+			expect(plan.Random).to.equal(false)
+			expect(plan.Fee).to.equal(1200)
+			expect(plan.Outcomes[1].Key).to.equal("egg_mythical")
+			SynthesisRules.apply(inv, plan, plan.Outcomes[1])
+			expect(inv.Bag.egg_rare).to.equal(nil)
+			expect(inv.Bag.egg_mythical).to.equal(1)
+			-- One coin short is refused.
+			local poor = inventory({ egg_rare = 4 }, nil, 1199)
+			expect((SynthesisRules.plan("egg_rare", { egg_rare = 4 }, poor, nil))).to.equal(nil)
 		end)
 
 		it("refuses other items in an egg recipe", function()

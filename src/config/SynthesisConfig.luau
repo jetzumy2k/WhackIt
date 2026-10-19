@@ -104,8 +104,8 @@ local ITEM_RECIPES: { ItemRecipe } = {
 		Enabled = true,
 	},
 	{
-		-- Off (owner decision 2026-10-19): would be the first no-Robux way to
-		-- a Mythical egg. Turn on only with the owner's approval.
+		-- On (owner decision 2026-10-19, after playtesting): the first no-Robux
+		-- way to a Mythical egg, so keep the fee high.
 		Id = "egg_rare",
 		Category = "Eggs",
 		Input = "egg_rare",
@@ -113,7 +113,7 @@ local ITEM_RECIPES: { ItemRecipe } = {
 		Output = "egg_mythical",
 		Fee = 1200,
 		Tier = "Legendary",
-		Enabled = false,
+		Enabled = true,
 	},
 }
 

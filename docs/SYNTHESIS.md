@@ -22,7 +22,7 @@ server checks you're within 14 studs and alive).
 | `boost_30m` | 3 Bag boosts of 30 min | 1 boost of 1 h | All one kind: that kind, **guaranteed**. Mixed kinds: a **random** kind (XP, Damage or Crit Damage, 1 in 3 each) | 150 coins |
 | `boost_1h` | 6 Bag boosts of 1 h | 1 boost of 5 h | the same rule | 600 coins |
 | `egg_common` | 4 Common Eggs | 1 Rare Egg | guaranteed | 300 coins |
-| `egg_rare` | 4 Rare Eggs | 1 Mythical Egg | **off**: the Mythical egg stays Robux/admin-only | (1,200) |
+| `egg_rare` | 4 Rare Eggs | 1 Mythical Egg | guaranteed (turned on after the owner's playtest, 2026-10-19: the first no-Robux way to a Mythical egg) | 1,200 coins |
 | `supply_swap` | 4 of the same office supply (in storage, not placed) | 1 **different** supply | random among the other 5 (equal odds) | 200 coins |
 
 - **Boost strength.** Each kind's strengths are ranked weakest to strongest (XP 10/20/25 %,
@@ -108,7 +108,6 @@ to 70 for Legendary), and the OUTPUT orb glow for a few seconds. Reduced motion:
   they don't know.
 
 ## Balance ideas that need the owner's OK
-- Turn on `egg_rare` (4 Rare → 1 Mythical, 1,200 coins): the first no-Robux Mythical egg.
 - Raise or lower fees (`SynthesisConfig`); every recipe and fee is config.
 - A pet recipe (e.g. 3 Common pets → a Rare Egg) would need rules for equipped, arena and showcase
   pets first.
