@@ -39,8 +39,10 @@ screen-size rules live in two places: `Lib/Responsive` for HUD buttons, popups a
 - **Events chip:** under the Menu button, only while events run. Its list is at most half the screen
   tall.
 - **Victory Card:** 62 % x 36 % on phones so its several lines stay readable.
-- **Pickleball match HUD on phones (2026-10-20):** the score card is smaller (0.7 scale) and
-  see-through so the court shows; the Soft / 🏓 / Hard buttons take Sprint's spot left of the jump
+- **Pickleball match HUD on phones (2026-10-20):** the score card is a small see-through strip at
+  the very top (0.7 scale, two short lines: score, then server and clock), in the place of the stat
+  and boost chips, which hide during the match; a match message shows on it for 3 s. It never covers
+  the court (live phone test: the earlier card under the chips still sat in the middle); the Soft / 🏓 / Hard buttons take Sprint's spot left of the jump
   button (Sprint hides during a match, it does nothing there); Forfeit and the mission Leave button
   sit under the events chip; tapping with no boss near doesn't show "Get closer to the boss!".
 - **How-to-play hint:** fades out after 20 s on phones, freeing the bottom of the screen.

@@ -390,6 +390,17 @@ local function buildHud(): (ScreenGui, Frame)
 		boostsScale.Scale = hudScale
 		placeMeter()
 	end)
+	-- Phones in a pickleball match: the match score strip takes the chips'
+	-- place (PickleballController), so the court stays clear.
+	local function matchChips(): ()
+		local match = localPlayer:GetAttribute(Attributes.RecMatch)
+		local inMatch = typeof(match) == "string" and match ~= ""
+		local hide = inMatch and Responsive.formFactor() == "Phone"
+		stats.Visible = not hide
+		boosts.Visible = not hide
+	end
+	localPlayer:GetAttributeChangedSignal(Attributes.RecMatch):Connect(matchChips)
+	Responsive.onChanged(matchChips)
 	local boostsLayout = Instance.new("UIListLayout")
 	boostsLayout.FillDirection = Enum.FillDirection.Horizontal
 	boostsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center

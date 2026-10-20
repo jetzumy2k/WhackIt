@@ -55,6 +55,8 @@ local PickleballController = {}
 local C = PanelKit.Colors
 local ACCENT = Color3.fromRGB(110, 210, 120)
 local CARD_COLOR = Color3.fromRGB(26, 29, 41)
+-- Phones: how long a match message ("Point to July!") stays on the score strip.
+local PHONE_MESSAGE_SECONDS = 3
 local BALL_COLOR = Color3.fromRGB(230, 240, 90)
 local REACH_COLOR = Color3.fromRGB(90, 255, 120)
 local COURT = PickleballConfig.Court
@@ -789,23 +791,29 @@ local function buildHud(): (ScreenGui, () -> ())
 		end)
 	end)
 
-	-- Phones (owner screenshots 2026-10-10, 2026-10-20): the score card goes
-	-- small and see-through at the top under the HUD chips, so the court
-	-- stays visible; the shot buttons sit just left of the jump button where
+	-- Phones (owner screenshots and live test 2026-10-10, 2026-10-20): the
+	-- score card is a small see-through strip at the very top, in the place
+	-- of the stat chips (UIController hides them during a match), so it never
+	-- covers the court; two short lines, a new message only for a moment
+	-- (PHONE_MESSAGE_SECONDS); the shot buttons sit just left of the jump button where
 	-- Sprint is outside a match (Sprint hides during one), above the XP bar;
 	-- Forfeit on the left under Menu, Music and the events chip.
 	local barScale = Instance.new("UIScale")
 	barScale.Parent = bar
+	local compact = false
+	local shownMessage = ""
+	local messageSince = 0
 	local function place(): ()
 		local phone = Responsive.formFactor() == "Phone"
 		local touch = Responsive.hasTouch()
 		barScale.Scale = if phone then 0.7 else 1
 		bar.BackgroundTransparency = if phone then 0.3 else 0.08
+		compact = phone
 		if phone then
 			bar.AnchorPoint = Vector2.new(0.5, 0)
-			bar.Position = UDim2.new(0.5, 0, 0, Responsive.PHONE_CARD_TOP)
-			-- Width before the 0.7 scale: about a third of the screen after it.
-			bar.Size = UDim2.fromScale(0.5, 0)
+			bar.Position = UDim2.new(0.5, 0, 0, 2)
+			-- Width before the 0.7 scale: under a third of the screen after it.
+			bar.Size = UDim2.fromScale(0.42, 0)
 		else
 			bar.AnchorPoint = Vector2.new(0.5, 1)
 			bar.Position = UDim2.new(0.5, 0, 1, if touch then -12 else -16)
@@ -863,6 +871,10 @@ local function buildHud(): (ScreenGui, () -> ())
 		local clock = string.format("%d:%02d left", left // 60, math.floor(left % 60))
 		if current.Phase == "Ended" then
 			serveLine.Text = "Match over"
+		elseif compact then
+			serveLine.Text = if current.Phase == "Starting"
+				then "Get ready · " .. clock
+				else string.format("🏓 %s serving · %s", serverName, clock)
 		elseif current.Phase == "Starting" then
 			serveLine.Text = "Get ready! " .. clock
 		else
@@ -874,8 +886,13 @@ local function buildHud(): (ScreenGui, () -> ())
 				clock
 			)
 		end
+		if current.Message ~= shownMessage then
+			shownMessage = current.Message
+			messageSince = os.clock()
+		end
 		messageLine.Text = current.Message
 		messageLine.Visible = current.Message ~= ""
+			and (not compact or os.clock() - messageSince < PHONE_MESSAGE_SECONDS)
 		hintLine.Text = "Aim with the mouse · Click: swing when the ball turns green · Q: soft · E: hard"
 			.. if current.Friendly then " · Friendly match" else ""
 	end
