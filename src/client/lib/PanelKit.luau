@@ -1212,6 +1212,7 @@ export type GameScreen = {
 }
 
 local GAME_HEADER_HEIGHT = 58
+local PHONE_GAME_HEADER_HEIGHT = 48
 
 -- Makes `child` take the leftover height of its UIListLayout parent.
 function PanelKit.fill(child: GuiObject): ()
@@ -1249,17 +1250,11 @@ function PanelKit.gameScreen(options: GameScreenOptions, parent: Instance): Game
 	limit.Parent = panel
 	local scale = Instance.new("UIScale")
 	scale.Parent = panel
-	Responsive.onChanged(function()
-		panel.Size = if Responsive.formFactor() == "Phone"
-			then UDim2.fromScale(0.98, 0.96)
-			else UDim2.fromScale(0.64, 0.86)
-	end)
 
 	local header = Instance.new("Frame")
 	header.Name = "Header"
 	header.BackgroundColor3 = C.Header
 	header.BorderSizePixel = 0
-	header.Size = UDim2.new(1, 0, 0, GAME_HEADER_HEIGHT)
 	header.Parent = panel
 	local strip = Instance.new("Frame")
 	strip.Name = "Accent"
@@ -1296,11 +1291,20 @@ function PanelKit.gameScreen(options: GameScreenOptions, parent: Instance): Game
 	local body = Instance.new("Frame")
 	body.Name = "Body"
 	body.BackgroundTransparency = 1
-	body.Position = UDim2.fromOffset(0, GAME_HEADER_HEIGHT)
-	body.Size = UDim2.new(1, 0, 1, -GAME_HEADER_HEIGHT)
 	body.Parent = panel
 	padding(body, UiTokens.Space.M)
 	list(body, UiTokens.Space.S + 2)
+
+	-- Phones: nearly the whole screen and a shorter header (owner phone
+	-- screenshots 2026-10-20: every row of height counts there).
+	Responsive.onChanged(function()
+		local phone = Responsive.formFactor() == "Phone"
+		local headerHeight = if phone then PHONE_GAME_HEADER_HEIGHT else GAME_HEADER_HEIGHT
+		panel.Size = if phone then UDim2.fromScale(0.98, 0.96) else UDim2.fromScale(0.64, 0.86)
+		header.Size = UDim2.new(1, 0, 0, headerHeight)
+		body.Position = UDim2.fromOffset(0, headerHeight)
+		body.Size = UDim2.new(1, 0, 1, -headerHeight)
+	end)
 
 	local function chip(content: string, color: Color3?): TextLabel
 		local label = Instance.new("TextLabel")

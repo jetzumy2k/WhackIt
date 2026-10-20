@@ -72,6 +72,8 @@ local function apply(): ()
 	end
 	if touchButton then
 		touchButton.BackgroundColor3 = if wantSprint then BUTTON_ON else BUTTON_OFF
+		-- No sprinting in a match; the shot buttons use its spot (PickleballController).
+		touchButton.Visible = not playing
 	end
 	if wantSprint == sprinting then
 		return

@@ -440,6 +440,72 @@ local function buildGame(parent: Instance): ()
 	local quitButton = PanelKit.button(confirmRow, "🚪 Quit (no reward)", C.Danger)
 	quitButton.Size = UDim2.new(0.5, -4, 1, 0)
 
+	-- Phones (owner screenshots 2026-10-20): a landscape phone is too short
+	-- for the stacked layout, so the office and THROW ran off the bottom.
+	-- There the office goes on the left and the meters, hint and THROW on
+	-- the right, all slimmer.
+	local play = Instance.new("Frame")
+	play.Name = "PhonePlay"
+	play.LayoutOrder = 2
+	play.BackgroundTransparency = 1
+	play.Size = UDim2.fromScale(1, 0)
+	play.Parent = body
+	PanelKit.fill(play)
+	local playList = Instance.new("UIListLayout")
+	playList.FillDirection = Enum.FillDirection.Horizontal
+	playList.SortOrder = Enum.SortOrder.LayoutOrder
+	playList.Padding = UDim.new(0, 10)
+	playList.Parent = play
+	local controls = Instance.new("Frame")
+	controls.Name = "Controls"
+	controls.LayoutOrder = 3 -- right of the office (LayoutOrder 2)
+	controls.BackgroundTransparency = 1
+	controls.Size = UDim2.fromScale(0.46, 1)
+	controls.Parent = play
+	local controlsList = Instance.new("UIListLayout")
+	controlsList.SortOrder = Enum.SortOrder.LayoutOrder
+	controlsList.Padding = UDim.new(0, 6)
+	controlsList.Parent = controls
+	local actionsFlex = Instance.new("UIFlexItem")
+	actionsFlex.Parent = actions
+
+	Responsive.onChanged(function()
+		local phone = Responsive.formFactor() == "Phone"
+		play.Visible = phone
+		viewport.Parent = if phone then play else body
+		viewport.Size = if phone then UDim2.fromScale(0, 1) else UDim2.new(1, 0, 0, 140)
+		for _, child in { meterCard, hint, actions } :: { GuiObject } do
+			child.Parent = if phone then controls else body
+		end
+		actionsFlex.FlexMode = if phone then Enum.UIFlexMode.Fill else Enum.UIFlexMode.None
+		actions.Size = UDim2.new(1, 0, 0, if phone then 40 else 58)
+		hint.Size = UDim2.new(1, 0, 0, if phone then 16 else 22)
+		scoreRow.Size = UDim2.new(1, 0, 0, if phone then 36 else 56)
+		youScore.TextSize = if phone then 24 else 34
+		cpuScore.TextSize = youScore.TextSize
+		versus.TextSize = if phone then 16 else 20
+		banner.TextSize = if phone then 26 else 40
+		for _, chip in { windChip, distanceChip } do
+			chip.TextSize = if phone then 12 else 16
+			chip.Size = UDim2.fromOffset(0, if phone then 24 else 32)
+		end
+		cardPad.PaddingTop = UDim.new(0, if phone then 8 else 12)
+		cardPad.PaddingBottom = cardPad.PaddingTop
+		cardPad.PaddingLeft = UDim.new(0, if phone then 10 else 14)
+		cardPad.PaddingRight = cardPad.PaddingLeft
+		cardList.Padding = UDim.new(0, if phone then 6 else 8)
+		local rowHeight = if phone then 24 else 38
+		local labelWidth = if phone then 70 else 104
+		meterCard.Size = UDim2.new(1, 0, 0, rowHeight * 2 + (if phone then 22 else 32))
+		for _, m in { aimMeter, powerMeter } do
+			m.Row.Size = UDim2.new(1, 0, 0, rowHeight)
+			m.Label.Size = UDim2.new(0, labelWidth, 1, 0)
+			m.Label.TextSize = if phone then 13 else 16
+			m.Track.Position = UDim2.new(0, labelWidth + 4, 0.5, 0)
+			m.Track.Size = UDim2.new(1, -(labelWidth + 4), 0, if phone then 16 else 22)
+		end
+	end)
+
 	-- State.
 	local phase = "Idle" -- "Aim" | "Power" | "Flying" | "Idle"
 	local sweepStart = os.clock()

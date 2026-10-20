@@ -789,29 +789,31 @@ local function buildHud(): (ScreenGui, () -> ())
 		end)
 	end)
 
-	-- Phones (owner screenshots 2026-10-10): the score card goes small at the
-	-- top under the HUD chips, the shot buttons left of the HUD buttons and
-	-- above Sprint, Forfeit on the left under Menu and Music.
+	-- Phones (owner screenshots 2026-10-10, 2026-10-20): the score card goes
+	-- small and see-through at the top under the HUD chips, so the court
+	-- stays visible; the shot buttons sit just left of the jump button where
+	-- Sprint is outside a match (Sprint hides during one), above the XP bar;
+	-- Forfeit on the left under Menu, Music and the events chip.
 	local barScale = Instance.new("UIScale")
 	barScale.Parent = bar
 	local function place(): ()
 		local phone = Responsive.formFactor() == "Phone"
 		local touch = Responsive.hasTouch()
-		barScale.Scale = if phone then 0.8 else 1
+		barScale.Scale = if phone then 0.7 else 1
+		bar.BackgroundTransparency = if phone then 0.3 else 0.08
 		if phone then
 			bar.AnchorPoint = Vector2.new(0.5, 0)
 			bar.Position = UDim2.new(0.5, 0, 0, Responsive.PHONE_CARD_TOP)
-			bar.Size = UDim2.fromScale(0.45, 0)
+			-- Width before the 0.7 scale: about a third of the screen after it.
+			bar.Size = UDim2.fromScale(0.5, 0)
 		else
 			bar.AnchorPoint = Vector2.new(0.5, 1)
 			bar.Position = UDim2.new(0.5, 0, 1, if touch then -12 else -16)
 			bar.Size = UDim2.fromScale(0.42, 0)
 		end
 		buttons.Visible = touch
-		local size = if phone then 56 else 76
-		buttons.Position = if phone
-			then UDim2.new(1, -(Responsive.dockWidth() + 12), 1, -64)
-			else UDim2.new(1, -16, 1, -150)
+		local size = if phone then 52 else 76
+		buttons.Position = if phone then UDim2.new(1, -104, 1, -34) else UDim2.new(1, -16, 1, -150)
 		buttons.Size = UDim2.fromOffset(size * 3 + 16, size)
 		for index, button in { soft, normal, hard } do
 			button.Size = UDim2.fromOffset(size, size)
