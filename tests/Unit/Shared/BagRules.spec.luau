@@ -28,6 +28,12 @@ return function()
 			)
 			expect(BagRules.itemText(StoreConfig.ByKey.beginner_bundle)).to.equal("Beginner Bundle")
 		end)
+
+		it("names the Synthesis Pick and never lets it be gifted", function()
+			local pick = StoreConfig.ByKey.synthesis_pick
+			expect(BagRules.itemText(pick)).to.equal("Synthesis Pick")
+			expect(BagRules.isGiftable(pick)).to.equal(false)
+		end)
 	end)
 
 	describe("BagRules.grant (bundles)", function()

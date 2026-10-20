@@ -6,7 +6,9 @@
 	  * a boost starts (or extends) that timed buff (BuffService);
 	  * a Mystery Hammer is opened: its stats are rolled now, it's added to the
 	    player's hammers and equipped;
-	  * an egg goes into the nearest free incubator in reach (PetService).
+	  * an egg goes into the nearest free incubator in reach (PetService);
+	  * a Synthesis Pick isn't used here: it stays in the Bag until the
+	    Synthesis Machine uses it (SynthesisService, docs/SYNTHESIS.md).
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -42,6 +44,13 @@ local function onUse(player: Player, rawKey: unknown): ()
 		-- Eggs hatch in an incubator: PetService checks the player is at one
 		-- and takes the egg from the Bag itself.
 		return PetService.incubateFromBag(player, key)
+	end
+	if product.Kind == "SynthesisPick" then
+		ToastRemote:FireClient(
+			player,
+			"Use your Synthesis Pick at the Synthesis Machine to choose a result."
+		)
+		return
 	end
 	local data = PlayerDataService.get(player)
 	if data == nil then

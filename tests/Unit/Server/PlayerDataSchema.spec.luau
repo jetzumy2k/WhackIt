@@ -331,7 +331,8 @@ return function()
 			expect(buffs.Xp.SecondsLeft).to.equal(600)
 			expect((data.ProcessedPurchases :: { string })[1]).to.equal("receipt-1")
 			local mystery = data.MysteryHammers :: { [string]: { [string]: number } }
-			expect(mystery.mystery_1.Damage).to.equal(35)
+			-- Base damage is fixed by config (raised from 35 to 62 on 2026-10-10).
+			expect(mystery.mystery_1.Damage).to.equal(StoreConfig.Mystery.BaseDamage)
 			expect(mystery.mystery_1.BonusDamagePercent).to.equal(20)
 			expect(mystery.mystery_1.CritDamagePercent).to.equal(7)
 		end)
@@ -1058,6 +1059,72 @@ return function()
 			local state = data.Capsule :: CapsuleRules.State
 			expect(state.Spins).to.equal(4)
 			expect(state.TotalSpins).to.equal(30)
+		end)
+	end)
+	describe("PlayerDataSchema v20 (paper toss)", function()
+		local PaperTossRules = require(ReplicatedStorage.Shared.PaperTossRules)
+
+		it("starts existing players with no games, touching nothing else", function()
+			local data = validData()
+			data.SchemaVersion = 19
+			data.PaperToss = { Cleared = 3, Best = 15 } -- can't exist before v20
+			expect((PlayerDataSchema.prepare(data))).to.equal(true)
+			local record = data.PaperToss :: PaperTossRules.Record
+			expect(record.Cleared).to.equal(0)
+			expect(record.Best).to.equal(0)
+			expect(data.Coins).to.equal(250)
+			expect(data.SchemaVersion).to.equal(PlayerDataSchema.CURRENT_VERSION)
+		end)
+
+		it("keeps a saved record", function()
+			local data = validData()
+			data.PaperToss =
+				{ DayKey = "2026-10-10", DayWins = 2, Cleared = 2, Best = 11, TotalWins = 6 }
+			PlayerDataSchema.prepare(data)
+			PlayerDataSchema.prepare(data)
+			local record = data.PaperToss :: PaperTossRules.Record
+			expect(record.Cleared).to.equal(2)
+			expect(record.Best).to.equal(11)
+			expect(record.TotalWins).to.equal(6)
+		end)
+	end)
+	describe("PlayerDataSchema v21 (synthesis machine)", function()
+		local SynthesisRules = require(ReplicatedStorage.Shared.SynthesisRules)
+
+		it("starts existing players with nothing synthesized, touching nothing else", function()
+			local data = validData()
+			data.SchemaVersion = 20
+			data.Synthesis = { Total = 9, PicksUsed = 2 } -- can't exist before v21
+			expect((PlayerDataSchema.prepare(data))).to.equal(true)
+			local state = data.Synthesis :: SynthesisRules.State
+			expect(state.Total).to.equal(0)
+			expect(state.PicksUsed).to.equal(0)
+			expect(data.Coins).to.equal(250)
+			expect(data.SchemaVersion).to.equal(PlayerDataSchema.CURRENT_VERSION)
+		end)
+
+		it("keeps a saved record and repairs a broken one", function()
+			local data = validData()
+			data.Synthesis = { Total = 12, PicksUsed = 3 }
+			PlayerDataSchema.prepare(data)
+			PlayerDataSchema.prepare(data)
+			local state = data.Synthesis :: SynthesisRules.State
+			expect(state.Total).to.equal(12)
+			expect(state.PicksUsed).to.equal(3)
+
+			local broken = validData()
+			broken.Synthesis = { Total = -5, PicksUsed = 0 / 0 }
+			PlayerDataSchema.prepare(broken)
+			local repaired = broken.Synthesis :: SynthesisRules.State
+			expect(repaired.Total).to.equal(0)
+			expect(repaired.PicksUsed).to.equal(0)
+		end)
+
+		it("keeps a Synthesis Pick in the Bag", function()
+			local data = validData()
+			data.Bag = { synthesis_pick = 2 }
+			PlayerDataSchema.prepare(data)
+			expect((data.Bag :: { [string]: number }).synthesis_pick).to.equal(2)
 		end)
 	end)
 end

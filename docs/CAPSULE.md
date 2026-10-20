@@ -14,7 +14,10 @@ casino-style simulated gambling, which Roblox treats as sensitive content (it ma
 experience questionnaire and can raise the age rating). This machine keeps the fun without that:
 - a fixed price, no bet size, no "lose everything" outcome: every spin pays something;
 - **coins only**: coins can't be bought with Robux and the machine never takes Robux;
-- every prize's odds are shown before spinning (normal and lucky spin);
+- every prize's odds are shown before spinning, as a table with a switch between the normal and the
+  lucky spin (window redesign 2026-10-11: one dot per daily spin with the lucky last one in gold, a
+  "resets in" countdown, the SPIN button names the reason when it can't spin, and the last prize
+  stays in the capsule until the next spin);
 - a daily spin limit;
 - on average it pays back fewer coins than it costs (spec-checked), so it's a coin sink with fun
   items, not a way to farm coins.

@@ -114,6 +114,10 @@ export type ProfileSnapshot = {
 	PetArena: { Cleared: number, DayWins: number, DayKey: string },
 	-- Lucky Capsule Machine (docs/CAPSULE.md): today's spins.
 	Capsule: { DayKey: string, Spins: number, TotalSpins: number },
+	-- Paper Toss Showdown (docs/PAPER_TOSS.md): opponents beaten, best score.
+	PaperToss: { Cleared: number, Best: number },
+	-- Synthesis Machine (docs/SYNTHESIS.md): syntheses done, picks used.
+	Synthesis: { Total: number, PicksUsed: number },
 }
 
 export type OwnedPet = {

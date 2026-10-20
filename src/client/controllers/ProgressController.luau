@@ -16,6 +16,10 @@ local PickleballRules =
 local QuestRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("QuestRules"))
 local MissionRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("MissionRules"))
 local CapsuleRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CapsuleRules"))
+local SynthesisRules =
+	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SynthesisRules"))
+local PaperTossRules =
+	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PaperTossRules"))
 local PetArenaRules =
 	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PetArenaRules"))
 local DailyEventRules =
@@ -215,6 +219,11 @@ local function parse(payload: unknown): Types.ProfileSnapshot?
 		DailyEvent = DailyEventRules.sanitize(data.DailyEvent),
 		Missions = MissionRules.sanitizeRecord(data.Missions),
 		Capsule = CapsuleRules.sanitizeState(data.Capsule),
+		Synthesis = SynthesisRules.sanitizeState(data.Synthesis),
+		PaperToss = (function()
+			local record = PaperTossRules.sanitizeRecord(data.PaperToss)
+			return { Cleared = record.Cleared, Best = record.Best }
+		end)(),
 		PetArena = (function()
 			local record = PetArenaRules.sanitizeRecord(data.PetArena)
 			return { Cleared = record.Cleared, DayWins = record.DayWins, DayKey = record.DayKey }

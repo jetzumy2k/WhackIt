@@ -331,6 +331,15 @@ local ArenaConfig = table.freeze({
 		Yaw = 90, -- degrees; its front faces -X
 	}),
 
+	-- Synthesis Machine (Lib/SynthesisMachineBuilder, 2026-10-19,
+	-- docs/SYNTHESIS.md): north of the hammer vending machine on the same
+	-- side of the stairs, facing the lobby (-X) like it. 10 studs apart, so
+	-- their prompts never compete; clear of the stairs' margin (specs).
+	SynthesisMachine = table.freeze({
+		Position = Vector3.new(25.6, 0, 6),
+		Yaw = 90,
+	}),
+
 	-- Outdoor campus (2026-10-07, Lib/CampusBuilder + Lib/OutdoorBuilder): reached
 	-- through an entrance in the middle of the lobby's glass front. Ground is at
 	-- Y = -1 (one step down from the building floor). Rectangles are XZ boxes

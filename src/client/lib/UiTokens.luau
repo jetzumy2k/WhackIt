@@ -29,6 +29,10 @@ UiTokens.Color = table.freeze({
 	Danger = Color3.fromRGB(205, 75, 80),
 	Neutral = Color3.fromRGB(78, 84, 108),
 	Disabled = Color3.fromRGB(70, 72, 84),
+	-- Dark text for light buttons (gold, light blue), and the dim behind windows.
+	Ink = Color3.fromRGB(24, 26, 36),
+	Backdrop = Color3.fromRGB(8, 10, 18),
+	Gold = Color3.fromRGB(255, 200, 70),
 })
 
 UiTokens.Font = table.freeze({
@@ -71,7 +75,23 @@ UiTokens.Motion = table.freeze({
 	Hover = 0.08,
 	Open = 0.12,
 	Bar = 0.3,
+	Pop = 0.25,
 })
+
+-- How see-through the dim behind an open window is (0 = black, 1 = none).
+UiTokens.BACKDROP_TRANSPARENCY = 0.45
+
+-- Text colour that reads on `background`: dark ink on light colours (gold,
+-- light blue, orange), white elsewhere. Uses relative luminance (WCAG).
+function UiTokens.textOn(background: Color3): Color3
+	local function channel(c: number): number
+		return if c <= 0.04045 then c / 12.92 else ((c + 0.055) / 1.055) ^ 2.4
+	end
+	local luminance = 0.2126 * channel(background.R)
+		+ 0.7152 * channel(background.G)
+		+ 0.0722 * channel(background.B)
+	return if luminance > 0.4 then UiTokens.Color.Ink else UiTokens.Color.Text
+end
 
 local savedReducedMotion = false
 

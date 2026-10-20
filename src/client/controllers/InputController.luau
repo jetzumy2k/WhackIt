@@ -21,6 +21,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
+local Attributes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Attributes"))
 local BossConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("BossConfig"))
 local CombatRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CombatRules"))
 local GameConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("GameConfig"))
@@ -123,7 +124,11 @@ local function onImpact(): ()
 	end
 	local bossInstanceId, bossId = GameplayController.getNearestBossInReach()
 	if bossInstanceId == nil or bossId == nil then
-		UIController.showToast(TOO_FAR_HINT)
+		-- In a pickleball match a tap is a shot, not a boss swing: no nag.
+		local match = Players.LocalPlayer:GetAttribute(Attributes.RecMatch)
+		if not (typeof(match) == "string" and match ~= "") then
+			UIController.showToast(TOO_FAR_HINT)
+		end
 		return
 	end
 	if not ProgressController.isBossUnlocked(bossId) then

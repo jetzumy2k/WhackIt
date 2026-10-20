@@ -431,8 +431,9 @@ end
 -- Where phone HUD cards (match score, team mission) go: under the top HUD's
 -- stat and boost chips, in ScreenGui (inset) coordinates.
 Responsive.PHONE_CARD_TOP = 36
--- Where the Forfeit / Leave buttons go on phones: on the left, under Menu and Music.
-Responsive.PHONE_LEFT_BUTTON_TOP = 60
+-- Where the Forfeit / Leave buttons go on phones: on the left, under Menu and
+-- Music and the events chip (EventController, 72-108), which they covered.
+Responsive.PHONE_LEFT_BUTTON_TOP = 114
 
 -- A button in the shared HUD column. `order` sorts top to bottom; hide it
 -- with .Visible and the column closes the gap.

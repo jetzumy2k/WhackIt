@@ -13,6 +13,8 @@
 	  * Unlock / Lock bosses: PlayerData.AdminUnlocks (saved).
 	Drops sets the office boss buff drop chances for every server
 	(DropRateService), or resets them to Config/DropRateConfig.
+	Synthesis turns Synthesis Machine recipes on or off for every server
+	(SynthesisSettingsService), or resets them to Config/SynthesisConfig.
 	Moderation bans or suspends by UserId or username with Players:BanAsync,
 	which kicks the player from every server and keeps them out (alt accounts
 	included) until the ban ends. Admins can't ban themselves or other admins.
@@ -47,6 +49,8 @@ local EventRules = require(ReplicatedStorage.Shared.EventRules)
 local BagRules = require(ReplicatedStorage.Shared.BagRules)
 local EventService = require(script.Parent.EventService)
 local StoreConfig = require(ReplicatedStorage.Config.StoreConfig)
+local SynthesisRules = require(ReplicatedStorage.Shared.SynthesisRules)
+local SynthesisSettingsService = require(script.Parent.SynthesisSettingsService)
 local HammerConfig = require(ReplicatedStorage.Config.HammerConfig)
 local HistoryService = require(script.Parent.HistoryService)
 local FurnitureConfig = require(ReplicatedStorage.Config.FurnitureConfig)
@@ -663,6 +667,50 @@ local function onSetDropRates(player: Player, raw: unknown): ()
 	)
 end
 
+-- `rawId` is a recipe id and `rawOn` true/false, or `rawId` "Reset" to go
+-- back to SynthesisConfig for every recipe.
+local function onSetSynthesis(player: Player, rawId: unknown, rawOn: unknown): ()
+	if not isAdmin(player) then
+		return RemoteController.reject(player, "Admin.SetSynthesis", "not an admin")
+	end
+	local recipe: SynthesisRules.Recipe? = nil
+	if rawId ~= "Reset" then
+		local id = Validate.id(rawId, 40)
+		recipe = if id then SynthesisRules.recipe(id) else nil
+		if recipe == nil then
+			return RemoteController.reject(player, "Admin.SetSynthesis", "unknown recipe")
+		end
+		if Validate.boolean(rawOn) == nil then
+			return RemoteController.reject(player, "Admin.SetSynthesis", "bad switch")
+		end
+	end
+	local on = rawOn == true
+	local ok, message = SynthesisSettingsService.save(if recipe then recipe.Id else nil, on)
+	if not ok then
+		toast(player, message)
+		-- Puts the admin's switch back to what is really in effect.
+		return sendState(player)
+	end
+	local action = if recipe
+		then string.format(
+			"turned synthesis recipe %s %s",
+			SynthesisRules.recipeTitle(recipe),
+			if on then "on" else "off"
+		)
+		else "reset synthesis recipes to defaults"
+	audit(player, action)
+	toast(
+		player,
+		string.format(
+			"%s. %s",
+			if recipe
+				then (if on then "Recipe on" else "Recipe off")
+				else "Recipes reset to defaults",
+			message
+		)
+	)
+end
+
 -- True for the owner and configured admins, online or not.
 local function isProtected(userId: number): boolean
 	if table.find(StoreAdminConfig.AdminUserIds, userId) then
@@ -1042,6 +1090,7 @@ function AdminService.init(): ()
 	end)
 	CustomBossService.onChanged(broadcastToAdmins)
 	DropRateService.onChanged(broadcastToAdmins)
+	SynthesisSettingsService.onChanged(broadcastToAdmins)
 	EventService.onChanged(broadcastToAdmins)
 
 	local options = { maxArgs = 3, rateLimit = RemoteLimits.Admin }
@@ -1062,6 +1111,11 @@ function AdminService.init(): ()
 		AdminRemotes.SetDropRates,
 		"Admin.SetDropRates",
 		onSetDropRates :: RemoteController.Handler
+	)
+	bind(
+		AdminRemotes.SetSynthesis,
+		"Admin.SetSynthesis",
+		onSetSynthesis :: RemoteController.Handler
 	)
 	bind(AdminRemotes.Moderate, "Admin.Moderate", onModerate :: RemoteController.Handler)
 	bind(AdminRemotes.Announce, "Admin.Announce", onAnnounce :: RemoteController.Handler)

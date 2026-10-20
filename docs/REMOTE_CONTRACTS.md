@@ -175,11 +175,32 @@ Client -> server remotes: `RemoteLimits.Contest` (burst 4, 0.5/s); one contest r
 | `Contest.State` | server -> one client | `{ Available, Global, Week, Phase, Remaining, Test, Entered, EntryModeration, EntryItems, EntryFit, ThemeItemsUsed, CanEnter, EnterReason, CanVote, VoteReason, VotesLeft, Winners = { { UserId, Name, Score } }, WinnersWeek }` | after Info, Enter |
 | `Contest.Result` | server -> one client | `{ Week, Theme, Rank?, Coins, Xp, Item }` | once per entered week when its prize is paid |
 
+## PaperToss: Paper Toss Showdown (docs/PAPER_TOSS.md, 2026-10-10)
+Client -> server remotes: `RemoteLimits.PaperToss` (burst 4, 1/s).
+
+| Remote | Direction | Payload | Server checks / handling |
+|---|---|---|---|
+| `PaperToss.Start` | client -> server | `opponent` (1-3); `maxArgs` 1 | not in a match or mission; `PaperTossRules.canPlay` (beat the one before); a new game with the server's rounds; `State` Start |
+| `PaperToss.Throw` | client -> server | `aim`, `power` (numbers 0..1, else rejected); `maxArgs` 2 | a game running; ≥ 1.2 s since the last throw; judged by the server, the CPU throws, next round; at the end `PaperTossRules.finish` pays (daily cap) |
+| `PaperToss.Quit` | client -> server | none | ends the game, no reward |
+| `PaperToss.State` | server -> one client | `{ Kind = "Start", Opponent, Rounds, Round, You, Cpu }`, `{ Kind = "Round", Played, YouThrow, CpuThrow, You, Cpu, Round, Outcome?, Coins?, Xp?, Supply?, Rewarded? }` or `{ Kind = "Quit" }` | |
+
 ## Capsule: the Lucky Capsule Machine (docs/CAPSULE.md, 2026-10-10)
 | Remote | Direction | Payload | Server checks / handling |
 |---|---|---|---|
 | `Capsule.Spin` | client -> server | none; `maxArgs` 0; `RemoteLimits.Capsule` (burst 2, 0.5/s) | data and session loaded; `CapsuleRules.canSpin` (Level ≥ 5, a spin left today, coins ≥ 200); `trySpendCoins(200)`; spin counted; prize rolled with the server's Random (last spin of the day: Rare+ only); paid at once (coins, XP, a Bag item, or an office supply); history entry. Never yields |
 | `Capsule.Result` | server -> one client | `{ PrizeId, Label, Icon, Tier, Detail, Lucky, SpinsLeft }` | after every spin |
+
+## Synthesis: the Synthesis Machine (docs/SYNTHESIS.md, 2026-10-19)
+| Remote | Direction | Payload | Server checks / handling |
+|---|---|---|---|
+| `Synthesis.Synthesize` | client -> server | `recipeId` (id), `selection` (map item key -> whole count 1-100, at most 8 keys), `pick` (optional id: a boost kind or a supply key); `maxArgs` 3; `RemoteLimits.Synthesis` (burst 3, 1/s) | bad payload rejected; data and session loaded; 1.5 s per-player cooldown; alive and within 14 studs of the machine; `SynthesisRules.plan`: recipe exists and is on (admin switch, else config), every item accepted by it, owned (office supplies: unplaced only), exact count, output exists with room, pick only on random recipes, one of the results and a Synthesis Pick owned, coins >= fee. The client never names an output: the result is rolled with the server's Random (equal odds) or is the pick. `trySpendCoins(fee)`, items and pick taken, result added with no yield; on an error part-way everything is restored. Bumps the machine's `SynthesisPlays` attribute; history entry |
+| `Synthesis.Result` | server -> one client | `{ Ok = true, RecipeId, Key, Store ("Bag" / "Furniture"), Label, Icon, Tier, Random, Picked, Detail }` or `{ Ok = false, Message }` | after every request, also every refusal |
+| `Remotes.Synthesis` attributes `On_<recipe id>` | server -> every client (replicated) | one boolean per recipe: on or off right now | set by `SynthesisSettingsService` at boot and on every admin change; display only (the server checks its own switches) |
+
+The Synthesis Pick is bought through the existing `Store.RequestPurchase("synthesis_pick")` and
+delivered to the Bag by `PurchaseService`; `Bag.Use` on it only answers with a toast (it's used by
+the machine).
 
 ## PetArena: pet battles (docs/PET_ARENA.md, 2026-10-10)
 Client -> server remotes: `RemoteLimits.PetArena` (burst 5, 1/s). Pet ids must name one of the
@@ -331,6 +352,7 @@ accepted action prints an `[Admin]` line.
 | `SetUnlock` | `userId: number, bossId: string or "*", unlocked: boolean` | known `BossConfig` id or `"*"`; target in this server | edits `AdminUnlocks` (saved); `"*"` + false clears them all. Earned unlocks are never removed |
 | `CreateBoss` | `{ Name, LookId, MaxHealth, ScoreReward, CoinReward, RespawnMode }` | `CustomBossRules.parseSpec` (name 1-30 chars, look from `CustomBossConfig.LookIds`, integer bounds, `RespawnMode` exactly `"Continuous"` or `"Once"`); name passes `TextService` filtering unchanged; **position is where the admin's character stands** (raycast to the floor), at least `MinSpacing` (14 studs) from every boss; at most 20 custom bosses | saved with `UpdateAsync` to DataStore `CustomBosses`, spawned here, other servers told via MessagingService `CustomBosses` |
 | `EditBoss` | `action: "Move" or "Delete", bossId: string` | custom boss id; Move uses the admin's position with the same spacing check | saved and synced like `CreateBoss` |
+| `SetSynthesis` | `recipeId` (a `SynthesisConfig` recipe id) and `on` (boolean), or `"Reset"` | admin; the id must be a known recipe and `on` a real boolean (otherwise rejected) | `SynthesisSettingsService.save`: `UpdateAsync` on DataStore `SynthesisSettings` key `Global` changes only that recipe (`"Reset"` removes the key, so `SynthesisConfig` `Enabled` applies); other servers told via MessagingService `SynthesisSettings`; on failure a toast and the admin's state is re-sent. Without DataStore access it applies to this server only |
 | `SetDropRates` | `{ NormalMin, NormalMax, LuckyMin, LuckyMax, LuckyEveryMinutes, LuckyLastsMinutes }` or `"Reset"` | `DropRateRules.parse`: chances are finite numbers 0..1 with min <= max per range; Every is an integer 10..1440 minutes; Lasts an integer 1..Every-1 | saved with `SetAsync` to DataStore `DropRates` (`"Reset"` removes the key, so `DropRateConfig.Default` applies); other servers told via MessagingService `DropRates` |
 | `Announce` (2026-10-08) | `text: string, seconds: number` | `AnnouncementRules.seconds` (one of 5 / 10 / 15 / 30); `AnnouncementRules.clean` (≤ 800 bytes in, one line, control and invisible formatting characters removed, 1-200 characters out); one per admin every `AdminConfig.AnnouncementCooldownSeconds` (10 s, claimed before the filter yields); `TextService:FilterStringAsync` once, then each recipient gets `GetNonChatStringForUserAsync(theirUserId)` (live; a failed filter sends nothing; Studio playtests send the text as typed) | `Notify.Announcement` to every player in **this** server, each with their own filtered text; `[Admin] … announced (… s, N players)` log line |
 | `Events` (2026-10-08) | `{ Action: "Create" \| "Update", EventId? (Update), Type, Name?, DurationSeconds? or StartsAt + EndsAt, Config }` or `{ Action: "Stop" \| "ForceRemove" \| "StartNow" \| "DeleteHistory", EventId }` | `EventRules.parseSpec`: known type; settings only from `EventConfig`'s lists and ranges (multiplier, boss look, location, quantity 1-4, drop boss and item, whole 1-100 % chance, whole 5-90 % discount, ≤ 11 known paid hammer ids); duration from the list, or whole unix times that start no earlier than 2 min ago and at most 90 days ahead, end after the start and last ≤ 14 days; a typed name (≤ 40 characters) passes `TextService` filtering unchanged; at most 12 events running or scheduled. Stop: a valid event id | saved with `UpdateAsync` to DataStore `Events`, applied here, other servers told via MessagingService `Events` (docs/EVENTS.md) |

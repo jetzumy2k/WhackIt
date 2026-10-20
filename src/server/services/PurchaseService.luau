@@ -80,6 +80,10 @@ local function grantToBag(
 	if product.Kind == "Egg" then
 		return BagRules.itemText(product) .. " added to your Bag. Take it to an Incubator outside!"
 	end
+	if product.Kind == "SynthesisPick" then
+		return BagRules.itemText(product)
+			.. " added to your Bag. Choose your result at the Synthesis Machine!"
+	end
 	return BagRules.itemText(product) .. " added to your Bag. Use it whenever you like!"
 end
 

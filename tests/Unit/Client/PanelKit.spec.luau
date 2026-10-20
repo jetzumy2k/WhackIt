@@ -207,6 +207,77 @@ return function()
 			w.Gui:Destroy()
 		end)
 	end)
+	describe("PanelKit polish (2026-10-11)", function()
+		it("picks dark text on light buttons and white on dark ones", function()
+			expect(UiTokens.textOn(UiTokens.Color.Gold)).to.equal(UiTokens.Color.Ink)
+			expect(UiTokens.textOn(Color3.fromRGB(110, 190, 255))).to.equal(UiTokens.Color.Ink)
+			expect(UiTokens.textOn(UiTokens.Color.Good)).to.equal(UiTokens.Color.Text)
+			expect(UiTokens.textOn(UiTokens.Color.Danger)).to.equal(UiTokens.Color.Text)
+			local holder = Instance.new("Frame")
+			local button = PanelKit.button(holder, "Charge", UiTokens.Color.Gold)
+			expect(button.TextColor3).to.equal(UiTokens.Color.Ink)
+			PanelKit.setDisabled(button, true)
+			expect(button.TextColor3).to.equal(UiTokens.Color.Text)
+			holder:Destroy()
+		end)
+
+		it("hides the nav of a window without tabs and shows it once tabs are set", function()
+			local w = window()
+			local nav = w.Frame:FindFirstChild("Nav") :: ScrollingFrame
+			expect(nav.Visible).to.equal(false)
+			expect(w.Content.Size.X.Offset).to.equal(0) -- full width
+			w:setTabs({ { Id = "A", Label = "Alpha" } }, function() end)
+			expect(nav.Visible).to.equal(true)
+			w.Gui:Destroy()
+		end)
+
+		it("dims the screen while a window is open", function()
+			UiTokens.setReducedMotion(true)
+			local w = window()
+			local backdrop = w.Gui:FindFirstChild("Backdrop") :: TextButton
+			expect(backdrop.Visible).to.equal(false)
+			w:open()
+			expect(backdrop.Visible).to.equal(true)
+			-- Instance properties are float32, so 0.45 comes back as 0.4499999...
+			expect(backdrop.BackgroundTransparency).to.be.near(UiTokens.BACKDROP_TRANSPARENCY, 1e-4)
+			w:close()
+			expect(backdrop.Visible).to.equal(false)
+			UiTokens.setReducedMotion(false)
+			w.Gui:Destroy()
+		end)
+
+		it("draws the close X instead of using a text glyph", function()
+			local w = window()
+			local close = (w.Frame:FindFirstChild("Header") :: Frame):FindFirstChild(
+					"Close"
+				) :: TextButton
+			expect(close.Text).to.equal("")
+			expect(close:FindFirstChild("Glyph")).never.to.equal(nil)
+			w.Gui:Destroy()
+		end)
+
+		it("builds a game screen with a header, chips and a body, closed at first", function()
+			UiTokens.setReducedMotion(true)
+			local holder = Instance.new("Folder")
+			local screen = PanelKit.gameScreen({
+				Name = "TestGame",
+				Title = "Test",
+				Accent = Color3.new(0, 0, 1),
+			}, holder)
+			expect(screen.isOpen()).to.equal(false)
+			local chip = screen.chip("Round 1 / 5")
+			expect(chip.Text).to.equal("Round 1 / 5")
+			expect(screen.Close.Name).to.equal("Close")
+			expect(screen.Body:FindFirstChildOfClass("UIListLayout")).never.to.equal(nil)
+			screen.setOpen(true)
+			expect(screen.isOpen()).to.equal(true)
+			screen.setOpen(false)
+			expect(screen.isOpen()).to.equal(false)
+			UiTokens.setReducedMotion(false)
+			holder:Destroy()
+		end)
+	end)
+
 	describe("PanelKit.itemCard (V4b)", function()
 		it("builds a card with a picture, title, detail, hidden badge and a button", function()
 			local holder = Instance.new("Frame")
